@@ -28,15 +28,12 @@ export default class DataSource {
 
         // Optional function to preprocess source data
         this.preprocess = config.preprocess;
-        if (typeof this.preprocess === 'function') {
-            this.preprocess.bind(this);
-        }
 
         // Optional function to transform source data
         this.transform = config.transform;
-        if (typeof this.transform === 'function') {
-            this.transform.bind(this);
-        }
+
+        // Optional function to proxy data requests
+        this.proxy = config.proxy;
 
         // Optional additional data to pass to the transform function
         this.extra_data = config.extra_data;
@@ -303,7 +300,21 @@ export class NetworkSource extends DataSource {
 
         return new Promise(resolve => {
             let request_id = (network_request_id++) + '-' + url;
-            let promise = Utils.io(url, 60 * 1000, this.response_type, 'GET', this.request_headers, request_id);
+            let promise;
+            
+            // Use user-defined proxy function, or standard network request
+            if (typeof this.proxy === 'function') {
+                // Create a limited subset of data similar to how transform is called
+                const tile_data = {
+                    min: Object.assign({}, dest.min),
+                    max: Object.assign({}, dest.max),
+                    coords: Object.assign({}, dest.coords)
+                };
+                promise = this.proxy(url, tile_data, this.request_headers, this.extra_data)
+                    .then(data => ({ body: data, status: 200 }));
+            } else {
+                promise = Utils.io(url, 60 * 1000, this.response_type, 'GET', this.request_headers, request_id);
+            }
 
             source_data.request_id = request_id;
             source_data.error = null;
