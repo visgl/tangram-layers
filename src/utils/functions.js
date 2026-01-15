@@ -67,3 +67,14 @@ export function compileFunctionString (val, wrap) {
     }
     return val;
 }
+
+// Load a script dynamically on main thread
+export function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        let scriptEl = document.createElement('script');
+        scriptEl.src = src;
+        scriptEl.onload = resolve;
+        scriptEl.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+        document.head.appendChild(scriptEl);
+    });
+}
