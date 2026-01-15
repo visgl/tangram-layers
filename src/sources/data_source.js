@@ -4,6 +4,7 @@ import {MethodNotImplemented} from '../utils/errors';
 import Utils from '../utils/utils';
 import sliceObject from '../utils/slice';
 import * as URLs from '../utils/urls';
+import {compileFunctionStrings} from '../utils/functions';
 import log from '../utils/log';
 
 export default class DataSource {
@@ -27,13 +28,13 @@ export default class DataSource {
         }
 
         // Optional function to preprocess source data
-        this.preprocess = config.preprocess;
+        this.preprocess = compileFunctionStrings(config.preprocess);
 
         // Optional function to transform source data
-        this.transform = config.transform;
+        this.transform = compileFunctionStrings(config.transform);
 
         // Optional function to proxy data requests
-        this.proxy = config.proxy;
+        this.proxy = compileFunctionStrings(config.proxy);
 
         // Optional additional data to pass to the transform function
         this.extra_data = config.extra_data;
@@ -532,7 +533,8 @@ export class NetworkTileSource extends NetworkSource {
     static urlHasTilePattern (url) {
         return url && (
             (url.search('{x}') > -1 && url.search('{y}') > -1 && url.search('{z}') > -1) ||
-            url.search('{q}') > -1
+            url.search('{q}') > -1 ||
+            url.search('.pmtiles')
         );
     }
 

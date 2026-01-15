@@ -24,6 +24,7 @@ import RenderStateManager from '../gl/render_state';
 import TextCanvas from '../styles/text/text_canvas';
 import FontManager from '../styles/text/font_manager';
 import MediaCapture from '../utils/media_capture';
+import { loadScript } from '../utils/functions';
 import setupSceneDebug from './scene_debug';
 
 // Load scene definition: pass an object directly, or a URL as string to load remotely
@@ -142,6 +143,7 @@ export default class Scene {
         this.initializing = this.loadScene(config_source, options)
             .then(async ({ texture_nodes }) => {
                 await this.createWorkers();
+                await this.importExternalScripts();
 
                 // Clean up resources from prior scene
                 this.destroyFeatureSelection();
@@ -304,6 +306,21 @@ export default class Scene {
         // Scripts changed?
         return !(this.external_scripts.length === prev_scripts.length &&
             this.external_scripts.every((v, i) => v === prev_scripts[i]));
+    }
+
+    // Load external scripts on the main thread (for browser environment)
+    // Similar to importExternalScripts in worker, but uses dynamic script loading for the main thread
+    async importExternalScripts() {
+        if (!this.external_scripts || this.external_scripts.length === 0) {
+            return;
+        }
+        log('debug', 'loading custom data source scripts on main thread:', this.external_scripts);
+
+        // Load all scripts in parallel using the shared loadScript function
+        const scriptPromises = this.external_scripts.map(script => loadScript(script));
+        
+        // Wait for all scripts to load
+        await Promise.all(scriptPromises);
     }
 
     // Web workers handle heavy duty tile construction: networking, geometry processing, etc.

@@ -5,6 +5,7 @@ import Texture from '../gl/texture';
 import Utils from '../utils/utils';
 import hashString from '../utils/hash';
 import log from '../utils/log';
+import * as URLs from '../utils/urls';
 
 export class RasterTileSource extends NetworkTileSource {
 
@@ -56,7 +57,25 @@ export class RasterTileSource extends NetworkTileSource {
         // texture definitions are cached to avoid loading the same raster tile multiple times,
         // e.g. due to slightly different URLs when subdomain pattern is used (a.tile.com vs. b.tile.com)
         if (!this.textures[key]) {
-            let url = this.formatURL(this.url, { coords });
+            let url;
+            
+            // Use user-defined proxy function, or standard network request
+            if (typeof this.proxy === 'function') {
+                const tile_data = {
+                    min: Object.assign({}, tile.min),
+                    max: Object.assign({}, tile.max),
+                    coords: Object.assign({}, coords)
+                };
+                
+                // Get proxied data and wrap in a blob URL
+                const data = await this.proxy(this.url, tile_data, this.request_headers, this.extra_data);
+                if (data) {
+                    url = URLs.createObjectURL(new Blob([data]));
+                }
+            } else {
+                url = this.formatURL(this.url, { coords });
+            }
+            
             this.textures[key] = {
                 name: url,
                 url,

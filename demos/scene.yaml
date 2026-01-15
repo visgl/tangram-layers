@@ -149,6 +149,25 @@ sources:
         #         }
         #         return data;
         #     }
+    # PMTiles example
+    # tilezen:
+    #     type: MVT
+    #     url: https://r2-public.protomaps.com/protomaps-sample-datasets/tilezen.pmtiles
+    #     tile_size: 512
+    #     max_zoom: 15
+    #     scripts:
+    #           pmtiles: https://unpkg.com/pmtiles@4.3.2/dist/pmtiles.js
+    #     extra_data:
+    #         pmtiles: null # the proxy function will add the pmtiles instance here to cache it (once per worker)
+    #     proxy: |
+    #         function(url, tile, request_headers, extra_data) {
+    #             // Create a PMTiles object
+    #             extra_data.pmtiles = extra_data.pmtiles ?? new pmtiles.PMTiles(url);
+                
+    #             // Get the tile data
+    #             const { z, x, y } = tile.coords;
+    #             return extra_data.pmtiles.getZxy(z, x, y).then(result => result?.data);
+    #         }
     # schools:
     #     type: GeoJSON
     #     url: data/school-districts-polygon.geojson
