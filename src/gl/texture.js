@@ -3,6 +3,7 @@ import log from '../utils/log';
 import Utils from '../utils/utils';
 import subscribeMixin from '../utils/subscribe';
 import WorkerBroker from '../utils/worker_broker';
+import Context from './context';
 
 // GL texture wrapper object for keeping track of a global set of textures, keyed by a unique user-defined name
 export default class Texture {
@@ -51,7 +52,11 @@ export default class Texture {
     }
 
     // Destroy a single texture instance
-    destroy({ force } = {}) {
+    destroy(options = {}) {
+        return Context.withContext(this.gl, () => this.destroyTexture(options));
+    }
+
+    destroyTexture({ force } = {}) {
         if (this.retain_count > 0 && !force) {
             log('error', `Texture '${this.name}': destroying texture with retain count of '${this.retain_count}'`);
             return;
@@ -227,6 +232,15 @@ export default class Texture {
 
     // Uploads current image or buffer to the GPU (can be used to update animated textures on the fly)
     update(source, options = {}) {
+        return Context.withContext(this.gl, () => {
+            if (Context.hasContextScope(this.gl)) {
+                Texture.resetBindings();
+            }
+            return this.updateTexture(source, options);
+        });
+    }
+
+    updateTexture(source, options = {}) {
         if (!this.valid) {
             return;
         }
@@ -258,6 +272,15 @@ export default class Texture {
 
     // Determines appropriate filtering mode
     setFiltering(options = {}) {
+        return Context.withContext(this.gl, () => {
+            if (Context.hasContextScope(this.gl)) {
+                Texture.resetBindings();
+            }
+            return this.updateFiltering(options);
+        });
+    }
+
+    updateFiltering(options = {}) {
         if (!this.valid) {
             return;
         }
@@ -542,6 +565,10 @@ Texture.textures = {};
 Texture.texture_configs = {};
 Texture.boundTexture = null;
 Texture.activeUnit = null;
+Texture.resetBindings = function () {
+    Texture.boundTexture = null;
+    Texture.activeUnit = null;
+};
 
 WorkerBroker.addTarget('Texture', Texture);
 subscribeMixin(Texture);

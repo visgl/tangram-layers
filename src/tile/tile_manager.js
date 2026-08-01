@@ -376,7 +376,7 @@ export default class TileManager {
                 tile.built = true;
             }
 
-            tile.buildMeshes(this.scene.styles, progress);
+            this.scene.withWebGLContext(() => tile.buildMeshes(this.scene.styles, progress));
             this.updateTileStates();
             this.scene.requestRedraw();
         }

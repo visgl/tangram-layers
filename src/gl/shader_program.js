@@ -592,6 +592,11 @@ ShaderProgram.reset = function () {
 };
 ShaderProgram.reset();
 
+// Invalidate Tangram's program cache when another renderer shares the context.
+ShaderProgram.resetCurrent = function () {
+    ShaderProgram.current = null;
+};
+
 // Turn an object of key/value pairs into single string of #define statements
 ShaderProgram.buildDefineString = function (defines) {
     var define_str = '';

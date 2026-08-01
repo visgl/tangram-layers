@@ -90,6 +90,10 @@ export default class Scene {
         this.container = options.container;
         this.canvas = null;
         this.contextOptions = options.webGLContextOptions;
+        this.external_gl = options.webGLContext || null;
+        this.owns_gl = !this.external_gl;
+        this.webgl_context_scope = options.webGLContextScope;
+        this.redraw_callback = options.requestRedraw;
 
         this.lights = null;
         this.background = null;
@@ -200,16 +204,20 @@ export default class Scene {
     }
 
     destroy() {
+        return this.withWebGLContext(() => this.destroyScene());
+    }
+
+    destroyScene() {
         this.initialized = false;
         this.render_loop_stop = true; // schedule render loop to stop
 
         this.destroyListeners();
         this.destroyFeatureSelection();
 
-        if (this.canvas && this.canvas.parentNode) {
+        if (this.owns_gl && this.canvas && this.canvas.parentNode) {
             this.canvas.parentNode.removeChild(this.canvas);
-            this.canvas = null;
         }
+        this.canvas = null;
         this.container = null;
 
         if (this.gl) {
@@ -219,10 +227,12 @@ export default class Scene {
 
             ShaderProgram.reset();
 
-            // Force context loss
-            let ext = this.gl.getExtension('WEBGL_lose_context');
-            if (ext) {
-                ext.loseContext();
+            if (this.owns_gl) {
+                // Force context loss only when Tangram created and owns it
+                let ext = this.gl.getExtension('WEBGL_lose_context');
+                if (ext) {
+                    ext.loseContext();
+                }
             }
 
             this.gl = null;
@@ -237,37 +247,49 @@ export default class Scene {
     }
 
     createCanvas() {
-        if (this.canvas) {
+        if (this.gl) {
             return;
         }
 
-        this.container = this.container || document.body;
-        this.canvas = document.createElement('canvas');
-        this.canvas.style.position = 'absolute';
-        this.canvas.style.top = 0;
-        this.canvas.style.left = 0;
+        return this.withWebGLContext(() => this.createCanvasContext());
+    }
 
-        // Force tangram canvas underneath all leaflet layers, and set background to transparent
-        this.container.style.backgroundColor = 'transparent';
-        this.container.appendChild(this.canvas);
-
-        try {
-            this.gl = Context.getContext(this.canvas, Object.assign({
-                alpha: true, premultipliedAlpha: true,
-                stencil: true,
-                device_pixel_ratio: Utils.device_pixel_ratio,
-                powerPreference: 'high-performance'
-            }, this.contextOptions));
+    createCanvasContext() {
+        if (this.external_gl) {
+            this.gl = Context.configure(this.external_gl, this.webgl_context_scope);
+            this.canvas = this.gl.canvas;
         }
-        catch(e) {
-            throw new Error(
-                'Couldn\'t create WebGL context. ' +
-                'Your browser may not support WebGL, or it\'s turned off? ' +
-                'Visit http://webglreport.com/ for more info.'
-            );
+        else {
+            this.container = this.container || document.body;
+            this.canvas = document.createElement('canvas');
+            this.canvas.style.position = 'absolute';
+            this.canvas.style.top = 0;
+            this.canvas.style.left = 0;
+
+            // Force tangram canvas underneath all leaflet layers, and set background to transparent
+            this.container.style.backgroundColor = 'transparent';
+            this.container.appendChild(this.canvas);
+
+            try {
+                this.gl = Context.getContext(this.canvas, Object.assign({
+                    alpha: true, premultipliedAlpha: true,
+                    stencil: true,
+                    device_pixel_ratio: Utils.device_pixel_ratio,
+                    powerPreference: 'high-performance'
+                }, this.contextOptions));
+            }
+            catch(e) {
+                throw new Error(
+                    'Couldn\'t create WebGL context. ' +
+                    'Your browser may not support WebGL, or it\'s turned off? ' +
+                    'Visit http://webglreport.com/ for more info.'
+                );
+            }
         }
 
-        this.resizeMap(this.container.clientWidth, this.container.clientHeight);
+        if (this.owns_gl) {
+            this.resizeMap(this.container.clientWidth, this.container.clientHeight);
+        }
         VertexArrayObject.init(this.gl);
         this.render_states = new RenderStateManager(this.gl);
         this.media_capture.setCanvas(this.canvas, this.gl);
@@ -387,14 +409,29 @@ export default class Scene {
 
         this.dirty = true;
         this.view.setViewportSize(width, height);
-        if (this.gl) {
+        if (this.gl && this.owns_gl) {
             Context.resize(this.gl, width, height, Utils.device_pixel_ratio);
+        }
+    }
+
+    withWebGLContext(callback) {
+        return this.webgl_context_scope ? this.webgl_context_scope(callback) : callback();
+    }
+
+    resetWebGLState() {
+        ShaderProgram.resetCurrent();
+        Texture.resetBindings();
+        if (this.render_states) {
+            this.render_states.invalidate();
         }
     }
 
     // Request scene be redrawn at next animation loop
     requestRedraw() {
         this.dirty = true;
+        if (this.render_loop === false && this.redraw_callback) {
+            this.redraw_callback();
+        }
     }
 
     // Redraw scene immediately - don't wait for animation loop
@@ -432,7 +469,19 @@ export default class Scene {
         }
     }
 
-    update() {
+    update({ force = false } = {}) {
+        return this.withWebGLContext(() => {
+            if (force) {
+                this.dirty = true;
+            }
+            if (this.external_gl) {
+                this.resetWebGLState();
+            }
+            return this.updateScene();
+        });
+    }
+
+    updateScene() {
         // Determine which passes (if any) to render
         let main = this.dirty;
         let selection = this.selection ? this.selection.hasPendingRequests() : false;
@@ -1202,12 +1251,14 @@ export default class Scene {
         // update GL/canvas if color has changed
         if (!last_color || color.some((v, i) => last_color[i] !== v)) {
             // if background is fully opaque, set canvas background to match
-            if (color[3] === 1) {
-                this.canvas.style.backgroundColor =
-                    `rgba(${color.map(c => Math.floor(c * 255)).join(', ')})`;
-            }
-            else {
-                this.canvas.style.backgroundColor = 'transparent';
+            if (this.owns_gl) {
+                if (color[3] === 1) {
+                    this.canvas.style.backgroundColor =
+                        `rgba(${color.map(c => Math.floor(c * 255)).join(', ')})`;
+                }
+                else {
+                    this.canvas.style.backgroundColor = 'transparent';
+                }
             }
 
             this.gl.clearColor(...color);
@@ -1240,16 +1291,18 @@ export default class Scene {
 
         this.trigger(loading ? 'load' : 'update', { config: this.config });
 
-        this.style_manager.init();
-        this.view.reset();
-        this.createLights();
-        this.createDataSources(loading);
-        this.loadTextures();
-        this.setBackground();
-        FontManager.loadFonts(this.config.fonts);
+        this.withWebGLContext(() => {
+            this.style_manager.init();
+            this.view.reset();
+            this.createLights();
+            this.createDataSources(loading);
+            this.loadTextures();
+            this.setBackground();
+            FontManager.loadFonts(this.config.fonts);
 
-        // TODO: detect changes to styles? already (currently) need to recompile anyway when camera or lights change
-        this.updateStyles();
+            // TODO: detect changes to styles? already (currently) need to recompile anyway when camera or lights change
+            this.updateStyles();
+        });
 
         // Optionally rebuild geometry
         let done = rebuild ?

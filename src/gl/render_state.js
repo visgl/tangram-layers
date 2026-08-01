@@ -13,6 +13,10 @@ export class RenderState {
             this.value = value;
         }
     }
+
+    invalidate () {
+        this.value = null;
+    }
 }
 
 export default class RenderStateManager {
@@ -93,6 +97,13 @@ export default class RenderStateManager {
             }
         );
 
+    }
+
+    invalidate () {
+        this.culling.invalidate();
+        this.blending.invalidate();
+        this.depth_write.invalidate();
+        this.depth_test.invalidate();
     }
 
 }

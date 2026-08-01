@@ -3,6 +3,24 @@
 import getExtension from './extensions';
 import log from '../utils/log';
 
+const native_extensions = new WeakMap();
+
+function getVertexArrayExtension(gl) {
+    const extension = getExtension(gl, 'OES_vertex_array_object');
+    if (extension || typeof gl.createVertexArray !== 'function') {
+        return extension;
+    }
+
+    if (!native_extensions.has(gl)) {
+        native_extensions.set(gl, {
+            createVertexArrayOES: () => gl.createVertexArray(),
+            deleteVertexArrayOES: vao => gl.deleteVertexArray(vao),
+            bindVertexArrayOES: vao => gl.bindVertexArray(vao)
+        });
+    }
+    return native_extensions.get(gl);
+}
+
 export default {
 
     disabled: false, // set to true to disable VAOs even if extension is available
@@ -11,7 +29,7 @@ export default {
     init (gl) {
         let ext;
         if (this.disabled !== true) {
-            ext = getExtension(gl, 'OES_vertex_array_object');
+            ext = getVertexArrayExtension(gl);
         }
 
         if (ext != null) {
@@ -27,6 +45,9 @@ export default {
 
     getExtension(gl, ext_name) {
         if (this.disabled !== true) {
+            if (ext_name === 'OES_vertex_array_object') {
+                return getVertexArrayExtension(gl);
+            }
             return getExtension(gl, ext_name);
         }
     },

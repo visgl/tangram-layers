@@ -1121,6 +1121,77 @@ function sliceObject(obj, keys) {
   return sliced;
 }
 
+// WebGL context wrapper
+
+var Context;
+var Context$1 = Context = {};
+let context_id = 0;
+const context_scopes = new WeakMap();
+
+// Register a WebGL context for Tangram use without taking ownership of it.
+Context.configure = function configure(gl, scope) {
+  if (gl._tangram_id == null) {
+    gl._tangram_id = context_id++;
+  }
+  if (scope) {
+    context_scopes.set(gl, scope);
+  }
+  return gl;
+};
+
+// Run WebGL work inside an optional host-managed state scope.
+Context.withContext = function withContext(gl, callback) {
+  const scope = gl && context_scopes.get(gl);
+  return scope ? scope(callback) : callback();
+};
+Context.hasContextScope = function hasContextScope(gl) {
+  return Boolean(gl && context_scopes.has(gl));
+};
+
+// Setup a WebGL context
+// If no canvas element is provided, one is created and added to the document body
+Context.getContext = function getContext(canvas, options) {
+  var fullscreen = false;
+  if (canvas == null) {
+    canvas = document.createElement('canvas');
+    canvas.style.position = 'absolute';
+    canvas.style.top = 0;
+    canvas.style.left = 0;
+    canvas.style.zIndex = -1;
+    document.body.appendChild(canvas);
+    fullscreen = true;
+  }
+
+  // powerPreference context option spec requires listeners for context loss/restore,
+  // though it's not clear these are required in practice.
+  // https://www.khronos.org/registry/webgl/specs/latest/1.0/#5.2.1
+  canvas.addEventListener('webglcontextlost', () => {});
+  canvas.addEventListener('webglcontextrestored', () => {});
+  var gl = canvas.getContext('webgl', options) || canvas.getContext('experimental-webgl', options);
+  if (!gl) {
+    throw new Error('Couldn\'t create WebGL context.');
+  }
+  Context.configure(gl);
+  if (!fullscreen) {
+    Context.resize(gl, parseFloat(canvas.style.width), parseFloat(canvas.style.height), options.device_pixel_ratio);
+  } else {
+    Context.resize(gl, window.innerWidth, window.innerHeight, options.device_pixel_ratio);
+    window.addEventListener('resize', function () {
+      Context.resize(gl, window.innerWidth, window.innerHeight, options.device_pixel_ratio);
+    });
+  }
+  return gl;
+};
+Context.resize = function (gl, width, height, device_pixel_ratio) {
+  device_pixel_ratio = device_pixel_ratio || window.devicePixelRatio || 1;
+  gl.canvas.style.width = width + 'px';
+  gl.canvas.style.height = height + 'px';
+  gl.canvas.width = Math.round(width * device_pixel_ratio);
+  gl.canvas.height = Math.round(height * device_pixel_ratio);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+};
+
 // Texture management
 
 // GL texture wrapper object for keeping track of a global set of textures, keyed by a unique user-defined name
@@ -1171,7 +1242,10 @@ class Texture {
   }
 
   // Destroy a single texture instance
-  destroy({
+  destroy(options = {}) {
+    return Context$1.withContext(this.gl, () => this.destroyTexture(options));
+  }
+  destroyTexture({
     force
   } = {}) {
     if (this.retain_count > 0 && !force) {
@@ -1339,6 +1413,14 @@ class Texture {
 
   // Uploads current image or buffer to the GPU (can be used to update animated textures on the fly)
   update(source, options = {}) {
+    return Context$1.withContext(this.gl, () => {
+      if (Context$1.hasContextScope(this.gl)) {
+        Texture.resetBindings();
+      }
+      return this.updateTexture(source, options);
+    });
+  }
+  updateTexture(source, options = {}) {
     if (!this.valid) {
       return;
     }
@@ -1366,6 +1448,14 @@ class Texture {
 
   // Determines appropriate filtering mode
   setFiltering(options = {}) {
+    return Context$1.withContext(this.gl, () => {
+      if (Context$1.hasContextScope(this.gl)) {
+        Texture.resetBindings();
+      }
+      return this.updateFiltering(options);
+    });
+  }
+  updateFiltering(options = {}) {
     if (!this.valid) {
       return;
     }
@@ -1628,6 +1718,10 @@ Texture.textures = {};
 Texture.texture_configs = {};
 Texture.boundTexture = null;
 Texture.activeUnit = null;
+Texture.resetBindings = function () {
+  Texture.boundTexture = null;
+  Texture.activeUnit = null;
+};
 WorkerBroker$1.addTarget('Texture', Texture);
 subscribeMixin(Texture);
 
@@ -2520,6 +2614,11 @@ ShaderProgram.reset = function () {
 };
 ShaderProgram.reset();
 
+// Invalidate Tangram's program cache when another renderer shares the context.
+ShaderProgram.resetCurrent = function () {
+  ShaderProgram.current = null;
+};
+
 // Turn an object of key/value pairs into single string of #define statements
 ShaderProgram.buildDefineString = function (defines) {
   var define_str = '';
@@ -2642,6 +2741,21 @@ ShaderProgram.createShader = function (gl, source, stype) {
 
 // Creates a Vertex Array Object if the extension is available, or falls back on standard attribute calls
 
+const native_extensions = new WeakMap();
+function getVertexArrayExtension(gl) {
+  const extension = getExtension(gl, 'OES_vertex_array_object');
+  if (extension || typeof gl.createVertexArray !== 'function') {
+    return extension;
+  }
+  if (!native_extensions.has(gl)) {
+    native_extensions.set(gl, {
+      createVertexArrayOES: () => gl.createVertexArray(),
+      deleteVertexArrayOES: vao => gl.deleteVertexArray(vao),
+      bindVertexArrayOES: vao => gl.bindVertexArray(vao)
+    });
+  }
+  return native_extensions.get(gl);
+}
 var VertexArrayObject = {
   disabled: false,
   // set to true to disable VAOs even if extension is available
@@ -2651,7 +2765,7 @@ var VertexArrayObject = {
   init(gl) {
     let ext;
     if (this.disabled !== true) {
-      ext = getExtension(gl, 'OES_vertex_array_object');
+      ext = getVertexArrayExtension(gl);
     }
     if (ext != null) {
       log('info', 'Vertex Array Object extension available');
@@ -2663,6 +2777,9 @@ var VertexArrayObject = {
   },
   getExtension(gl, ext_name) {
     if (this.disabled !== true) {
+      if (ext_name === 'OES_vertex_array_object') {
+        return getVertexArrayExtension(gl);
+      }
       return getExtension(gl, ext_name);
     }
   },
@@ -20748,6 +20865,7 @@ DataSource.register('TopoJSON', source => {
 });
 
 exports.Collision = Collision;
+exports.Context = Context$1;
 exports.DataSource = DataSource;
 exports.FeatureSelection = FeatureSelection;
 exports.FilterOptions = FilterOptions;
@@ -21151,56 +21269,6 @@ topojson.WorkerBroker.addTarget('self', SceneWorker);
 }));
 
 define(['./shared'], (function (topojson) { 'use strict';
-
-// WebGL context wrapper
-
-var Context;
-var Context$1 = Context = {};
-let context_id = 0;
-
-// Setup a WebGL context
-// If no canvas element is provided, one is created and added to the document body
-Context.getContext = function getContext(canvas, options) {
-  var fullscreen = false;
-  if (canvas == null) {
-    canvas = document.createElement('canvas');
-    canvas.style.position = 'absolute';
-    canvas.style.top = 0;
-    canvas.style.left = 0;
-    canvas.style.zIndex = -1;
-    document.body.appendChild(canvas);
-    fullscreen = true;
-  }
-
-  // powerPreference context option spec requires listeners for context loss/restore,
-  // though it's not clear these are required in practice.
-  // https://www.khronos.org/registry/webgl/specs/latest/1.0/#5.2.1
-  canvas.addEventListener('webglcontextlost', () => {});
-  canvas.addEventListener('webglcontextrestored', () => {});
-  var gl = canvas.getContext('webgl', options) || canvas.getContext('experimental-webgl', options);
-  if (!gl) {
-    throw new Error('Couldn\'t create WebGL context.');
-  }
-  gl._tangram_id = context_id++;
-  if (!fullscreen) {
-    Context.resize(gl, parseFloat(canvas.style.width), parseFloat(canvas.style.height), options.device_pixel_ratio);
-  } else {
-    Context.resize(gl, window.innerWidth, window.innerHeight, options.device_pixel_ratio);
-    window.addEventListener('resize', function () {
-      Context.resize(gl, window.innerWidth, window.innerHeight, options.device_pixel_ratio);
-    });
-  }
-  return gl;
-};
-Context.resize = function (gl, width, height, device_pixel_ratio) {
-  device_pixel_ratio = device_pixel_ratio || window.devicePixelRatio || 1;
-  gl.canvas.style.width = width + 'px';
-  gl.canvas.style.height = height + 'px';
-  gl.canvas.width = Math.round(width * device_pixel_ratio);
-  gl.canvas.height = Math.round(height * device_pixel_ratio);
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-};
 
 // Get a value for a nested property with path provided as an array (`a.b.c` => ['a', 'b', 'c'])
 function getPropertyPath(object, path) {
@@ -27841,7 +27909,7 @@ class TileManager {
       if (progress.done) {
         tile.built = true;
       }
-      tile.buildMeshes(this.scene.styles, progress);
+      this.scene.withWebGLContext(() => tile.buildMeshes(this.scene.styles, progress));
       this.updateTileStates();
       this.scene.requestRedraw();
     }
@@ -27937,6 +28005,9 @@ class RenderState {
       this.value = value;
     }
   }
+  invalidate() {
+    this.value = null;
+  }
 }
 class RenderStateManager {
   constructor(gl) {
@@ -28008,6 +28079,12 @@ class RenderStateManager {
         gl.disable(gl.DEPTH_TEST);
       }
     });
+  }
+  invalidate() {
+    this.culling.invalidate();
+    this.blending.invalidate();
+    this.depth_write.invalidate();
+    this.depth_test.invalidate();
   }
 }
 
@@ -28366,6 +28443,10 @@ class Scene {
     this.container = options.container;
     this.canvas = null;
     this.contextOptions = options.webGLContextOptions;
+    this.external_gl = options.webGLContext || null;
+    this.owns_gl = !this.external_gl;
+    this.webgl_context_scope = options.webGLContextScope;
+    this.redraw_callback = options.requestRedraw;
     this.lights = null;
     this.background = null;
     this.createListeners();
@@ -28475,26 +28556,30 @@ class Scene {
     return this.initializing;
   }
   destroy() {
+    return this.withWebGLContext(() => this.destroyScene());
+  }
+  destroyScene() {
     this.initialized = false;
     this.render_loop_stop = true; // schedule render loop to stop
 
     this.destroyListeners();
     this.destroyFeatureSelection();
-    if (this.canvas && this.canvas.parentNode) {
+    if (this.owns_gl && this.canvas && this.canvas.parentNode) {
       this.canvas.parentNode.removeChild(this.canvas);
-      this.canvas = null;
     }
+    this.canvas = null;
     this.container = null;
     if (this.gl) {
       topojson.Texture.destroy(this.gl);
       this.style_manager.destroy(this.gl);
       this.styles = {};
       topojson.ShaderProgram.reset();
-
-      // Force context loss
-      let ext = this.gl.getExtension('WEBGL_lose_context');
-      if (ext) {
-        ext.loseContext();
+      if (this.owns_gl) {
+        // Force context loss only when Tangram created and owns it
+        let ext = this.gl.getExtension('WEBGL_lose_context');
+        if (ext) {
+          ext.loseContext();
+        }
       }
       this.gl = null;
     }
@@ -28505,30 +28590,40 @@ class Scene {
     topojson.log.reset();
   }
   createCanvas() {
-    if (this.canvas) {
+    if (this.gl) {
       return;
     }
-    this.container = this.container || document.body;
-    this.canvas = document.createElement('canvas');
-    this.canvas.style.position = 'absolute';
-    this.canvas.style.top = 0;
-    this.canvas.style.left = 0;
+    return this.withWebGLContext(() => this.createCanvasContext());
+  }
+  createCanvasContext() {
+    if (this.external_gl) {
+      this.gl = topojson.Context.configure(this.external_gl, this.webgl_context_scope);
+      this.canvas = this.gl.canvas;
+    } else {
+      this.container = this.container || document.body;
+      this.canvas = document.createElement('canvas');
+      this.canvas.style.position = 'absolute';
+      this.canvas.style.top = 0;
+      this.canvas.style.left = 0;
 
-    // Force tangram canvas underneath all leaflet layers, and set background to transparent
-    this.container.style.backgroundColor = 'transparent';
-    this.container.appendChild(this.canvas);
-    try {
-      this.gl = Context$1.getContext(this.canvas, Object.assign({
-        alpha: true,
-        premultipliedAlpha: true,
-        stencil: true,
-        device_pixel_ratio: topojson.Utils.device_pixel_ratio,
-        powerPreference: 'high-performance'
-      }, this.contextOptions));
-    } catch (e) {
-      throw new Error('Couldn\'t create WebGL context. ' + 'Your browser may not support WebGL, or it\'s turned off? ' + 'Visit http://webglreport.com/ for more info.');
+      // Force tangram canvas underneath all leaflet layers, and set background to transparent
+      this.container.style.backgroundColor = 'transparent';
+      this.container.appendChild(this.canvas);
+      try {
+        this.gl = topojson.Context.getContext(this.canvas, Object.assign({
+          alpha: true,
+          premultipliedAlpha: true,
+          stencil: true,
+          device_pixel_ratio: topojson.Utils.device_pixel_ratio,
+          powerPreference: 'high-performance'
+        }, this.contextOptions));
+      } catch (e) {
+        throw new Error('Couldn\'t create WebGL context. ' + 'Your browser may not support WebGL, or it\'s turned off? ' + 'Visit http://webglreport.com/ for more info.');
+      }
     }
-    this.resizeMap(this.container.clientWidth, this.container.clientHeight);
+    if (this.owns_gl) {
+      this.resizeMap(this.container.clientWidth, this.container.clientHeight);
+    }
     topojson.VertexArrayObject.init(this.gl);
     this.render_states = new RenderStateManager(this.gl);
     this.media_capture.setCanvas(this.canvas, this.gl);
@@ -28633,14 +28728,27 @@ class Scene {
     }
     this.dirty = true;
     this.view.setViewportSize(width, height);
-    if (this.gl) {
-      Context$1.resize(this.gl, width, height, topojson.Utils.device_pixel_ratio);
+    if (this.gl && this.owns_gl) {
+      topojson.Context.resize(this.gl, width, height, topojson.Utils.device_pixel_ratio);
+    }
+  }
+  withWebGLContext(callback) {
+    return this.webgl_context_scope ? this.webgl_context_scope(callback) : callback();
+  }
+  resetWebGLState() {
+    topojson.ShaderProgram.resetCurrent();
+    topojson.Texture.resetBindings();
+    if (this.render_states) {
+      this.render_states.invalidate();
     }
   }
 
   // Request scene be redrawn at next animation loop
   requestRedraw() {
     this.dirty = true;
+    if (this.render_loop === false && this.redraw_callback) {
+      this.redraw_callback();
+    }
   }
 
   // Redraw scene immediately - don't wait for animation loop
@@ -28679,7 +28787,20 @@ class Scene {
       }, 0); // delay start by one tick
     }
   }
-  update() {
+  update({
+    force = false
+  } = {}) {
+    return this.withWebGLContext(() => {
+      if (force) {
+        this.dirty = true;
+      }
+      if (this.external_gl) {
+        this.resetWebGLState();
+      }
+      return this.updateScene();
+    });
+  }
+  updateScene() {
     // Determine which passes (if any) to render
     let main = this.dirty;
     let selection = this.selection ? this.selection.hasPendingRequests() : false;
@@ -29498,10 +29619,12 @@ class Scene {
     // update GL/canvas if color has changed
     if (!last_color || color.some((v, i) => last_color[i] !== v)) {
       // if background is fully opaque, set canvas background to match
-      if (color[3] === 1) {
-        this.canvas.style.backgroundColor = `rgba(${color.map(c => Math.floor(c * 255)).join(', ')})`;
-      } else {
-        this.canvas.style.backgroundColor = 'transparent';
+      if (this.owns_gl) {
+        if (color[3] === 1) {
+          this.canvas.style.backgroundColor = `rgba(${color.map(c => Math.floor(c * 255)).join(', ')})`;
+        } else {
+          this.canvas.style.backgroundColor = 'transparent';
+        }
       }
       this.gl.clearColor(...color);
     }
@@ -29542,16 +29665,18 @@ class Scene {
     this.trigger(loading ? 'load' : 'update', {
       config: this.config
     });
-    this.style_manager.init();
-    this.view.reset();
-    this.createLights();
-    this.createDataSources(loading);
-    this.loadTextures();
-    this.setBackground();
-    topojson.FontManager.loadFonts(this.config.fonts);
+    this.withWebGLContext(() => {
+      this.style_manager.init();
+      this.view.reset();
+      this.createLights();
+      this.createDataSources(loading);
+      this.loadTextures();
+      this.setBackground();
+      topojson.FontManager.loadFonts(this.config.fonts);
 
-    // TODO: detect changes to styles? already (currently) need to recompile anyway when camera or lights change
-    this.updateStyles();
+      // TODO: detect changes to styles? already (currently) need to recompile anyway when camera or lights change
+      this.updateStyles();
+    });
 
     // Optionally rebuild geometry
     let done = rebuild ? this.rebuild(Object.assign({
@@ -30281,7 +30406,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = 'd0b887d09a3645aad91a18bd3bd0362d74627da3';
+	Tangram.debug.SHA = 'f24f47cdfa825fb4d20b639730ce2f384e2e76c4';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

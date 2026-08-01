@@ -4,6 +4,31 @@ var Context;
 export default Context = {};
 
 let context_id = 0;
+const context_scopes = new WeakMap();
+
+// Register a WebGL context for Tangram use without taking ownership of it.
+Context.configure = function configure (gl, scope)
+{
+    if (gl._tangram_id == null) {
+        gl._tangram_id = context_id++;
+    }
+    if (scope) {
+        context_scopes.set(gl, scope);
+    }
+    return gl;
+};
+
+// Run WebGL work inside an optional host-managed state scope.
+Context.withContext = function withContext (gl, callback)
+{
+    const scope = gl && context_scopes.get(gl);
+    return scope ? scope(callback) : callback();
+};
+
+Context.hasContextScope = function hasContextScope (gl)
+{
+    return Boolean(gl && context_scopes.has(gl));
+};
 
 // Setup a WebGL context
 // If no canvas element is provided, one is created and added to the document body
@@ -30,7 +55,7 @@ Context.getContext = function getContext (canvas, options)
     if (!gl) {
         throw new Error('Couldn\'t create WebGL context.');
     }
-    gl._tangram_id = context_id++;
+    Context.configure(gl);
 
     if (!fullscreen) {
         Context.resize(gl, parseFloat(canvas.style.width), parseFloat(canvas.style.height), options.device_pixel_ratio);
