@@ -13,6 +13,7 @@ import Vector from './utils/vector';
 import DataSource from './sources/data_source';
 import GLSL from './gl/glsl';
 import ShaderProgram from './gl/shader_program';
+import UniformBuffer from './gl/uniform_buffer';
 import VertexData from './gl/vertex_data';
 import Texture from './gl/texture';
 import Material from './lights/material';
@@ -39,6 +40,7 @@ const debug = {
     DataSource,
     GLSL,
     ShaderProgram,
+    UniformBuffer,
     VertexData,
     Texture,
     Material,

@@ -39,6 +39,7 @@ export default class ShaderProgram {
         this.dependent_uniforms = options.uniforms;
 
         this.uniforms = {}; // program locations of uniforms, lazily added as each uniform is set
+        this.uniform_blocks = Object.assign({}, options.uniform_blocks || {});
         this.attribs = {}; // program locations of vertex attributes, lazily added as each attribute is accessed
 
         this.vertex_source = vertex_source;
@@ -63,10 +64,12 @@ export default class ShaderProgram {
             return;
         }
 
-        if (ShaderProgram.current !== this) {
+        const changed = ShaderProgram.current !== this;
+        if (changed) {
             this.gl.useProgram(this.program);
         }
         ShaderProgram.current = this;
+        this.bindUniformBlocks();
     }
 
     compile() {
@@ -180,6 +183,12 @@ export default class ShaderProgram {
             this.program = ShaderProgram.updateProgram(this.gl, this.program, this.computed_vertex_source, this.computed_fragment_source);
             this.compiled = true;
             this.compiling = false;
+            ShaderProgram.current = null; // updateProgram() explicitly unbinds the current GL program
+            for (const uniform_buffer of Object.values(this.uniform_blocks)) {
+                if (typeof uniform_buffer.invalidateProgram === 'function') {
+                    uniform_buffer.invalidateProgram(this.program);
+                }
+            }
         }
         catch(error) {
             this.program = null;
@@ -323,6 +332,24 @@ export default class ShaderProgram {
                     this.uniform(method, name, value);
                 }
             });
+    }
+
+    // Register a WebGL2 uniform buffer with this program.
+    setUniformBlock(name, uniform_buffer) {
+        this.uniform_blocks[name] = uniform_buffer;
+        if (this.compiled) {
+            uniform_buffer.bind(this.program);
+        }
+    }
+
+    // Bind all registered WebGL2 uniform buffers to this program.
+    bindUniformBlocks() {
+        if (!this.compiled) {
+            return;
+        }
+        for (const uniform_buffer of Object.values(this.uniform_blocks)) {
+            uniform_buffer.bind(this.program);
+        }
     }
 
     // Cache some or all uniform values so they can be restored
