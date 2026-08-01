@@ -330,13 +330,25 @@ export default class View {
     }
 
     // Set general uniforms that must be updated once per program
-    setupProgram (program) {
-        program.uniform('2fv', 'u_resolution', [this.size.device.width, this.size.device.height]);
-        program.uniform('3fv', 'u_map_position', [this.center.meters.x, this.center.meters.y, this.zoom]);
-        program.uniform('1f', 'u_meters_per_pixel', this.meters_per_pixel);
-        program.uniform('1f', 'u_device_pixel_ratio', Utils.device_pixel_ratio);
-        program.uniform('1f', 'u_view_pan_snap_timer', this.pan_snap_timer);
-        program.uniform('1i', 'u_view_panning', this.panning);
+    setupProgram (program, uniform_buffer) {
+        if (uniform_buffer) {
+            uniform_buffer.setUniforms({
+                u_resolution: [this.size.device.width, this.size.device.height],
+                u_map_position: [this.center.meters.x, this.center.meters.y, this.zoom],
+                u_meters_per_pixel: this.meters_per_pixel,
+                u_device_pixel_ratio: Utils.device_pixel_ratio,
+                u_view_pan_snap_timer: this.pan_snap_timer,
+                u_view_panning: this.panning
+            });
+        }
+        else {
+            program.uniform('2fv', 'u_resolution', [this.size.device.width, this.size.device.height]);
+            program.uniform('3fv', 'u_map_position', [this.center.meters.x, this.center.meters.y, this.zoom]);
+            program.uniform('1f', 'u_meters_per_pixel', this.meters_per_pixel);
+            program.uniform('1f', 'u_device_pixel_ratio', Utils.device_pixel_ratio);
+            program.uniform('1f', 'u_view_pan_snap_timer', this.pan_snap_timer);
+            program.uniform('1i', 'u_view_panning', this.panning);
+        }
 
         this.camera.setupProgram(program);
     }

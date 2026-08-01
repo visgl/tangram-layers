@@ -12,6 +12,9 @@ import parseShaderErrors from 'gl-shader-errors';
 // Regex patterns
 const re_pragma = /^\s*#pragma.*$/gm;   // for removing unused pragmas after shader block injection
 const re_continue_line = /\\\s*\n/mg;   // for removing backslash line continuations
+const re_fragment_color = /\bgl_FragColor\b/g;
+const re_texture_2d = /\btexture2D\b/g;
+const re_texture_cube = /\btextureCube\b/g;
 
 export default class ShaderProgram {
 
@@ -40,6 +43,7 @@ export default class ShaderProgram {
 
         this.uniforms = {}; // program locations of uniforms, lazily added as each uniform is set
         this.uniform_blocks = Object.assign({}, options.uniform_blocks || {});
+        this.glsl_version = options.glsl_version || (Object.keys(this.uniform_blocks).length > 0 ? 300 : 100);
         this.attribs = {}; // program locations of vertex attributes, lazily added as each attribute is accessed
 
         this.vertex_source = vertex_source;
@@ -144,6 +148,7 @@ export default class ShaderProgram {
 
         // Inject uniform definitions
         this.ensureUniforms(this.dependent_uniforms);
+        this.ensureUniformBlocks();
 
         // Build & inject extensions & defines
         // This is done *after* code injection so that we can add defines for which code points were injected
@@ -158,6 +163,7 @@ export default class ShaderProgram {
 
         defines['TANGRAM_VERTEX_SHADER'] = true;
         defines['TANGRAM_FRAGMENT_SHADER'] = false;
+        defines['TANGRAM_WEBGL2'] = this.glsl_version >= 300;
         this.computed_vertex_source =
             precision +
             ShaderProgram.buildDefineString(defines) +
@@ -177,6 +183,10 @@ export default class ShaderProgram {
         // Replace multi-line backslashes
         this.computed_vertex_source = this.computed_vertex_source.replace(re_continue_line, '');
         this.computed_fragment_source = this.computed_fragment_source.replace(re_continue_line, '');
+        if (this.glsl_version >= 300) {
+            this.computed_vertex_source = ShaderProgram.convertToWebGL2(this.computed_vertex_source, 'vertex');
+            this.computed_fragment_source = ShaderProgram.convertToWebGL2(this.computed_fragment_source, 'fragment');
+        }
 
         // Compile & set uniforms to cached values
         try {
@@ -303,6 +313,29 @@ export default class ShaderProgram {
         // this could cause some issues with certain #pragmas, or other functions that might expect #defines
         this.computed_vertex_source = inject.join('\n') + this.computed_vertex_source;
         this.computed_fragment_source = inject.join('\n') + this.computed_fragment_source;
+    }
+
+    // Replace standalone uniforms with std140 uniform-block declarations.
+    ensureUniformBlocks() {
+        for (const uniform_buffer of Object.values(this.uniform_blocks)) {
+            const uniforms = uniform_buffer.layout && uniform_buffer.layout.uniforms;
+            if (!uniforms || typeof uniform_buffer.getDeclaration !== 'function') {
+                continue;
+            }
+
+            for (const name of Object.keys(uniforms)) {
+                const declaration = new RegExp(
+                    `^\\s*uniform\\s+[A-Za-z0-9_]+\\s+${escapeRegExp(name)}\\s*;\\s*(?://.*)?$`,
+                    'gm'
+                );
+                this.computed_vertex_source = this.computed_vertex_source.replace(declaration, '');
+                this.computed_fragment_source = this.computed_fragment_source.replace(declaration, '');
+            }
+
+            const declaration = uniform_buffer.getDeclaration() + '\n';
+            this.computed_vertex_source = declaration + this.computed_vertex_source;
+            this.computed_fragment_source = declaration + this.computed_fragment_source;
+        }
     }
 
     // Set uniforms from a JS object, with inferred types
@@ -624,6 +657,30 @@ ShaderProgram.resetCurrent = function () {
     ShaderProgram.current = null;
 };
 
+// Upgrade the subset of GLSL ES 1.00 syntax emitted by Tangram to GLSL ES 3.00.
+ShaderProgram.convertToWebGL2 = function (source, type) {
+    source = source
+        .replace(re_texture_2d, 'texture')
+        .replace(re_texture_cube, 'texture');
+
+    if (type === 'vertex') {
+        source = source
+            .replace(/\battribute\b/g, 'in')
+            .replace(/\bvarying\b/g, 'out');
+    }
+    else if (type === 'fragment') {
+        source = source
+            .replace(/\bvarying\b/g, 'in')
+            .replace(re_fragment_color, 'tangram_FragColor');
+        source = source.replace(
+            /(precision\s+(?:lowp|mediump|highp)\s+float\s*;)/,
+            '$1\nlayout(location = 0) out vec4 tangram_FragColor;'
+        );
+    }
+
+    return '#version 300 es\n' + source;
+};
+
 // Turn an object of key/value pairs into single string of #define statements
 ShaderProgram.buildDefineString = function (defines) {
     var define_str = '';
@@ -658,6 +715,10 @@ ShaderProgram.addBlock = function (key, ...blocks) {
     ShaderProgram.blocks[key] = ShaderProgram.blocks[key] || [];
     ShaderProgram.blocks[key].push(...blocks);
 };
+
+function escapeRegExp(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 // Remove all global shader blocks for a given key
 ShaderProgram.removeBlock = function (key) {

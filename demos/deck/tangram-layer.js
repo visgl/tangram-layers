@@ -153,6 +153,7 @@ export function createTangramLayerClass({ Layer, Scene }) {
                         }
                     },
                     disableRenderLoop: true,
+                    enableUniformBuffers: true,
                     continuousZoom: true,
                     highDensityDisplay: true,
                     logLevel: 'warn'
@@ -292,6 +293,7 @@ export function createTangramLayerClass({ Layer, Scene }) {
             const previousProgram = hasTrackedProgram ? lumaState.program :
                 gl.getParameter(gl.CURRENT_PROGRAM);
             const previousActiveTexture = gl.getParameter(gl.ACTIVE_TEXTURE);
+            const uniformBufferBindings = this._captureUniformBufferBindings(record);
 
             record.webglScopeDepth++;
             device.pushState();
@@ -303,11 +305,58 @@ export function createTangramLayerClass({ Layer, Scene }) {
                     device.popState();
                     gl.useProgram(previousProgram);
                     gl.activeTexture(previousActiveTexture);
+                    this._restoreUniformBufferBindings(record, uniformBufferBindings);
                 }
                 finally {
                     record.webglScopeDepth--;
                 }
             }
+        }
+
+        _captureUniformBufferBindings(record) {
+            const { gl, scene } = record;
+            if (!scene || !gl.getIndexedParameter || gl.UNIFORM_BUFFER == null) {
+                return null;
+            }
+
+            const bindings = [];
+            const bindingPoints = new Set(
+                Object.values(scene.uniform_buffers || {}).map(uniform_buffer => uniform_buffer.binding)
+            );
+            for (const binding of bindingPoints) {
+                bindings.push({
+                    binding,
+                    buffer: gl.getIndexedParameter(gl.UNIFORM_BUFFER_BINDING, binding),
+                    start: gl.getIndexedParameter(gl.UNIFORM_BUFFER_START, binding),
+                    size: gl.getIndexedParameter(gl.UNIFORM_BUFFER_SIZE, binding)
+                });
+            }
+            return {
+                generic: gl.getParameter(gl.UNIFORM_BUFFER_BINDING),
+                bindings
+            };
+        }
+
+        _restoreUniformBufferBindings(record, snapshot) {
+            if (!snapshot) {
+                return;
+            }
+            const { gl } = record;
+            for (const binding of snapshot.bindings) {
+                if (binding.buffer && binding.size > 0 && gl.bindBufferRange) {
+                    gl.bindBufferRange(
+                        gl.UNIFORM_BUFFER,
+                        binding.binding,
+                        binding.buffer,
+                        binding.start,
+                        binding.size
+                    );
+                }
+                else {
+                    gl.bindBufferBase(gl.UNIFORM_BUFFER, binding.binding, binding.buffer);
+                }
+            }
+            gl.bindBuffer(gl.UNIFORM_BUFFER, snapshot.generic);
         }
     }
 

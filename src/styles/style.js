@@ -97,6 +97,7 @@ export var Style = {
 
         WorkerBroker.removeTarget(this.main_thread_target);
         this.gl = null;
+        this.uniform_blocks = null;
         this.initialized = false;
     },
 
@@ -402,8 +403,9 @@ export var Style = {
 
     /*** GL state and rendering ***/
 
-    setGL (gl) {
+    setGL (gl, uniform_blocks = {}) {
         this.gl = gl;
+        this.uniform_blocks = uniform_blocks;
         this.max_texture_size = Texture.getMaxTextureSize(this.gl);
     },
 
@@ -491,6 +493,7 @@ export var Style = {
                 name: this.name,
                 defines,
                 uniforms,
+                uniform_blocks: this.uniform_blocks,
                 blocks,
                 block_scopes,
                 extensions
@@ -506,6 +509,7 @@ export var Style = {
                     name: (this.name + ' (selection)'),
                     defines: selection_defines,
                     uniforms,
+                    uniform_blocks: this.uniform_blocks,
                     blocks,
                     block_scopes,
                     extensions

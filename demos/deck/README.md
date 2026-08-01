@@ -27,7 +27,11 @@ The `ib/deck-tangram-layer-uniform-buffers` sub-branch adds a WebGL2
 binding into `ShaderProgram`. It is exposed through `Tangram.debug` for the
 spike, but the existing scalar-uniform path remains unchanged.
 
-The next migration slice is to upgrade Tangram's generated shaders to GLSL 300
-and move the frame/view globals into a `TangramView` block. Camera and tile
-matrices can then move into separate blocks before replacing the WebGL-specific
-buffer implementation with a luma.gl `Device` buffer for WebGPU.
+The generated polygon and point shaders now upgrade to GLSL 300 when uniform
+blocks are enabled, and frame/view globals are supplied through a real
+`TangramView` block. The deck bridge also restores indexed uniform-buffer state
+that luma.gl's general WebGL state stack intentionally does not track.
+
+The next migration slice is to move camera and tile matrices into separate
+blocks before replacing the WebGL-specific buffer implementation with a luma.gl
+`Device` buffer for WebGPU.

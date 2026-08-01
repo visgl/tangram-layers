@@ -1,6 +1,10 @@
 import { assert } from 'chai';
+import Context from '../src/gl/context';
 import ShaderProgram from '../src/gl/shader_program';
 import UniformBuffer from '../src/gl/uniform_buffer';
+import {StyleManager} from '../src/styles/style_manager';
+import Camera from '../src/scene/camera';
+import Light from '../src/lights/light';
 
 describe('UniformBuffer', function () {
     it('creates a std140-compatible layout and declaration', function () {
@@ -109,6 +113,97 @@ describe('UniformBuffer', function () {
         ShaderProgram.resetCurrent();
         program.use();
         assert.deepEqual(uniform_buffer.calls, [program.program, program.program, program.program]);
+    });
+
+    it('upgrades legacy Tangram shader syntax and compiles a real WebGL2 uniform block', function () {
+        const gl = document.createElement('canvas').getContext('webgl2');
+        if (!gl) {
+            this.skip();
+            return;
+        }
+        gl._tangram_id = 1000;
+        ShaderProgram.reset();
+
+        const uniform_buffer = new UniformBuffer(gl, {
+            name: 'TangramView',
+            uniforms: { u_time: 'float' }
+        });
+        const program = new ShaderProgram(gl, [
+            'attribute vec4 a_position;',
+            'uniform float u_time;',
+            'varying float v_time;',
+            'void main() {',
+            '    v_time = u_time;',
+            '    gl_Position = a_position;',
+            '}'
+        ].join('\n'), [
+            'uniform float u_time;',
+            'varying float v_time;',
+            'void main() {',
+            '    gl_FragColor = vec4(v_time + u_time);',
+            '}'
+        ].join('\n'), {
+            uniform_blocks: { TangramView: uniform_buffer }
+        });
+
+        program.compile();
+        uniform_buffer.setUniform('u_time', 0.25);
+        program.use();
+
+        assert.isTrue(program.compiled);
+        assert.strictEqual(program.glsl_version, 300);
+        assert.strictEqual(gl.getError(), gl.NO_ERROR);
+
+        program.destroy();
+        uniform_buffer.destroy();
+        ShaderProgram.reset();
+    });
+
+    it('compiles Tangram polygon and point styles with the TangramView block', function () {
+        const gl = document.createElement('canvas').getContext('webgl2');
+        if (!gl) {
+            this.skip();
+            return;
+        }
+        Context.configure(gl);
+        ShaderProgram.reset();
+        Camera.create('uniform-buffer-test', null, { type: 'flat' });
+        Light.inject();
+
+        const uniform_buffer = new UniformBuffer(gl, {
+            name: 'TangramView',
+            uniforms: {
+                u_resolution: 'vec2',
+                u_time: 'float',
+                u_map_position: 'vec3',
+                u_meters_per_pixel: 'float',
+                u_device_pixel_ratio: 'float',
+                u_view_pan_snap_timer: 'float',
+                u_view_panning: 'bool'
+            }
+        });
+        const uniform_blocks = { TangramView: uniform_buffer };
+        const style_manager = new StyleManager();
+        style_manager.init();
+
+        for (const name of ['polygons', 'points']) {
+            const style = style_manager.styles[name];
+            style.init();
+            style.setGL(gl, uniform_blocks);
+            style.getProgram();
+            assert.isTrue(style.program.compiled, `${name} style compiles`);
+            assert.strictEqual(style.program.glsl_version, 300);
+            if (style.selection_program) {
+                style.getProgram('selection_program');
+                assert.isTrue(style.selection_program.compiled, `${name} selection style compiles`);
+                assert.strictEqual(style.selection_program.glsl_version, 300);
+            }
+        }
+        assert.strictEqual(gl.getError(), gl.NO_ERROR);
+
+        style_manager.destroy(gl);
+        uniform_buffer.destroy();
+        ShaderProgram.reset();
     });
 });
 

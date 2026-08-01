@@ -9,6 +9,7 @@ import sliceObject from '../utils/slice';
 import Context from '../gl/context';
 import Texture from '../gl/texture';
 import ShaderProgram from '../gl/shader_program';
+import UniformBuffer from '../gl/uniform_buffer';
 import VertexArrayObject from '../gl/vao';
 import {StyleManager} from '../styles/style_manager';
 import {Style} from '../styles/style';
@@ -94,6 +95,8 @@ export default class Scene {
         this.owns_gl = !this.external_gl;
         this.webgl_context_scope = options.webGLContextScope;
         this.redraw_callback = options.requestRedraw;
+        this.enable_uniform_buffers = options.enableUniformBuffers === true;
+        this.uniform_buffers = {};
 
         this.lights = null;
         this.background = null;
@@ -224,6 +227,7 @@ export default class Scene {
             Texture.destroy(this.gl);
             this.style_manager.destroy(this.gl);
             this.styles = {};
+            this.destroyUniformBuffers();
 
             ShaderProgram.reset();
 
@@ -293,6 +297,33 @@ export default class Scene {
         VertexArrayObject.init(this.gl);
         this.render_states = new RenderStateManager(this.gl);
         this.media_capture.setCanvas(this.canvas, this.gl);
+        this.createUniformBuffers();
+    }
+
+    createUniformBuffers() {
+        if (!this.enable_uniform_buffers || !UniformBuffer.isSupported(this.gl)) {
+            return;
+        }
+        this.uniform_buffers.TangramView = new UniformBuffer(this.gl, {
+            name: 'TangramView',
+            binding: 0,
+            uniforms: {
+                u_resolution: 'vec2',
+                u_time: 'float',
+                u_map_position: 'vec3',
+                u_meters_per_pixel: 'float',
+                u_device_pixel_ratio: 'float',
+                u_view_pan_snap_timer: 'float',
+                u_view_panning: 'bool'
+            }
+        });
+    }
+
+    destroyUniformBuffers() {
+        for (const uniform_buffer of Object.values(this.uniform_buffers)) {
+            uniform_buffer.destroy();
+        }
+        this.uniform_buffers = {};
     }
 
     // Update list of any custom scripts (either at scene-level or data-source-level)
@@ -777,8 +808,17 @@ export default class Scene {
         program.use();
         style.setup();
 
-        program.uniform('1f', 'u_time', this.animated ? (((+new Date()) - this.start_time) / 1000) : 0);
-        this.view.setupProgram(program);
+        const time = this.animated ? (((+new Date()) - this.start_time) / 1000) : 0;
+        const view_uniform_buffer = this.uniform_buffers.TangramView;
+        if (view_uniform_buffer) {
+            view_uniform_buffer.setUniform('u_time', time);
+            this.view.setupProgram(program, view_uniform_buffer);
+            program.bindUniformBlocks();
+        }
+        else {
+            program.uniform('1f', 'u_time', time);
+            this.view.setupProgram(program);
+        }
 
         for (let i in this.lights) {
             this.lights[i].setupProgram(program);
@@ -1184,7 +1224,7 @@ export default class Scene {
 
         // Optionally set GL context (used when initializing or re-initializing GL resources)
         for (let style in this.styles) {
-            this.styles[style].setGL(this.gl);
+            this.styles[style].setGL(this.gl, this.uniform_buffers);
         }
 
         this.dirty = true;

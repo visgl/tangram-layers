@@ -30,6 +30,7 @@ class FakeScene {
         this.resizeCalls = [];
         this.viewCalls = [];
         this.updateCalls = [];
+        this.onUpdate = null;
         this.destroyed = false;
         this.loadArguments = null;
         this.deferred = createDeferred();
@@ -57,6 +58,9 @@ class FakeScene {
 
     update(options) {
         this.updateCalls.push(options);
+        if (this.onUpdate) {
+            this.onUpdate();
+        }
         return true;
     }
 
@@ -110,6 +114,7 @@ describe('TangramLayer demo bridge', function () {
         assert.strictEqual(parentElement.children[0], deckCanvas);
         assert.strictEqual(scene.options.webGLContext, device.handle);
         assert.isTrue(scene.options.disableRenderLoop);
+        assert.isTrue(scene.options.enableUniformBuffers);
         assert.isFunction(scene.options.webGLContextScope);
         assert.isFunction(scene.options.requestRedraw);
         assert.deepEqual(scene.resizeCalls, [[800, 600]]);
@@ -171,6 +176,35 @@ describe('TangramLayer demo bridge', function () {
         assert.deepInclude(gl.calls, ['clear', gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT]);
         assert.deepInclude(gl.calls, ['useProgram', 'deck-program']);
         assert.deepInclude(gl.calls, ['activeTexture', 'deck-active-texture']);
+    });
+
+    it('restores indexed and generic uniform-buffer bindings outside luma state tracking', async function () {
+        const { layer, gl } = createLayer();
+        const scene = FakeScene.instances[0];
+        await flushPromises();
+        scene.deferred.resolve();
+        await flushPromises();
+
+        scene.uniform_buffers = { TangramView: { binding: 0 } };
+        gl.uniformBuffer = 'deck-generic-buffer';
+        gl.indexedUniformBuffers[0] = {
+            buffer: 'deck-view-buffer',
+            start: 16,
+            size: 64
+        };
+        scene.onUpdate = () => {
+            gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, 'tangram-view-buffer');
+            gl.bindBuffer(gl.UNIFORM_BUFFER, 'tangram-generic-buffer');
+        };
+
+        layer.draw();
+
+        assert.deepEqual(gl.indexedUniformBuffers[0], {
+            buffer: 'deck-view-buffer',
+            start: 16,
+            size: 64
+        });
+        assert.strictEqual(gl.uniformBuffer, 'deck-generic-buffer');
     });
 
     it('honors inherited visibility and zero opacity', async function () {
@@ -331,11 +365,33 @@ function createFakeWebGLContext(canvas) {
         ACTIVE_TEXTURE: 0x84E0,
         DEPTH_BUFFER_BIT: 0x0100,
         STENCIL_BUFFER_BIT: 0x0400,
+        UNIFORM_BUFFER: 0x8A11,
+        UNIFORM_BUFFER_BINDING: 0x8A28,
+        UNIFORM_BUFFER_START: 0x8A29,
+        UNIFORM_BUFFER_SIZE: 0x8A2A,
         lumaState: { program: 'deck-program' },
+        uniformBuffer: null,
+        indexedUniformBuffers: {},
         calls: [],
         getParameter(parameter) {
             if (parameter === this.ACTIVE_TEXTURE) {
                 return 'deck-active-texture';
+            }
+            if (parameter === this.UNIFORM_BUFFER_BINDING) {
+                return this.uniformBuffer;
+            }
+            return null;
+        },
+        getIndexedParameter(parameter, binding) {
+            const state = this.indexedUniformBuffers[binding] || {};
+            if (parameter === this.UNIFORM_BUFFER_BINDING) {
+                return state.buffer || null;
+            }
+            if (parameter === this.UNIFORM_BUFFER_START) {
+                return state.start || 0;
+            }
+            if (parameter === this.UNIFORM_BUFFER_SIZE) {
+                return state.size || 0;
             }
             return null;
         },
@@ -345,6 +401,20 @@ function createFakeWebGLContext(canvas) {
         },
         activeTexture(texture) {
             this.calls.push(['activeTexture', texture]);
+        },
+        bindBuffer(target, buffer) {
+            this.uniformBuffer = buffer;
+            this.calls.push(['bindBuffer', target, buffer]);
+        },
+        bindBufferBase(target, binding, buffer) {
+            this.indexedUniformBuffers[binding] = { buffer, start: 0, size: 0 };
+            this.uniformBuffer = buffer;
+            this.calls.push(['bindBufferBase', target, binding, buffer]);
+        },
+        bindBufferRange(target, binding, buffer, start, size) {
+            this.indexedUniformBuffers[binding] = { buffer, start, size };
+            this.uniformBuffer = buffer;
+            this.calls.push(['bindBufferRange', target, binding, buffer, start, size]);
         },
         depthMask(value) {
             this.calls.push(['depthMask', value]);

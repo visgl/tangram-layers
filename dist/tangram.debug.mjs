@@ -2059,7 +2059,9 @@ var parseShaderErrors = /*@__PURE__*/getDefaultExportFromCjs(glShaderErrorsExpor
 // Regex patterns
 const re_pragma = /^\s*#pragma.*$/gm; // for removing unused pragmas after shader block injection
 const re_continue_line = /\\\s*\n/mg; // for removing backslash line continuations
-
+const re_fragment_color = /\bgl_FragColor\b/g;
+const re_texture_2d = /\btexture2D\b/g;
+const re_texture_cube = /\btextureCube\b/g;
 class ShaderProgram {
   constructor(gl, vertex_source, fragment_source, options) {
     options = options || {};
@@ -2084,6 +2086,7 @@ class ShaderProgram {
     this.dependent_uniforms = options.uniforms;
     this.uniforms = {}; // program locations of uniforms, lazily added as each uniform is set
     this.uniform_blocks = Object.assign({}, options.uniform_blocks || {});
+    this.glsl_version = options.glsl_version || (Object.keys(this.uniform_blocks).length > 0 ? 300 : 100);
     this.attribs = {}; // program locations of vertex attributes, lazily added as each attribute is accessed
 
     this.vertex_source = vertex_source;
@@ -2183,6 +2186,7 @@ class ShaderProgram {
 
     // Inject uniform definitions
     this.ensureUniforms(this.dependent_uniforms);
+    this.ensureUniformBlocks();
 
     // Build & inject extensions & defines
     // This is done *after* code injection so that we can add defines for which code points were injected
@@ -2195,6 +2199,7 @@ class ShaderProgram {
     }
     defines['TANGRAM_VERTEX_SHADER'] = true;
     defines['TANGRAM_FRAGMENT_SHADER'] = false;
+    defines['TANGRAM_WEBGL2'] = this.glsl_version >= 300;
     this.computed_vertex_source = precision + ShaderProgram.buildDefineString(defines) + this.computed_vertex_source;
 
     // Precision qualifier only valid in fragment shader
@@ -2207,6 +2212,10 @@ class ShaderProgram {
     // Replace multi-line backslashes
     this.computed_vertex_source = this.computed_vertex_source.replace(re_continue_line, '');
     this.computed_fragment_source = this.computed_fragment_source.replace(re_continue_line, '');
+    if (this.glsl_version >= 300) {
+      this.computed_vertex_source = ShaderProgram.convertToWebGL2(this.computed_vertex_source, 'vertex');
+      this.computed_fragment_source = ShaderProgram.convertToWebGL2(this.computed_fragment_source, 'fragment');
+    }
 
     // Compile & set uniforms to cached values
     try {
@@ -2337,6 +2346,24 @@ class ShaderProgram {
     // this could cause some issues with certain #pragmas, or other functions that might expect #defines
     this.computed_vertex_source = inject.join('\n') + this.computed_vertex_source;
     this.computed_fragment_source = inject.join('\n') + this.computed_fragment_source;
+  }
+
+  // Replace standalone uniforms with std140 uniform-block declarations.
+  ensureUniformBlocks() {
+    for (const uniform_buffer of Object.values(this.uniform_blocks)) {
+      const uniforms = uniform_buffer.layout && uniform_buffer.layout.uniforms;
+      if (!uniforms || typeof uniform_buffer.getDeclaration !== 'function') {
+        continue;
+      }
+      for (const name of Object.keys(uniforms)) {
+        const _declaration = new RegExp(`^\\s*uniform\\s+[A-Za-z0-9_]+\\s+${escapeRegExp(name)}\\s*;\\s*(?://.*)?$`, 'gm');
+        this.computed_vertex_source = this.computed_vertex_source.replace(_declaration, '');
+        this.computed_fragment_source = this.computed_fragment_source.replace(_declaration, '');
+      }
+      const declaration = uniform_buffer.getDeclaration() + '\n';
+      this.computed_vertex_source = declaration + this.computed_vertex_source;
+      this.computed_fragment_source = declaration + this.computed_fragment_source;
+    }
   }
 
   // Set uniforms from a JS object, with inferred types
@@ -2646,6 +2673,18 @@ ShaderProgram.resetCurrent = function () {
   ShaderProgram.current = null;
 };
 
+// Upgrade the subset of GLSL ES 1.00 syntax emitted by Tangram to GLSL ES 3.00.
+ShaderProgram.convertToWebGL2 = function (source, type) {
+  source = source.replace(re_texture_2d, 'texture').replace(re_texture_cube, 'texture');
+  if (type === 'vertex') {
+    source = source.replace(/\battribute\b/g, 'in').replace(/\bvarying\b/g, 'out');
+  } else if (type === 'fragment') {
+    source = source.replace(/\bvarying\b/g, 'in').replace(re_fragment_color, 'tangram_FragColor');
+    source = source.replace(/(precision\s+(?:lowp|mediump|highp)\s+float\s*;)/, '$1\nlayout(location = 0) out vec4 tangram_FragColor;');
+  }
+  return '#version 300 es\n' + source;
+};
+
 // Turn an object of key/value pairs into single string of #define statements
 ShaderProgram.buildDefineString = function (defines) {
   var define_str = '';
@@ -2679,6 +2718,9 @@ ShaderProgram.addBlock = function (key, ...blocks) {
   ShaderProgram.blocks[key] = ShaderProgram.blocks[key] || [];
   ShaderProgram.blocks[key].push(...blocks);
 };
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 // Remove all global shader blocks for a given key
 ShaderProgram.removeBlock = function (key) {
@@ -6706,6 +6748,7 @@ var Style = {
     }
     WorkerBroker$1.removeTarget(this.main_thread_target);
     this.gl = null;
+    this.uniform_blocks = null;
     this.initialized = false;
   },
   reset() {},
@@ -6993,8 +7036,9 @@ var Style = {
   },
   /*** GL state and rendering ***/
 
-  setGL(gl) {
+  setGL(gl, uniform_blocks = {}) {
     this.gl = gl;
+    this.uniform_blocks = uniform_blocks;
     this.max_texture_size = Texture.getMaxTextureSize(this.gl);
   },
   makeMesh(vertex_data, vertex_elements, options = {}) {
@@ -7072,6 +7116,7 @@ var Style = {
       name: this.name,
       defines,
       uniforms,
+      uniform_blocks: this.uniform_blocks,
       blocks,
       block_scopes,
       extensions
@@ -7081,6 +7126,7 @@ var Style = {
         name: this.name + ' (selection)',
         defines: selection_defines,
         uniforms,
+        uniform_blocks: this.uniform_blocks,
         blocks,
         block_scopes,
         extensions
@@ -14006,13 +14052,24 @@ class View {
   }
 
   // Set general uniforms that must be updated once per program
-  setupProgram(program) {
-    program.uniform('2fv', 'u_resolution', [this.size.device.width, this.size.device.height]);
-    program.uniform('3fv', 'u_map_position', [this.center.meters.x, this.center.meters.y, this.zoom]);
-    program.uniform('1f', 'u_meters_per_pixel', this.meters_per_pixel);
-    program.uniform('1f', 'u_device_pixel_ratio', Utils.device_pixel_ratio);
-    program.uniform('1f', 'u_view_pan_snap_timer', this.pan_snap_timer);
-    program.uniform('1i', 'u_view_panning', this.panning);
+  setupProgram(program, uniform_buffer) {
+    if (uniform_buffer) {
+      uniform_buffer.setUniforms({
+        u_resolution: [this.size.device.width, this.size.device.height],
+        u_map_position: [this.center.meters.x, this.center.meters.y, this.zoom],
+        u_meters_per_pixel: this.meters_per_pixel,
+        u_device_pixel_ratio: Utils.device_pixel_ratio,
+        u_view_pan_snap_timer: this.pan_snap_timer,
+        u_view_panning: this.panning
+      });
+    } else {
+      program.uniform('2fv', 'u_resolution', [this.size.device.width, this.size.device.height]);
+      program.uniform('3fv', 'u_map_position', [this.center.meters.x, this.center.meters.y, this.zoom]);
+      program.uniform('1f', 'u_meters_per_pixel', this.meters_per_pixel);
+      program.uniform('1f', 'u_device_pixel_ratio', Utils.device_pixel_ratio);
+      program.uniform('1f', 'u_view_pan_snap_timer', this.pan_snap_timer);
+      program.uniform('1i', 'u_view_panning', this.panning);
+    }
     this.camera.setupProgram(program);
   }
 
@@ -21297,6 +21354,236 @@ topojson.WorkerBroker.addTarget('self', SceneWorker);
 
 define(['./shared'], (function (topojson) { 'use strict';
 
+// WebGL2 uniform buffer wrapper with std140-compatible CPU-side packing.
+
+const BLOCK_ALIGNMENT = 16;
+const INVALID_INDEX = 0xFFFFFFFF;
+const TYPES = {
+  float: {
+    alignment: 4,
+    size: 4,
+    components: 1,
+    kind: 'float'
+  },
+  int: {
+    alignment: 4,
+    size: 4,
+    components: 1,
+    kind: 'int'
+  },
+  bool: {
+    alignment: 4,
+    size: 4,
+    components: 1,
+    kind: 'int'
+  },
+  vec2: {
+    alignment: 8,
+    size: 8,
+    components: 2,
+    kind: 'float'
+  },
+  ivec2: {
+    alignment: 8,
+    size: 8,
+    components: 2,
+    kind: 'int'
+  },
+  vec3: {
+    alignment: 16,
+    size: 16,
+    components: 3,
+    kind: 'float'
+  },
+  ivec3: {
+    alignment: 16,
+    size: 16,
+    components: 3,
+    kind: 'int'
+  },
+  vec4: {
+    alignment: 16,
+    size: 16,
+    components: 4,
+    kind: 'float'
+  },
+  ivec4: {
+    alignment: 16,
+    size: 16,
+    components: 4,
+    kind: 'int'
+  },
+  mat3: {
+    alignment: 16,
+    size: 48,
+    columns: 3,
+    rows: 3,
+    kind: 'float'
+  },
+  mat4: {
+    alignment: 16,
+    size: 64,
+    columns: 4,
+    rows: 4,
+    kind: 'float'
+  }
+};
+class UniformBuffer {
+  static isSupported(gl) {
+    return Boolean(gl && gl.UNIFORM_BUFFER != null && typeof gl.bindBufferBase === 'function' && typeof gl.getUniformBlockIndex === 'function' && typeof gl.uniformBlockBinding === 'function');
+  }
+  static createLayout(uniforms) {
+    let offset = 0;
+    const layout = {};
+    for (const [name, type] of Object.entries(uniforms)) {
+      const type_info = TYPES[type];
+      if (!type_info) {
+        throw new Error(`UniformBuffer: unsupported std140 type '${type}' for '${name}'`);
+      }
+      offset = align(offset, type_info.alignment);
+      layout[name] = Object.assign({
+        name,
+        type,
+        offset
+      }, type_info);
+      offset += type_info.size;
+    }
+    return {
+      byte_length: align(offset, BLOCK_ALIGNMENT),
+      uniforms: layout
+    };
+  }
+  constructor(gl, options = {}) {
+    if (!UniformBuffer.isSupported(gl)) {
+      throw new Error('UniformBuffer requires a WebGL2 context');
+    }
+    if (!options.name) {
+      throw new Error('UniformBuffer requires a uniform block name');
+    }
+    this.gl = gl;
+    this.name = options.name;
+    this.binding = options.binding || 0;
+    this.usage = options.usage || gl.DYNAMIC_DRAW;
+    this.layout = UniformBuffer.createLayout(options.uniforms || {});
+    this.data = new ArrayBuffer(this.layout.byte_length);
+    this.data_view = new DataView(this.data);
+    this.buffer = gl.createBuffer();
+    this.program_indices = new WeakMap();
+    this.dirty = false;
+    if (!this.buffer) {
+      throw new Error(`UniformBuffer: could not create buffer '${this.name}'`);
+    }
+    this.withBufferBinding(() => {
+      gl.bufferData(gl.UNIFORM_BUFFER, this.layout.byte_length, this.usage);
+    });
+  }
+  get byteLength() {
+    return this.layout.byte_length;
+  }
+  getDeclaration() {
+    const declarations = Object.values(this.layout.uniforms).map(uniform => `    ${uniform.type} ${uniform.name};`).join('\n');
+    return `layout(std140) uniform ${this.name} {\n${declarations}\n};`;
+  }
+  setUniform(name, value) {
+    const uniform = this.layout.uniforms[name];
+    if (!uniform) {
+      throw new Error(`UniformBuffer '${this.name}' has no uniform '${name}'`);
+    }
+    const values = typeof value === 'number' || typeof value === 'boolean' ? [value] : value;
+    const required = uniform.columns ? uniform.columns * uniform.rows : uniform.components;
+    if (!values || values.length !== required) {
+      throw new Error(`UniformBuffer '${this.name}.${name}' requires ${required} values`);
+    }
+    if (uniform.columns) {
+      for (let column = 0; column < uniform.columns; column++) {
+        for (let row = 0; row < uniform.rows; row++) {
+          const index = column * uniform.rows + row;
+          this.data_view.setFloat32(uniform.offset + column * BLOCK_ALIGNMENT + row * 4, values[index], true);
+        }
+      }
+    } else {
+      for (let component = 0; component < uniform.components; component++) {
+        const offset = uniform.offset + component * 4;
+        if (uniform.kind === 'int') {
+          this.data_view.setInt32(offset, values[component], true);
+        } else {
+          this.data_view.setFloat32(offset, values[component], true);
+        }
+      }
+    }
+    this.dirty = true;
+    return this;
+  }
+  setUniforms(uniforms) {
+    for (const [name, value] of Object.entries(uniforms)) {
+      this.setUniform(name, value);
+    }
+    return this;
+  }
+  upload() {
+    if (!this.buffer || !this.dirty) {
+      return false;
+    }
+    this.withBufferBinding(() => {
+      this.gl.bufferSubData(this.gl.UNIFORM_BUFFER, 0, new Uint8Array(this.data));
+    });
+    this.dirty = false;
+    return true;
+  }
+  bind(program) {
+    if (!this.buffer || !program) {
+      return false;
+    }
+    let program_binding = this.program_indices.get(program);
+    if (program_binding === undefined) {
+      const index = this.gl.getUniformBlockIndex(program, this.name);
+      if (index === this.gl.INVALID_INDEX || index === INVALID_INDEX) {
+        program_binding = null;
+      } else {
+        program_binding = {
+          index
+        };
+        this.gl.uniformBlockBinding(program, index, this.binding);
+      }
+      this.program_indices.set(program, program_binding);
+    }
+    if (program_binding == null) {
+      return false;
+    }
+    this.upload();
+    this.gl.bindBufferBase(this.gl.UNIFORM_BUFFER, this.binding, this.buffer);
+    return true;
+  }
+  invalidateProgram(program) {
+    if (this.program_indices && program) {
+      this.program_indices.delete(program);
+    }
+  }
+  destroy() {
+    if (this.buffer) {
+      this.gl.deleteBuffer(this.buffer);
+      this.buffer = null;
+    }
+    this.gl = null;
+    this.data = null;
+    this.data_view = null;
+    this.program_indices = null;
+  }
+  withBufferBinding(callback) {
+    const gl = this.gl;
+    const previous = typeof gl.getParameter === 'function' && gl.UNIFORM_BUFFER_BINDING != null ? gl.getParameter(gl.UNIFORM_BUFFER_BINDING) : null;
+    gl.bindBuffer(gl.UNIFORM_BUFFER, this.buffer);
+    try {
+      return callback();
+    } finally {
+      gl.bindBuffer(gl.UNIFORM_BUFFER, previous);
+    }
+  }
+}
+function align(value, alignment) {
+  return Math.ceil(value / alignment) * alignment;
+}
+
 // Get a value for a nested property with path provided as an array (`a.b.c` => ['a', 'b', 'c'])
 function getPropertyPath(object, path) {
   var _getPropertyPathTarge;
@@ -28474,6 +28761,8 @@ class Scene {
     this.owns_gl = !this.external_gl;
     this.webgl_context_scope = options.webGLContextScope;
     this.redraw_callback = options.requestRedraw;
+    this.enable_uniform_buffers = options.enableUniformBuffers === true;
+    this.uniform_buffers = {};
     this.lights = null;
     this.background = null;
     this.createListeners();
@@ -28600,6 +28889,7 @@ class Scene {
       topojson.Texture.destroy(this.gl);
       this.style_manager.destroy(this.gl);
       this.styles = {};
+      this.destroyUniformBuffers();
       topojson.ShaderProgram.reset();
       if (this.owns_gl) {
         // Force context loss only when Tangram created and owns it
@@ -28654,6 +28944,31 @@ class Scene {
     topojson.VertexArrayObject.init(this.gl);
     this.render_states = new RenderStateManager(this.gl);
     this.media_capture.setCanvas(this.canvas, this.gl);
+    this.createUniformBuffers();
+  }
+  createUniformBuffers() {
+    if (!this.enable_uniform_buffers || !UniformBuffer.isSupported(this.gl)) {
+      return;
+    }
+    this.uniform_buffers.TangramView = new UniformBuffer(this.gl, {
+      name: 'TangramView',
+      binding: 0,
+      uniforms: {
+        u_resolution: 'vec2',
+        u_time: 'float',
+        u_map_position: 'vec3',
+        u_meters_per_pixel: 'float',
+        u_device_pixel_ratio: 'float',
+        u_view_pan_snap_timer: 'float',
+        u_view_panning: 'bool'
+      }
+    });
+  }
+  destroyUniformBuffers() {
+    for (const uniform_buffer of Object.values(this.uniform_buffers)) {
+      uniform_buffer.destroy();
+    }
+    this.uniform_buffers = {};
   }
 
   // Update list of any custom scripts (either at scene-level or data-source-level)
@@ -29108,8 +29423,16 @@ class Scene {
     }
     program.use();
     style.setup();
-    program.uniform('1f', 'u_time', this.animated ? (+new Date() - this.start_time) / 1000 : 0);
-    this.view.setupProgram(program);
+    const time = this.animated ? (+new Date() - this.start_time) / 1000 : 0;
+    const view_uniform_buffer = this.uniform_buffers.TangramView;
+    if (view_uniform_buffer) {
+      view_uniform_buffer.setUniform('u_time', time);
+      this.view.setupProgram(program, view_uniform_buffer);
+      program.bindUniformBlocks();
+    } else {
+      program.uniform('1f', 'u_time', time);
+      this.view.setupProgram(program);
+    }
     for (let i in this.lights) {
       this.lights[i].setupProgram(program);
     }
@@ -29583,7 +29906,7 @@ class Scene {
 
     // Optionally set GL context (used when initializing or re-initializing GL resources)
     for (let style in this.styles) {
-      this.styles[style].setGL(this.gl);
+      this.styles[style].setGL(this.gl, this.uniform_buffers);
     }
     this.dirty = true;
   }
@@ -30385,236 +30708,6 @@ function extendLeaflet(options) {
   }
 }
 
-// WebGL2 uniform buffer wrapper with std140-compatible CPU-side packing.
-
-const BLOCK_ALIGNMENT = 16;
-const INVALID_INDEX = 0xFFFFFFFF;
-const TYPES = {
-  float: {
-    alignment: 4,
-    size: 4,
-    components: 1,
-    kind: 'float'
-  },
-  int: {
-    alignment: 4,
-    size: 4,
-    components: 1,
-    kind: 'int'
-  },
-  bool: {
-    alignment: 4,
-    size: 4,
-    components: 1,
-    kind: 'int'
-  },
-  vec2: {
-    alignment: 8,
-    size: 8,
-    components: 2,
-    kind: 'float'
-  },
-  ivec2: {
-    alignment: 8,
-    size: 8,
-    components: 2,
-    kind: 'int'
-  },
-  vec3: {
-    alignment: 16,
-    size: 16,
-    components: 3,
-    kind: 'float'
-  },
-  ivec3: {
-    alignment: 16,
-    size: 16,
-    components: 3,
-    kind: 'int'
-  },
-  vec4: {
-    alignment: 16,
-    size: 16,
-    components: 4,
-    kind: 'float'
-  },
-  ivec4: {
-    alignment: 16,
-    size: 16,
-    components: 4,
-    kind: 'int'
-  },
-  mat3: {
-    alignment: 16,
-    size: 48,
-    columns: 3,
-    rows: 3,
-    kind: 'float'
-  },
-  mat4: {
-    alignment: 16,
-    size: 64,
-    columns: 4,
-    rows: 4,
-    kind: 'float'
-  }
-};
-class UniformBuffer {
-  static isSupported(gl) {
-    return Boolean(gl && gl.UNIFORM_BUFFER != null && typeof gl.bindBufferBase === 'function' && typeof gl.getUniformBlockIndex === 'function' && typeof gl.uniformBlockBinding === 'function');
-  }
-  static createLayout(uniforms) {
-    let offset = 0;
-    const layout = {};
-    for (const [name, type] of Object.entries(uniforms)) {
-      const type_info = TYPES[type];
-      if (!type_info) {
-        throw new Error(`UniformBuffer: unsupported std140 type '${type}' for '${name}'`);
-      }
-      offset = align(offset, type_info.alignment);
-      layout[name] = Object.assign({
-        name,
-        type,
-        offset
-      }, type_info);
-      offset += type_info.size;
-    }
-    return {
-      byte_length: align(offset, BLOCK_ALIGNMENT),
-      uniforms: layout
-    };
-  }
-  constructor(gl, options = {}) {
-    if (!UniformBuffer.isSupported(gl)) {
-      throw new Error('UniformBuffer requires a WebGL2 context');
-    }
-    if (!options.name) {
-      throw new Error('UniformBuffer requires a uniform block name');
-    }
-    this.gl = gl;
-    this.name = options.name;
-    this.binding = options.binding || 0;
-    this.usage = options.usage || gl.DYNAMIC_DRAW;
-    this.layout = UniformBuffer.createLayout(options.uniforms || {});
-    this.data = new ArrayBuffer(this.layout.byte_length);
-    this.data_view = new DataView(this.data);
-    this.buffer = gl.createBuffer();
-    this.program_indices = new WeakMap();
-    this.dirty = false;
-    if (!this.buffer) {
-      throw new Error(`UniformBuffer: could not create buffer '${this.name}'`);
-    }
-    this.withBufferBinding(() => {
-      gl.bufferData(gl.UNIFORM_BUFFER, this.layout.byte_length, this.usage);
-    });
-  }
-  get byteLength() {
-    return this.layout.byte_length;
-  }
-  getDeclaration() {
-    const declarations = Object.values(this.layout.uniforms).map(uniform => `    ${uniform.type} ${uniform.name};`).join('\n');
-    return `layout(std140) uniform ${this.name} {\n${declarations}\n};`;
-  }
-  setUniform(name, value) {
-    const uniform = this.layout.uniforms[name];
-    if (!uniform) {
-      throw new Error(`UniformBuffer '${this.name}' has no uniform '${name}'`);
-    }
-    const values = typeof value === 'number' || typeof value === 'boolean' ? [value] : value;
-    const required = uniform.columns ? uniform.columns * uniform.rows : uniform.components;
-    if (!values || values.length !== required) {
-      throw new Error(`UniformBuffer '${this.name}.${name}' requires ${required} values`);
-    }
-    if (uniform.columns) {
-      for (let column = 0; column < uniform.columns; column++) {
-        for (let row = 0; row < uniform.rows; row++) {
-          const index = column * uniform.rows + row;
-          this.data_view.setFloat32(uniform.offset + column * BLOCK_ALIGNMENT + row * 4, values[index], true);
-        }
-      }
-    } else {
-      for (let component = 0; component < uniform.components; component++) {
-        const offset = uniform.offset + component * 4;
-        if (uniform.kind === 'int') {
-          this.data_view.setInt32(offset, values[component], true);
-        } else {
-          this.data_view.setFloat32(offset, values[component], true);
-        }
-      }
-    }
-    this.dirty = true;
-    return this;
-  }
-  setUniforms(uniforms) {
-    for (const [name, value] of Object.entries(uniforms)) {
-      this.setUniform(name, value);
-    }
-    return this;
-  }
-  upload() {
-    if (!this.buffer || !this.dirty) {
-      return false;
-    }
-    this.withBufferBinding(() => {
-      this.gl.bufferSubData(this.gl.UNIFORM_BUFFER, 0, new Uint8Array(this.data));
-    });
-    this.dirty = false;
-    return true;
-  }
-  bind(program) {
-    if (!this.buffer || !program) {
-      return false;
-    }
-    let program_binding = this.program_indices.get(program);
-    if (program_binding === undefined) {
-      const index = this.gl.getUniformBlockIndex(program, this.name);
-      if (index === this.gl.INVALID_INDEX || index === INVALID_INDEX) {
-        program_binding = null;
-      } else {
-        program_binding = {
-          index
-        };
-        this.gl.uniformBlockBinding(program, index, this.binding);
-      }
-      this.program_indices.set(program, program_binding);
-    }
-    if (program_binding == null) {
-      return false;
-    }
-    this.upload();
-    this.gl.bindBufferBase(this.gl.UNIFORM_BUFFER, this.binding, this.buffer);
-    return true;
-  }
-  invalidateProgram(program) {
-    if (this.program_indices && program) {
-      this.program_indices.delete(program);
-    }
-  }
-  destroy() {
-    if (this.buffer) {
-      this.gl.deleteBuffer(this.buffer);
-      this.buffer = null;
-    }
-    this.gl = null;
-    this.data = null;
-    this.data_view = null;
-    this.program_indices = null;
-  }
-  withBufferBinding(callback) {
-    const gl = this.gl;
-    const previous = typeof gl.getParameter === 'function' && gl.UNIFORM_BUFFER_BINDING != null ? gl.getParameter(gl.UNIFORM_BUFFER_BINDING) : null;
-    gl.bindBuffer(gl.UNIFORM_BUFFER, this.buffer);
-    try {
-      return callback();
-    } finally {
-      gl.bindBuffer(gl.UNIFORM_BUFFER, previous);
-    }
-  }
-}
-function align(value, alignment) {
-  return Math.ceil(value / alignment) * alignment;
-}
-
 /*jshint worker: true*/
 
 
@@ -30664,7 +30757,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = '93cdb6956419d13e54f6681ec67757811cc398f1';
+	Tangram.debug.SHA = '8115ddf86b0c906d7f457a3aad793f803b78940e';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}
