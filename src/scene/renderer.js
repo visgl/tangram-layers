@@ -1,4 +1,5 @@
 import Scene from './scene';
+import LumaDeviceRenderer from '../gpu/luma_device_renderer';
 
 /**
  * Embeddable Tangram renderer driven by a host-provided frame.
@@ -10,7 +11,9 @@ import Scene from './scene';
 export default class Renderer {
 
     constructor(config, options = {}) {
-        this.scene = Scene.create(config, Object.assign({}, options, {
+        this.device_renderer = options.device ? new LumaDeviceRenderer(options.device) : null;
+        const device_options = this.device_renderer ? this.device_renderer.getSceneOptions() : {};
+        this.scene = Scene.create(config, Object.assign({}, options, device_options, {
             disableRenderLoop: true,
             externalCamera: true
         }));
@@ -66,7 +69,11 @@ export default class Renderer {
     }
 
     destroy() {
-        return this.scene.destroy();
+        const result = this.scene.destroy();
+        if (this.device_renderer) {
+            this.device_renderer.destroy();
+        }
+        return result;
     }
 
 }

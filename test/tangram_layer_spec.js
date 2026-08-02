@@ -1,6 +1,7 @@
 import { assert } from 'chai';
 import createTangramLayerClass from '../demos/deck/tangram-layer';
 import Camera from '../src/scene/camera';
+import LumaDeviceRenderer from '../src/gpu/luma_device_renderer';
 
 const IDENTITY_MATRIX = [
     1, 0, 0, 0,
@@ -98,7 +99,9 @@ FakeScene.create = function(source, options) {
 
 class FakeRenderer {
     constructor(source, options) {
-        this.scene = FakeScene.create(source, Object.assign({}, options, {
+        this.device_renderer = options.device ? new LumaDeviceRenderer(options.device) : null;
+        const device_options = this.device_renderer ? this.device_renderer.getSceneOptions() : {};
+        this.scene = FakeScene.create(source, Object.assign({}, options, device_options, {
             disableRenderLoop: true,
             externalCamera: true
         }));
@@ -141,6 +144,9 @@ class FakeRenderer {
 
     destroy() {
         this.scene.destroy();
+        if (this.device_renderer) {
+            this.device_renderer.destroy();
+        }
     }
 }
 
@@ -765,6 +771,7 @@ describe('TangramLayer demo bridge', function () {
         const gl = createFakeWebGLContext(deckCanvas);
         const device = {
             type: 'webgl',
+            info: { shadingLanguage: 'glsl' },
             handle: gl,
             limits: { maxTextureDimension2D: 8192 },
             bufferOptions: [],

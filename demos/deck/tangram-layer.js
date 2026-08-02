@@ -2,14 +2,6 @@ const DECK_TO_TANGRAM_ZOOM_OFFSET = 1;
 const VIEW_EPSILON = 1e-7;
 const DECK_WORLD_SIZE = 512;
 const TANGRAM_HALF_WORLD_METERS = 20037508.342789244;
-// luma.gl Buffer usage flags. Kept local so the demo does not add a package dependency.
-const LUMA_BUFFER_COPY_DST = 0x0008;
-const LUMA_BUFFER_INDEX = 0x0010;
-const LUMA_BUFFER_VERTEX = 0x0020;
-const LUMA_BUFFER_UNIFORM = 0x0040;
-const LUMA_TEXTURE_COPY_DST = 0x0002;
-const LUMA_TEXTURE_SAMPLE = 0x0004;
-const LUMA_TEXTURE_RENDER = 0x0010;
 
 /**
  * Injects an API key into every Nextzen source in a Tangram scene.
@@ -73,7 +65,7 @@ export function getExternalCameraFrame(viewport) {
 
 /**
  * Creates an experimental deck.gl layer class that renders Tangram through
- * deck.gl's WebGL device handle.
+ * Tangram's luma.gl device renderer.
  *
  * The class is dependency-injected so this demo does not add deck.gl as a Tangram
  * package dependency.
@@ -196,13 +188,13 @@ export function createTangramLayerClass({ Layer, Renderer }) {
                 lastViewportError: null,
                 reportedViewportError: null,
                 loadPromise: null,
-                webglScopeDepth: 0,
-                meshRenderer: createDeviceMeshRenderer(device)
+                webglScopeDepth: 0
             };
 
             let renderer;
             try {
                 renderer = Renderer.create(props.scene, {
+                    device,
                     webGLContext: gl,
                     webGLContextScope: callback => this._withDeviceState(record, callback),
                     requestRedraw: () => {
@@ -210,20 +202,12 @@ export function createTangramLayerClass({ Layer, Renderer }) {
                             record.owner.setNeedsRedraw();
                         }
                     },
-                    enableUniformBuffers: true,
-                    uniformBufferFactory: options => createDeviceUniformBuffer(device, options),
-                    shaderFactory: options => createDeviceShader(device, options),
-                    meshBufferFactory: options => createDeviceMeshBuffer(device, options),
-                    textureFactory: options => createDeviceTexture(device, options),
-                    maxTextureSize: device.limits && device.limits.maxTextureDimension2D,
-                    meshRenderer: record.meshRenderer,
                     continuousZoom: true,
                     highDensityDisplay: true,
                     logLevel: 'warn'
                 });
             }
             catch (error) {
-                record.meshRenderer.destroy();
                 this._raiseBridgeError(normalizeError(error));
                 return null;
             }
@@ -349,7 +333,6 @@ export function createTangramLayerClass({ Layer, Renderer }) {
         _destroyTangramRecord(record) {
             if (!record.destroyed) {
                 record.destroyed = true;
-                record.meshRenderer.destroy();
                 record.renderer.destroy();
             }
         }
@@ -449,238 +432,6 @@ function normalizeError(value) {
         return new Error(value.message);
     }
     return new Error(String(value));
-}
-
-function createDeviceUniformBuffer(device, options) {
-    if (options.usage !== 'uniform') {
-        throw new Error(`unsupported Tangram buffer usage '${options.usage}'`);
-    }
-    return device.createBuffer({
-        id: `tangram-${options.id}`,
-        byteLength: options.byteLength,
-        usage: LUMA_BUFFER_UNIFORM | LUMA_BUFFER_COPY_DST
-    });
-}
-
-function createDeviceShader(device, options) {
-    return device.createShader({
-        id: `tangram-${options.id}`,
-        language: 'glsl',
-        stage: options.stage,
-        source: options.source
-    });
-}
-
-function createDeviceMeshBuffer(device, options) {
-    const usage = options.usage === 'vertex' ? LUMA_BUFFER_VERTEX :
-        options.usage === 'index' ? LUMA_BUFFER_INDEX : null;
-    if (usage == null) {
-        throw new Error(`unsupported Tangram mesh buffer usage '${options.usage}'`);
-    }
-    const props = {
-        id: `tangram-${options.id}`,
-        usage: usage | LUMA_BUFFER_COPY_DST,
-        data: options.data
-    };
-    if (options.indexType) {
-        props.indexType = options.indexType;
-    }
-    return device.createBuffer(props);
-}
-
-function createDeviceTexture(device, options) {
-    const mipmapped = options.filtering === 'mipmap';
-    const filter = options.filtering === 'nearest' ? 'nearest' : 'linear';
-    const texture = device.createTexture({
-        id: `tangram-${options.id}`,
-        width: options.width,
-        height: options.height,
-        format: 'rgba8unorm',
-        usage: LUMA_TEXTURE_COPY_DST | LUMA_TEXTURE_SAMPLE | LUMA_TEXTURE_RENDER,
-        mipLevels: mipmapped ? Math.floor(Math.log2(Math.max(options.width, options.height))) + 1 : 1,
-        sampler: {
-            minFilter: filter,
-            magFilter: filter,
-            mipmapFilter: mipmapped ? 'linear' : 'none',
-            addressModeU: options.repeat ? 'repeat' : 'clamp-to-edge',
-            addressModeV: options.repeat ? 'repeat' : 'clamp-to-edge'
-        }
-    });
-
-    try {
-        if (options.data != null) {
-            if (ArrayBuffer.isView(options.data) || options.data instanceof ArrayBuffer) {
-                texture.writeData(options.data, {
-                    width: options.width,
-                    height: options.height
-                });
-            }
-            else {
-                texture.copyExternalImage({
-                    image: options.data,
-                    width: options.width,
-                    height: options.height,
-                    flipY: options.flipY,
-                    premultipliedAlpha: options.premultipliedAlpha
-                });
-            }
-            if (mipmapped) {
-                texture.generateMipmapsWebGL();
-            }
-        }
-        return texture;
-    }
-    catch (error) {
-        texture.destroy();
-        throw error;
-    }
-}
-
-function createDeviceMeshRenderer(device) {
-    const pipeline_cache = new WeakMap();
-    const vertex_array_cache = new WeakMap();
-    const pipelines = new Set();
-    const vertex_arrays = new Set();
-
-    return {
-        drawMesh({ mesh, program, renderPass, renderState, visibleTime }) {
-            if (!renderPass || !program || !program.vertex_shader_resource ||
-                !program.fragment_shader_resource) {
-                throw new Error('Tangram luma renderer requires an active render pass and shader resources');
-            }
-
-            const descriptor = mesh.getDrawDescriptor();
-            const pipeline = getPipeline(program, mesh.vertex_layout, descriptor, renderState);
-
-            if (mesh.uniforms) {
-                program.saveUniforms(mesh.uniforms);
-                program.setUniforms(mesh.uniforms, false);
-            }
-
-            try {
-                program.uniform('1f', 'u_visible_time', visibleTime);
-                const bindings = program.getBindings();
-                assertPipelineBindings(pipeline, bindings);
-                const vertex_array = getVertexArray(mesh, pipeline, descriptor);
-                renderPass.setPipeline(pipeline);
-                renderPass.setBindings(bindings);
-                renderPass.setVertexArray(vertex_array);
-                const draw_succeeded = renderPass.draw({
-                    vertexCount: descriptor.indexBuffer ? undefined : descriptor.vertexCount,
-                    indexCount: descriptor.indexBuffer ? descriptor.indexCount : undefined,
-                    uniforms: program.getUniformValues()
-                });
-                return draw_succeeded === false && pipeline.isPending === true;
-            }
-            finally {
-                if (mesh.uniforms) {
-                    program.restoreUniforms(mesh.uniforms);
-                }
-            }
-        },
-
-        destroy() {
-            for (const vertex_array of vertex_arrays) {
-                vertex_array.destroy();
-            }
-            for (const pipeline of pipelines) {
-                pipeline.destroy();
-            }
-            vertex_arrays.clear();
-            pipelines.clear();
-        }
-    };
-
-    function getPipeline(program, vertex_layout, descriptor, render_state) {
-        let layouts = pipeline_cache.get(program);
-        if (!layouts) {
-            layouts = new WeakMap();
-            pipeline_cache.set(program, layouts);
-        }
-        let topologies = layouts.get(vertex_layout);
-        if (!topologies) {
-            topologies = new Map();
-            layouts.set(vertex_layout, topologies);
-        }
-        let states = topologies.get(descriptor.topology);
-        if (!states) {
-            states = new Map();
-            topologies.set(descriptor.topology, states);
-        }
-        const state_key = JSON.stringify(render_state || {});
-        let pipeline = states.get(state_key);
-        if (!pipeline) {
-            const pipeline_options = {
-                id: `tangram-${program.name || program.id}-${descriptor.topology}-${states.size}`,
-                vs: program.vertex_shader_resource,
-                fs: program.fragment_shader_resource,
-                bufferLayout: [descriptor.bufferLayout],
-                topology: descriptor.topology,
-                disableWarnings: true
-            };
-            if (render_state) {
-                pipeline_options.parameters = render_state;
-            }
-            pipeline = device.createRenderPipeline(pipeline_options);
-            states.set(state_key, pipeline);
-            pipelines.add(pipeline);
-        }
-        return pipeline;
-    }
-
-    function getVertexArray(mesh, pipeline, descriptor) {
-        let pipelines_for_mesh = vertex_array_cache.get(mesh);
-        if (!pipelines_for_mesh) {
-            pipelines_for_mesh = new WeakMap();
-            vertex_array_cache.set(mesh, pipelines_for_mesh);
-        }
-        let vertex_array = pipelines_for_mesh.get(pipeline);
-        if (vertex_array) {
-            return vertex_array;
-        }
-
-        vertex_array = device.createVertexArray({
-            id: `tangram-mesh-${mesh.id}-${pipeline.id}`,
-            shaderLayout: pipeline.shaderLayout,
-            bufferLayout: pipeline.bufferLayout
-        });
-        const attributes = new Map(
-            pipeline.shaderLayout.attributes.map(attribute => [attribute.name, attribute])
-        );
-        for (const attribute of descriptor.bufferLayout.attributes) {
-            const shader_attribute = attributes.get(attribute.attribute);
-            if (shader_attribute) {
-                vertex_array.setBuffer(shader_attribute.location, descriptor.vertexBuffer);
-            }
-        }
-        for (const attribute of descriptor.staticAttributes) {
-            const shader_attribute = attributes.get(attribute.attribute);
-            if (shader_attribute) {
-                vertex_array.setConstantWebGL(
-                    shader_attribute.location,
-                    new Float32Array(attribute.value)
-                );
-            }
-        }
-        if (descriptor.indexBuffer) {
-            vertex_array.setIndexBuffer(descriptor.indexBuffer);
-        }
-
-        pipelines_for_mesh.set(pipeline, vertex_array);
-        vertex_arrays.add(vertex_array);
-        return vertex_array;
-    }
-}
-
-function assertPipelineBindings(pipeline, bindings) {
-    for (const binding of pipeline.shaderLayout.bindings) {
-        if (binding.type !== 'uniform' && binding.type !== 'texture') {
-            throw new Error(`Tangram luma renderer does not support '${binding.type}' bindings`);
-        }
-        if (!bindings[binding.name]) {
-            throw new Error(`Tangram luma renderer is missing '${binding.name}' binding`);
-        }
-    }
 }
 
 export default createTangramLayerClass;

@@ -46,13 +46,16 @@ export default class LumaDeviceRenderer {
 
     /** Creates a shader in the language supported by the active device. */
     createShader(options) {
-        return this.device.createShader({
+        const shader_options = {
             id: `tangram-${options.id}`,
             language: options.language || this.device.info.shadingLanguage,
             stage: options.stage,
-            source: options.source,
-            entryPoint: options.entryPoint
-        });
+            source: options.source
+        };
+        if (options.entryPoint) {
+            shader_options.entryPoint = options.entryPoint;
+        }
+        return this.device.createShader(shader_options);
     }
 
     /** Creates a luma.gl vertex or index buffer. */

@@ -48,4 +48,31 @@ describe('Renderer', function () {
         assert.isTrue(renderer.scene.updateScene.calledWith({ renderPass: render_pass }));
         assert.isTrue(renderer.scene.processTasks.calledOnce);
     });
+
+    it('owns the luma device backend and installs its scene resource factories', function () {
+        const device = {
+            type: 'webgpu',
+            info: { shadingLanguage: 'wgsl' },
+            limits: { maxTextureDimension2D: 4096 },
+            createBuffer() {},
+            createShader() {},
+            createTexture() {},
+            createRenderPipeline() {},
+            createVertexArray() {}
+        };
+        const renderer = Renderer.create({}, { device });
+        sinon.spy(renderer.device_renderer, 'destroy');
+
+        assert.strictEqual(renderer.device_renderer.device, device);
+        assert.strictEqual(renderer.scene.mesh_renderer, renderer.device_renderer);
+        assert.isTrue(renderer.scene.enable_uniform_buffers);
+        assert.strictEqual(renderer.scene.max_texture_size, 4096);
+        assert.isFunction(renderer.scene.uniform_buffer_factory);
+        assert.isFunction(renderer.scene.shader_factory);
+        assert.isFunction(renderer.scene.mesh_buffer_factory);
+        assert.isFunction(renderer.scene.texture_factory);
+
+        renderer.destroy();
+        assert.isTrue(renderer.device_renderer.destroy.calledOnce);
+    });
 });
