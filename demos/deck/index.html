@@ -20,7 +20,7 @@
       </label>
       <label class="control checkbox-control">
         <input id="basemap-visible" type="checkbox" checked>
-        Show Tangram basemap
+        Show TangramBasemapLayer
       </label>
       <p class="hint">
         Blue landmarks and the orange path are deck.gl layers. Right-drag or
@@ -33,6 +33,6 @@
     </p>
     <!-- Serve /Users/ibgreen/code as the web root so this resolves to the sibling checkout. -->
     <script src="../../../deck.gl/modules/main/dist.min.js"></script>
-    <script type="module" src="./app.js?bridge=shared-context"></script>
+    <script type="module" src="./app.js?bridge=renderer-entry"></script>
   </body>
 </html>
