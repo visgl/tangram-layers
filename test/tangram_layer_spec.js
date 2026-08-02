@@ -257,6 +257,7 @@ describe('TangramLayer demo bridge', function () {
         assert.isFunction(scene.options.meshRenderer.drawMesh);
         assert.isFunction(scene.options.webGLContextScope);
         assert.isFunction(scene.options.requestRedraw);
+        assert.strictEqual(scene.options.canvas, deckCanvas);
         assert.deepEqual(scene.resizeCalls, [[800, 600]]);
         assert.deepEqual(scene.viewCalls, [{
             lng: -74.009764,
@@ -341,6 +342,24 @@ describe('TangramLayer demo bridge', function () {
 
         layer.draw();
         assert.lengthOf(scene.resizeCalls, 1, 'unchanged dimensions do not resize again');
+    });
+
+    it('renders on a WebGPU device without reading its raw handle', async function () {
+        const { layer, device } = createLayer({}, { deviceType: 'webgpu' });
+        const scene = FakeScene.instances[0];
+        await flushPromises();
+        scene.deferred.resolve();
+        await flushPromises();
+
+        const render_pass = createFakeRenderPass();
+        layer.draw({ renderPass: render_pass });
+
+        assert.strictEqual(scene.options.device, device);
+        assert.strictEqual(scene.options.shaderLanguage, 'wgsl');
+        assert.notProperty(scene.options, 'webGLContext');
+        assert.notProperty(scene.options, 'webGLContextScope');
+        assert.deepEqual(scene.updateCalls, [{ force: true, renderPass: render_pass }]);
+        assert.deepEqual(device.stateCalls, []);
     });
 
     it('builds and caches luma render pipelines and vertex arrays for Tangram meshes', async function () {
@@ -740,7 +759,7 @@ describe('TangramLayer demo bridge', function () {
         assert.strictEqual(loadCallbackCount, 0);
     });
 
-    function createLayer(props = {}) {
+    function createLayer(props = {}, { deviceType = 'webgl' } = {}) {
         const parentElement = document.createElement('div');
         parentElement.style.position = 'relative';
         const deckCanvas = document.createElement('canvas');
@@ -889,6 +908,16 @@ describe('TangramLayer demo bridge', function () {
                 this.stateCalls.push('pop');
             }
         };
+        if (deviceType === 'webgpu') {
+            device.type = 'webgpu';
+            device.info.shadingLanguage = 'wgsl';
+            delete device.handle;
+            Object.defineProperty(device, 'handle', {
+                get() {
+                    throw new Error('WebGPU device.handle must not be read');
+                }
+            });
+        }
         const deck = {
             viewports: null,
             getCanvas: () => deckCanvas,

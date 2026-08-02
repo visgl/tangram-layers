@@ -547,12 +547,17 @@ export default class ShaderProgram {
         for (const [uniform_name, texture] of Object.entries(this.texture_uniforms)) {
             const resource = texture && texture.getResource && texture.getResource();
             if (resource) {
-                bindings[uniform_name] = resource;
+                if (this.shader_language === 'glsl') {
+                    bindings[uniform_name] = resource;
+                }
                 // WebGL reflects a sampler array through its base uniform name,
                 // while Tangram assigns each texture through an indexed name.
                 // Preserve the first element as the base binding expected by luma.
                 if (uniform_name.endsWith('[0]')) {
                     bindings[uniform_name.slice(0, -3)] = resource;
+                }
+                else if (this.shader_language !== 'glsl' && !uniform_name.includes('[')) {
+                    bindings[uniform_name] = resource;
                 }
             }
         }

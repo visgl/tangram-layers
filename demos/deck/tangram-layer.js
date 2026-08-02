@@ -115,20 +115,27 @@ export function createTangramLayerClass({ Layer, Renderer }) {
                 return;
             }
 
-            record.scene.withWebGLContext(() => {
+            const renderTangram = () => {
                 const update_options = { force: true };
                 renderPass = renderPass || this.context.renderPass;
                 if (renderPass) {
                     update_options.renderPass = renderPass;
                 }
-                if (record.renderer.render(update_options)) {
+                if (record.renderer.render(update_options) && record.gl) {
                     // Tangram's depth and stencil buffers are internal implementation
                     // details. Preserve its color output but leave a clean depth buffer
                     // for deck layers that follow this basemap.
                     record.gl.depthMask(true);
                     record.gl.clear(record.gl.DEPTH_BUFFER_BIT | record.gl.STENCIL_BUFFER_BIT);
                 }
-            });
+            };
+
+            if (record.device.type === 'webgl') {
+                record.scene.withWebGLContext(renderTangram);
+            }
+            else {
+                renderTangram();
+            }
         }
 
         finalizeState() {
@@ -148,23 +155,31 @@ export function createTangramLayerClass({ Layer, Renderer }) {
 
             const deckCanvas = this.context.deck && this.context.deck.getCanvas();
             const device = this.context.device;
-            const gl = device && device.handle;
             if (!deckCanvas) {
                 this._raiseBridgeError(new Error('deck canvas is required'));
                 return null;
             }
-            if (!device || device.type !== 'webgl' || !gl ||
-                typeof device.pushState !== 'function' || typeof device.popState !== 'function' ||
+            if (!device || (device.type !== 'webgl' && device.type !== 'webgpu') ||
                 typeof device.createBuffer !== 'function' || typeof device.createShader !== 'function' ||
                 typeof device.createTexture !== 'function' ||
                 typeof device.createRenderPipeline !== 'function' ||
                 typeof device.createVertexArray !== 'function') {
-                this._raiseBridgeError(new Error('a deck.gl WebGLDevice is required'));
+                this._raiseBridgeError(new Error('a deck.gl luma.gl Device is required'));
                 return null;
             }
-            if (gl.canvas !== deckCanvas) {
-                this._raiseBridgeError(new Error('deck canvas and WebGLDevice handle must share a context'));
-                return null;
+
+            let gl = null;
+            if (device.type === 'webgl') {
+                gl = device.handle;
+                if (!gl || typeof device.pushState !== 'function' ||
+                    typeof device.popState !== 'function') {
+                    this._raiseBridgeError(new Error('a deck.gl WebGLDevice is required'));
+                    return null;
+                }
+                if (gl.canvas !== deckCanvas) {
+                    this._raiseBridgeError(new Error('deck canvas and WebGLDevice handle must share a context'));
+                    return null;
+                }
             }
 
             const record = {
@@ -193,10 +208,9 @@ export function createTangramLayerClass({ Layer, Renderer }) {
 
             let renderer;
             try {
-                renderer = Renderer.create(props.scene, {
+                const renderer_options = {
                     device,
-                    webGLContext: gl,
-                    webGLContextScope: callback => this._withDeviceState(record, callback),
+                    canvas: deckCanvas,
                     requestRedraw: () => {
                         if (!record.disposed && record.owner.setNeedsRedraw) {
                             record.owner.setNeedsRedraw();
@@ -205,7 +219,13 @@ export function createTangramLayerClass({ Layer, Renderer }) {
                     continuousZoom: true,
                     highDensityDisplay: true,
                     logLevel: 'warn'
-                });
+                };
+                if (gl) {
+                    renderer_options.webGLContext = gl;
+                    renderer_options.webGLContextScope = callback =>
+                        this._withDeviceState(record, callback);
+                }
+                renderer = Renderer.create(props.scene, renderer_options);
             }
             catch (error) {
                 this._raiseBridgeError(normalizeError(error));

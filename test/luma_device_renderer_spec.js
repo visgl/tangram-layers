@@ -35,7 +35,7 @@ describe('LumaDeviceRenderer', function () {
         assert.strictEqual(options.maxTextureSize, 4096);
     });
 
-    it('rejects scalar uniforms on WebGPU draw calls', function () {
+    it('omits WebGL compatibility uniforms from WebGPU draw calls', function () {
         const device = createDevice([]);
         device.type = 'webgpu';
         device.info.shadingLanguage = 'wgsl';
@@ -44,12 +44,17 @@ describe('LumaDeviceRenderer', function () {
         const program = createProgram({ u_scale: 2 });
         const mesh = createMesh();
 
-        assert.throws(() => renderer.drawMesh({
+        assert.isFalse(renderer.drawMesh({
             mesh,
             program,
             renderPass: render_pass,
             visibleTime: 0
-        }), 'requires all uniforms to use buffer bindings');
+        }));
+        assert.deepEqual(render_pass.draws, [{
+            vertexCount: 3,
+            indexCount: undefined,
+            uniforms: undefined
+        }]);
     });
 
     it('submits a buffer-bound WebGPU mesh without WebGL compatibility uniforms', function () {
@@ -77,6 +82,56 @@ describe('LumaDeviceRenderer', function () {
         assert.isTrue(device.pipeline.destroyed);
         assert.isTrue(device.vertex_array.destroyed);
     });
+
+    it('snapshots tile uniforms per mesh for deferred WebGPU execution', function () {
+        const device = createDevice([]);
+        device.type = 'webgpu';
+        device.info.shadingLanguage = 'wgsl';
+        device.pipelineBindings = [{ type: 'uniform', name: 'TangramTile' }];
+        const renderer = new LumaDeviceRenderer(device);
+        const render_pass = createRenderPass();
+        const tile_data = new ArrayBuffer(16);
+        const tile_values = new Float32Array(tile_data);
+        const shared_tile_buffer = { id: 'shared-tile-buffer' };
+        const program = createProgram({});
+        program.uniform_blocks = {
+            TangramTile: { data: tile_data, byteLength: tile_data.byteLength }
+        };
+        program.getBindings = () => ({ TangramTile: shared_tile_buffer });
+        const first_mesh = createMesh();
+        const second_mesh = createMesh();
+        second_mesh.id = 2;
+
+        tile_values[0] = 1;
+        renderer.drawMesh({
+            mesh: first_mesh,
+            program,
+            renderPass: render_pass,
+            visibleTime: 0
+        });
+        tile_values[0] = 2;
+        renderer.drawMesh({
+            mesh: second_mesh,
+            program,
+            renderPass: render_pass,
+            visibleTime: 0
+        });
+
+        assert.lengthOf(device.buffers, 2);
+        assert.notStrictEqual(render_pass.bindings[0].TangramTile, shared_tile_buffer);
+        assert.notStrictEqual(
+            render_pass.bindings[0].TangramTile,
+            render_pass.bindings[1].TangramTile
+        );
+        assert.deepEqual(
+            render_pass.bindings.map(bindings => bindings.TangramTile.writes[0][0]),
+            [1, 2]
+        );
+
+        renderer.destroy();
+        assert.isTrue(device.buffers[0].destroyed);
+        assert.isTrue(device.buffers[1].destroyed);
+    });
 });
 
 function createDevice(calls) {
@@ -84,9 +139,26 @@ function createDevice(calls) {
         type: 'webgl',
         info: { shadingLanguage: 'glsl' },
         limits: { maxTextureDimension2D: 4096 },
+        buffers: [],
         createBuffer(options) {
             calls.push(['buffer', options]);
-            return { destroy() {}, write() {} };
+            const buffer = {
+                options,
+                writes: [],
+                destroyed: false,
+                destroy() {
+                    this.destroyed = true;
+                },
+                write(data) {
+                    this.writes.push(Array.from(new Float32Array(
+                        data.buffer,
+                        data.byteOffset,
+                        data.byteLength / Float32Array.BYTES_PER_ELEMENT
+                    )));
+                }
+            };
+            this.buffers.push(buffer);
+            return buffer;
         },
         createShader(options) {
             calls.push(['shader', options]);
@@ -106,7 +178,10 @@ function createDevice(calls) {
         createRenderPipeline(options) {
             this.pipeline = {
                 id: options.id,
-                shaderLayout: { attributes: [{ name: 'a_position', location: 0 }], bindings: [] },
+                shaderLayout: {
+                    attributes: [{ name: 'a_position', location: 0 }],
+                    bindings: this.pipelineBindings || []
+                },
                 bufferLayout: options.bufferLayout,
                 isPending: false,
                 destroyed: false,
@@ -170,8 +245,11 @@ function createMesh() {
 function createRenderPass() {
     return {
         draws: [],
+        bindings: [],
         setPipeline() {},
-        setBindings() {},
+        setBindings(bindings) {
+            this.bindings.push(bindings);
+        },
         setVertexArray() {},
         draw(options) {
             this.draws.push(options);

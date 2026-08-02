@@ -491,11 +491,20 @@ export var Style = {
             extensions = [extensions];
         }
 
+        let vertex_shader_src = this.vertex_shader_src;
+        let fragment_shader_src = this.fragment_shader_src;
+        if (this.shader_language === 'wgsl') {
+            if (typeof this.getWGSLShaderSource !== 'function') {
+                throw new Error(`style '${this.name}' does not have a portable WGSL shader`);
+            }
+            vertex_shader_src = fragment_shader_src = this.getWGSLShaderSource();
+        }
+
         // Create shaders
         this.program = new ShaderProgram(
             this.gl,
-            this.vertex_shader_src,
-            this.fragment_shader_src,
+            vertex_shader_src,
+            fragment_shader_src,
             {
                 name: this.name,
                 defines,
@@ -512,7 +521,7 @@ export var Style = {
             }
         );
 
-        if (this.selection) {
+        if (this.selection && this.shader_language === 'glsl') {
             this.selection_program = new ShaderProgram(
                 this.gl,
                 this.vertex_shader_src,

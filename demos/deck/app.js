@@ -1,7 +1,12 @@
-import Tangram from '../../dist/tangram.debug.mjs?bridge=std140-fix';
+import Tangram from '../../dist/tangram.debug.mjs?bridge=webgpu-basemap-state-12';
 import createTangramLayerClass from './tangram-layer.js?bridge=std140-fix';
+import {webgpuAdapter} from 'https://esm.sh/@luma.gl/webgpu@9.4.0-alpha.1?bundle&deps=@luma.gl/core@9.4.0-alpha.1';
 
 const { Deck, Layer, PathLayer, ScatterplotLayer } = window.deck;
+const searchParams = new URLSearchParams(window.location.search);
+const requestedBackend = searchParams.get('device');
+const deviceType = requestedBackend || (navigator.gpu ? 'webgpu' : 'webgl');
+const useWebGPU = deviceType === 'webgpu';
 const TangramLayer = createTangramLayerClass({
     Layer,
     Renderer: Tangram.debug.Renderer
@@ -40,63 +45,95 @@ const bridgePath = [
 const statusElement = document.getElementById('status');
 const visibilityInput = document.getElementById('basemap-visible');
 const basemapSelect = document.getElementById('basemap-style');
+const deviceSelect = document.getElementById('device-type');
+deviceSelect.value = deviceType;
+if (useWebGPU) {
+    basemapSelect.value = 'positronRaster';
+    basemapSelect.querySelector('[value="streetsVector"]').disabled = true;
+}
 let basemapVisible = true;
 let basemapId = basemapSelect.value;
+let lastError = null;
 
 function setStatus(message, type = '') {
+    if (type === 'error') {
+        lastError = message;
+    }
+    else if (lastError) {
+        return;
+    }
     statusElement.textContent = message;
     statusElement.dataset.type = type;
 }
 
 function createLayers() {
     const basemap = CARTO_BASEMAPS[basemapId];
-    return [
+    const layers = [
         new TangramLayer({
             id: 'tangram-basemap',
             scene: basemap.scene,
             visible: basemapVisible,
             onSceneLoad: () => setStatus(`${basemap.label} loaded through Tangram`, 'success'),
             onSceneError: error => setStatus(error.message, 'error')
-        }),
+        })
+    ];
+    layers.push(
         new PathLayer({
             id: 'alignment-path',
             data: [{ path: bridgePath }],
             getPath: object => object.path,
-            getColor: [255, 96, 32, 220],
-            getWidth: 6,
+            getColor: () => [255, 96, 32, 220],
+            getWidth: () => 6,
             widthUnits: 'pixels'
         }),
         new ScatterplotLayer({
             id: 'alignment-landmarks',
             data: landmarks,
             getPosition: object => object.coordinates,
-            getRadius: 35,
-            getFillColor: [30, 144, 255, 220],
-            getLineColor: [255, 255, 255, 255],
+            getRadius: () => 35,
+            getFillColor: () => [30, 144, 255, 220],
+            getLineColor: () => [255, 255, 255, 255],
             lineWidthMinPixels: 2,
             stroked: true,
             pickable: true
-        })
-    ];
+        }));
+    return layers;
 }
 
-const deckInstance = new Deck({
-    parent: document.getElementById('deck-container'),
-    initialViewState,
-    controller: {
-        dragRotate: true,
-        touchRotate: true,
-        maxPitch: 50
-    },
-    layers: createLayers(),
-    getTooltip: ({ object }) => object && object.name,
-    onError: error => {
-        setStatus(error.message, 'error');
-        return true;
-    }
-});
+let deckInstance;
+try {
+    deckInstance = new Deck({
+        parent: document.getElementById('deck-container'),
+        deviceProps: useWebGPU ? {
+            type: 'webgpu',
+            adapters: [webgpuAdapter]
+        } : { type: 'webgl' },
+        initialViewState,
+        controller: {
+            dragRotate: true,
+            touchRotate: true,
+            maxPitch: 50
+        },
+        layers: createLayers(),
+        getTooltip: ({ object }) => object && object.name,
+        onError: error => {
+            setStatus(error.message, 'error');
+            return true;
+        }
+    });
+}
+catch (error) {
+    setStatus(error.message, 'error');
+    throw error;
+}
 
-setStatus(`Loading ${CARTO_BASEMAPS[basemapId].label} through Tangram…`);
+setStatus(`Loading ${CARTO_BASEMAPS[basemapId].label} through Tangram on ${deviceType}…`);
+
+deviceSelect.addEventListener('change', event => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('device', event.target.value);
+    window.location.assign(url);
+});
 
 visibilityInput.addEventListener('change', event => {
     basemapVisible = event.target.checked;
@@ -105,7 +142,7 @@ visibilityInput.addEventListener('change', event => {
 
 basemapSelect.addEventListener('change', event => {
     basemapId = event.target.value;
-    setStatus(`Loading ${CARTO_BASEMAPS[basemapId].label} through Tangram…`);
+    setStatus(`Loading ${CARTO_BASEMAPS[basemapId].label} through Tangram on ${deviceType}…`);
     deckInstance.setProps({ layers: createLayers() });
 });
 

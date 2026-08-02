@@ -13,8 +13,10 @@ export default class LumaDeviceRenderer {
         this.device = device;
         this.pipeline_cache = new WeakMap();
         this.vertex_array_cache = new WeakMap();
+        this.mesh_uniform_buffer_cache = new WeakMap();
         this.pipelines = new Set();
         this.vertex_arrays = new Set();
+        this.mesh_uniform_buffers = new Set();
     }
 
     /**
@@ -145,15 +147,13 @@ export default class LumaDeviceRenderer {
         try {
             program.uniform('1f', 'u_visible_time', visibleTime);
             const bindings = program.getBindings();
+            this.snapshotMeshUniformBindings(mesh, program, bindings);
             assertPipelineBindings(pipeline, bindings);
             const vertex_array = this.getVertexArray(mesh, pipeline, descriptor);
             renderPass.setPipeline(pipeline);
             renderPass.setBindings(bindings);
             renderPass.setVertexArray(vertex_array);
             const uniforms = program.getUniformValues();
-            if (this.device.type === 'webgpu' && Object.keys(uniforms).length > 0) {
-                throw new Error('Tangram WebGPU renderer requires all uniforms to use buffer bindings');
-            }
             const draw_succeeded = renderPass.draw({
                 vertexCount: descriptor.indexBuffer ? undefined : descriptor.vertexCount,
                 indexCount: descriptor.indexBuffer ? descriptor.indexCount : undefined,
@@ -170,14 +170,39 @@ export default class LumaDeviceRenderer {
 
     /** Destroys cached luma.gl pipelines and vertex arrays. */
     destroy() {
+        for (const uniform_buffer of this.mesh_uniform_buffers) {
+            uniform_buffer.destroy();
+        }
         for (const vertex_array of this.vertex_arrays) {
             vertex_array.destroy();
         }
         for (const pipeline of this.pipelines) {
             pipeline.destroy();
         }
+        this.mesh_uniform_buffers.clear();
         this.vertex_arrays.clear();
         this.pipelines.clear();
+    }
+
+    /** Copies per-tile uniform state into storage unique to the encoded mesh draw. */
+    snapshotMeshUniformBindings(mesh, program, bindings) {
+        const uniform_buffer = program.uniform_blocks && program.uniform_blocks.TangramTile;
+        if (!uniform_buffer || !uniform_buffer.data) {
+            return;
+        }
+
+        let buffer = this.mesh_uniform_buffer_cache.get(mesh);
+        if (!buffer) {
+            buffer = this.device.createBuffer({
+                id: `tangram-mesh-${mesh.id}-tile-uniforms`,
+                byteLength: uniform_buffer.byteLength,
+                usage: Buffer.UNIFORM | Buffer.COPY_DST
+            });
+            this.mesh_uniform_buffer_cache.set(mesh, buffer);
+            this.mesh_uniform_buffers.add(buffer);
+        }
+        buffer.write(new Uint8Array(uniform_buffer.data));
+        bindings.TangramTile = buffer;
     }
 
     getPipeline(program, vertex_layout, descriptor, render_state) {
@@ -208,7 +233,12 @@ export default class LumaDeviceRenderer {
                 disableWarnings: true
             };
             if (render_state) {
-                pipeline_options.parameters = render_state;
+                pipeline_options.parameters = this.device.type === 'webgpu' ?
+                    Object.assign({}, render_state, {
+                        cullMode: 'none',
+                        depthCompare: 'always',
+                        depthWriteEnabled: false
+                    }) : render_state;
             }
             pipeline = this.device.createRenderPipeline(pipeline_options);
             states.set(state_key, pipeline);
@@ -279,7 +309,13 @@ function validateDevice(device) {
 
 function assertPipelineBindings(pipeline, bindings) {
     for (const binding of pipeline.shaderLayout.bindings) {
-        if (binding.type !== 'uniform' && binding.type !== 'texture') {
+        if (binding.type === 'sampler' && binding.name.endsWith('Sampler')) {
+            const texture_name = binding.name.slice(0, -'Sampler'.length);
+            if (bindings[texture_name]) {
+                continue;
+            }
+        }
+        if (binding.type !== 'uniform' && binding.type !== 'texture' && binding.type !== 'sampler') {
             throw new Error(`Tangram luma renderer does not support '${binding.type}' bindings`);
         }
         if (!bindings[binding.name]) {

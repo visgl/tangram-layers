@@ -13,6 +13,13 @@
       <h1>TangramLayer bridge</h1>
       <p id="status" role="status"></p>
       <label class="control">
+        <span>Device</span>
+        <select id="device-type">
+          <option value="webgpu">WebGPU</option>
+          <option value="webgl">WebGL</option>
+        </select>
+      </label>
+      <label class="control">
         <span>Basemap</span>
         <select id="basemap-style">
           <option value="streetsVector">CARTO Streets (vector)</option>
@@ -29,7 +36,7 @@
       </p>
       <p class="source-link">
         <a
-          href="https://github.com/ibgreen/tangram/blob/ib/deck-layer/demos/deck/app.js#L54-L60"
+          href="https://github.com/ibgreen/tangram/blob/ib/tangram-on-webgpu/demos/deck/app.js"
           target="_blank"
           rel="noopener noreferrer"
         >View TangramBasemapLayer demo source</a>
@@ -40,6 +47,6 @@
       &copy; <a href="https://carto.com/attributions">CARTO</a>
     </p>
     <script src="https://unpkg.com/deck.gl@9.4.0-alpha.2/dist.min.js"></script>
-    <script type="module" src="./app.js?bridge=road-order"></script>
+    <script type="module" src="./app.js?bridge=webgpu-raster-overlays"></script>
   </body>
 </html>

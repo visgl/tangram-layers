@@ -9,6 +9,7 @@ import Geo from '../../utils/geo';
 
 import polygons_vs from './polygons_vertex.glsl';
 import polygons_fs from './polygons_fragment.glsl';
+import {buildPolygonsWGSL} from './polygons_wgsl';
 
 export const Polygons = Object.create(Style);
 
@@ -18,6 +19,10 @@ Object.assign(Polygons, {
     vertex_shader_src: polygons_vs,
     fragment_shader_src: polygons_fs,
     selection: true, // enable feature selection
+
+    getWGSLShaderSource() {
+        return buildPolygonsWGSL({ raster: this.raster === 'color' });
+    },
 
     init() {
         Style.init.apply(this, arguments);

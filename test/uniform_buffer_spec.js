@@ -366,6 +366,30 @@ describe('UniformBuffer', function () {
         delete Texture.textures.__deferred_texture_array_second;
     });
 
+    it('exposes only the base sampler-array binding to portable shaders', function () {
+        const first_resource = { handle: {} };
+        const second_resource = { handle: {} };
+        Texture.textures.__portable_texture_array_first = { getResource: () => first_resource };
+        Texture.textures.__portable_texture_array_second = { getResource: () => second_resource };
+
+        const program = new ShaderProgram(createFakeWebGL2Context(), '', '', {
+            shaderLanguage: 'wgsl',
+            deferTextureBindings: true
+        });
+        program.compiled = true;
+        program.setUniforms({
+            u_rasters: [
+                '__portable_texture_array_first',
+                '__portable_texture_array_second'
+            ]
+        });
+
+        assert.deepEqual(program.getTextureBindings(), { u_rasters: first_resource });
+
+        delete Texture.textures.__portable_texture_array_first;
+        delete Texture.textures.__portable_texture_array_second;
+    });
+
     it('upgrades legacy Tangram shader syntax and compiles a real WebGL2 uniform block', function () {
         const gl = document.createElement('canvas').getContext('webgl2');
         if (!gl) {
