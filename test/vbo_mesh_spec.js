@@ -1,6 +1,8 @@
 import { assert } from 'chai';
 import VBOMesh from '../src/gl/vbo_mesh';
 import Scene from '../src/scene/scene';
+import VertexLayout from '../src/gl/vertex_layout';
+import gl_constants from '../src/gl/constants';
 
 describe('VBOMesh render backend', function () {
     it('can allocate and destroy luma-style vertex and index buffer resources', function () {
@@ -50,6 +52,49 @@ describe('VBOMesh render backend', function () {
         mesh.destroy();
         assert.isTrue(resources[0].destroyed);
         assert.isTrue(resources[1].destroyed);
+    });
+
+    it('exposes a portable indexed draw descriptor', function () {
+        const vertex_data = new Int16Array([0, 1, 2, 3, 4, 5]);
+        const element_data = new Uint16Array([0, 1, 2]);
+        const resources = [];
+        const gl = {
+            STATIC_DRAW: 0x88E4,
+            TRIANGLES: 0x0004,
+            UNSIGNED_SHORT: 0x1403,
+            UNSIGNED_INT: 0x1405
+        };
+        const vertex_layout = new VertexLayout([
+            { name: 'a_position', size: 2, type: gl_constants.SHORT, normalized: false },
+            { name: 'a_color', size: 4, type: gl_constants.UNSIGNED_BYTE, normalized: true, static: [1, 1, 1, 1] }
+        ]);
+        const mesh = new VBOMesh(gl, vertex_data, element_data, vertex_layout, {
+            id: 'descriptor',
+            bufferFactory(options) {
+                const resource = { options, handle: {}, destroy() {} };
+                resources.push(resource);
+                return resource;
+            }
+        });
+
+        assert.deepEqual(mesh.getDrawDescriptor(), {
+            topology: 'triangle-list',
+            vertexCount: 3,
+            indexCount: 3,
+            indexType: 'uint16',
+            vertexBuffer: resources[0],
+            indexBuffer: resources[1],
+            bufferLayout: {
+                name: 'vertices',
+                byteStride: 4,
+                attributes: [
+                    { attribute: 'a_position', format: 'sint16x2', byteOffset: 0 }
+                ]
+            },
+            staticAttributes: [{ attribute: 'a_color', value: [1, 1, 1, 1] }]
+        });
+
+        mesh.destroy();
     });
 
     it('delegates a mesh draw with the active render pass before issuing raw WebGL calls', function () {

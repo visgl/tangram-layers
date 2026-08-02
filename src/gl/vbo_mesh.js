@@ -127,6 +127,21 @@ export default class VBOMesh  {
         return (visible_time < this.fade_in_time);
     }
 
+    // Return the renderer-independent resources and draw parameters for this mesh.
+    getDrawDescriptor() {
+        return {
+            topology: getTopology(this.draw_mode),
+            vertexCount: this.vertex_count,
+            indexCount: this.element_count,
+            indexType: this.toggle_element_array ?
+                (this.element_type === this.gl.UNSIGNED_SHORT ? 'uint16' : 'uint32') : null,
+            vertexBuffer: this.vertex_buffer_resource,
+            indexBuffer: this.element_buffer_resource || null,
+            bufferLayout: this.vertex_layout.getBufferLayout(),
+            staticAttributes: this.vertex_layout.getStaticAttributes()
+        };
+    }
+
     // Bind buffers and vertex attributes to prepare for rendering
     bind(program) {
         // Bind VAO for this progam, or create one
@@ -206,4 +221,21 @@ function createBufferResource(buffer_factory, options) {
         throw new Error('VBOMesh: bufferFactory must return a resource with handle and destroy');
     }
     return resource;
+}
+
+function getTopology(draw_mode) {
+    switch (draw_mode) {
+    case 0x0000:
+        return 'point-list';
+    case 0x0001:
+        return 'line-list';
+    case 0x0003:
+        return 'line-strip';
+    case 0x0004:
+        return 'triangle-list';
+    case 0x0005:
+        return 'triangle-strip';
+    default:
+        throw new Error(`VBOMesh: unsupported draw mode ${draw_mode}`);
+    }
 }
