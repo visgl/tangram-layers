@@ -1,6 +1,7 @@
 import { assert } from 'chai';
 import Context from '../src/gl/context';
 import ShaderProgram from '../src/gl/shader_program';
+import Texture from '../src/gl/texture';
 import UniformBuffer from '../src/gl/uniform_buffer';
 import {StyleManager} from '../src/styles/style_manager';
 import Camera from '../src/scene/camera';
@@ -235,6 +236,37 @@ describe('UniformBuffer', function () {
             u_time: 0.5,
             u_color: [1, 0, 0, 1]
         });
+    });
+
+    it('defers texture uniforms and exposes luma texture bindings to an injected renderer', function () {
+        const resource = { handle: {} };
+        const first_texture = {
+            bind() {
+                throw new Error('raw texture binding should be skipped');
+            },
+            getResource: () => resource
+        };
+        const second_resource = { handle: {} };
+        const second_texture = { getResource: () => second_resource };
+        Texture.textures.__deferred_texture_test = first_texture;
+        Texture.textures.__deferred_texture_override_test = second_texture;
+
+        const program = new ShaderProgram(createFakeWebGL2Context(), '', '', {
+            deferTextureBindings: true
+        });
+        program.compiled = true;
+        program.setTextureUniform('u_texture', '__deferred_texture_test');
+        assert.deepEqual(program.getTextureBindings(), { u_texture: resource });
+        assert.deepEqual(program.getBindings(), { u_texture: resource });
+
+        program.saveUniforms({ u_texture: true });
+        program.setTextureUniform('u_texture', '__deferred_texture_override_test');
+        assert.deepEqual(program.getTextureBindings(), { u_texture: second_resource });
+        program.restoreUniforms({ u_texture: true });
+        assert.deepEqual(program.getTextureBindings(), { u_texture: resource });
+
+        delete Texture.textures.__deferred_texture_test;
+        delete Texture.textures.__deferred_texture_override_test;
     });
 
     it('upgrades legacy Tangram shader syntax and compiles a real WebGL2 uniform block', function () {

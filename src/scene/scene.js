@@ -100,6 +100,8 @@ export default class Scene {
         this.shader_factory = options.shaderFactory;
         this.mesh_buffer_factory = options.meshBufferFactory;
         this.mesh_renderer = options.meshRenderer;
+        this.texture_factory = options.textureFactory;
+        this.max_texture_size = options.maxTextureSize;
         this.uniform_buffers = {};
 
         this.lights = null;
@@ -229,6 +231,7 @@ export default class Scene {
 
         if (this.gl) {
             Texture.destroy(this.gl);
+            Texture.clearResourceFactory(this.gl);
             this.style_manager.destroy(this.gl);
             this.styles = {};
             this.destroyUniformBuffers();
@@ -298,6 +301,7 @@ export default class Scene {
         if (this.owns_gl) {
             this.resizeMap(this.container.clientWidth, this.container.clientHeight);
         }
+        Texture.setResourceFactory(this.gl, this.texture_factory);
         VertexArrayObject.init(this.gl);
         this.render_states = new RenderStateManager(this.gl);
         this.media_capture.setCanvas(this.canvas, this.gl);
@@ -1258,7 +1262,9 @@ export default class Scene {
             this.styles[style].setGL(this.gl, this.uniform_buffers, {
                 shaderFactory: this.shader_factory,
                 meshBufferFactory: this.mesh_buffer_factory,
-                deferUniformBlocks: Boolean(this.mesh_renderer)
+                deferUniformBlocks: Boolean(this.mesh_renderer),
+                deferTextureBindings: Boolean(this.mesh_renderer),
+                maxTextureSize: this.max_texture_size
             });
         }
 

@@ -44,6 +44,8 @@ export default class ShaderProgram {
         this.uniforms = {}; // program locations of uniforms, lazily added as each uniform is set
         this.uniform_blocks = Object.assign({}, options.uniform_blocks || {});
         this.defer_uniform_blocks = options.deferUniformBlocks === true;
+        this.defer_texture_bindings = options.deferTextureBindings === true;
+        this.texture_uniforms = {};
         this.shader_factory = options.shaderFactory;
         this.vertex_shader_resource = null;
         this.fragment_shader_resource = null;
@@ -63,6 +65,7 @@ export default class ShaderProgram {
         this.destroyShaderResources();
         this.program = null;
         this.uniforms = {};
+        this.texture_uniforms = {};
         this.attribs = {};
         this.compiled = false;
     }
@@ -466,6 +469,23 @@ export default class ShaderProgram {
         return bindings;
     }
 
+    // Return luma.gl Texture resources keyed by sampler uniform name.
+    getTextureBindings() {
+        const bindings = {};
+        for (const [uniform_name, texture] of Object.entries(this.texture_uniforms)) {
+            const resource = texture && texture.getResource && texture.getResource();
+            if (resource) {
+                bindings[uniform_name] = resource;
+            }
+        }
+        return bindings;
+    }
+
+    // Return all portable shader resources for a renderer-owned draw call.
+    getBindings() {
+        return Object.assign({}, this.getUniformBlockBindings(), this.getTextureBindings());
+    }
+
     // Return the current scalar uniform values for renderers that own the draw call.
     getUniformValues() {
         const values = {};
@@ -487,6 +507,7 @@ export default class ShaderProgram {
             }
         }
         this.saved_texture_unit = this.texture_unit || 0;
+        this.saved_texture_uniforms = Object.assign({}, this.texture_uniforms);
     }
 
     // Restore some or all uniforms to saved values
@@ -500,6 +521,7 @@ export default class ShaderProgram {
             }
         }
         this.texture_unit = this.saved_texture_unit || 0;
+        this.texture_uniforms = this.saved_texture_uniforms || {};
     }
 
     // Set a texture uniform, finds texture by name or creates a new one
@@ -510,8 +532,11 @@ export default class ShaderProgram {
             return;
         }
 
-        texture.bind(this.texture_unit);
-        this.uniform('1i', uniform_name, this.texture_unit);
+        this.texture_uniforms[uniform_name] = texture;
+        if (!this.defer_texture_bindings) {
+            texture.bind(this.texture_unit);
+            this.uniform('1i', uniform_name, this.texture_unit);
+        }
         this.texture_unit++; // TODO: track max texture units and log/throw errors
     }
 

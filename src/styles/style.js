@@ -409,7 +409,8 @@ export var Style = {
         this.shader_factory = options.shaderFactory;
         this.mesh_buffer_factory = options.meshBufferFactory;
         this.defer_uniform_blocks = options.deferUniformBlocks === true;
-        this.max_texture_size = Texture.getMaxTextureSize(this.gl);
+        this.defer_texture_bindings = options.deferTextureBindings === true;
+        this.max_texture_size = options.maxTextureSize || Texture.getMaxTextureSize(this.gl);
     },
 
     makeMesh (vertex_data, vertex_elements, options = {}) {
@@ -499,6 +500,7 @@ export var Style = {
                 uniforms,
                 uniform_blocks: this.uniform_blocks,
                 deferUniformBlocks: this.defer_uniform_blocks,
+                deferTextureBindings: this.defer_texture_bindings,
                 shaderFactory: this.shader_factory,
                 blocks,
                 block_scopes,
@@ -517,6 +519,7 @@ export var Style = {
                     uniforms,
                     uniform_blocks: this.uniform_blocks,
                     deferUniformBlocks: this.defer_uniform_blocks,
+                    deferTextureBindings: this.defer_texture_bindings,
                     shaderFactory: this.shader_factory,
                     blocks,
                     block_scopes,

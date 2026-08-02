@@ -5,16 +5,22 @@ import subscribeMixin from '../utils/subscribe';
 import WorkerBroker from '../utils/worker_broker';
 import Context from './context';
 
+function isTextureElement(source) {
+    return (typeof HTMLCanvasElement !== 'undefined' && source instanceof HTMLCanvasElement) ||
+        (typeof HTMLVideoElement !== 'undefined' && source instanceof HTMLVideoElement) ||
+        (typeof HTMLImageElement !== 'undefined' && source instanceof HTMLImageElement && source.complete);
+}
+
 // GL texture wrapper object for keeping track of a global set of textures, keyed by a unique user-defined name
 export default class Texture {
 
     constructor(gl, name, options = {}) {
         options = Texture.sliceOptions(options); // exclude any non-texture-specific props
         this.gl = gl;
-        this.texture = gl.createTexture();
-        if (this.texture) {
-            this.valid = true;
-        }
+        this.texture_factory = options.textureFactory || Texture.getResourceFactory(gl);
+        this.texture_resource = null;
+        this.texture = this.texture_factory ? null : gl.createTexture();
+        this.valid = Boolean(this.texture_factory || this.texture);
         this.bind();
 
         this.name = name;
@@ -65,7 +71,13 @@ export default class Texture {
         if (!this.valid) {
             return;
         }
-        this.gl.deleteTexture(this.texture);
+        if (this.texture_resource) {
+            this.texture_resource.destroy();
+            this.texture_resource = null;
+        }
+        else {
+            this.gl.deleteTexture(this.texture);
+        }
         this.texture = null;
         if (Texture.textures[this.name] === this) {
             delete Texture.textures[this.name];
@@ -92,6 +104,10 @@ export default class Texture {
 
     bind(unit = 0) {
         if (!this.valid) {
+            return;
+        }
+
+        if (this.texture_factory) {
             return;
         }
 
@@ -245,6 +261,10 @@ export default class Texture {
             return;
         }
 
+        if (this.texture_factory) {
+            return this.updateTextureResource(source, options);
+        }
+
         this.bind();
 
         // Image or Canvas element
@@ -270,6 +290,41 @@ export default class Texture {
         Texture.trigger('update', this);
     }
 
+    // Replace the injected GPU texture resource because luma.gl texture dimensions are immutable.
+    updateTextureResource(source, options = {}) {
+        if (isTextureElement(source)) {
+            this.width = source.width;
+            this.height = source.height;
+        }
+
+        const resource = this.texture_factory({
+            id: this.name,
+            width: this.width,
+            height: this.height,
+            data: source,
+            filtering: options.filtering || this.filtering || 'linear',
+            repeat: options.repeat === true,
+            flipY: options.UNPACK_FLIP_Y_WEBGL !== false,
+            premultipliedAlpha: options.UNPACK_PREMULTIPLY_ALPHA_WEBGL === true
+        });
+        if (!resource || !resource.handle || typeof resource.destroy !== 'function') {
+            throw new Error(`Texture '${this.name}': texture factory must return a GPU resource`);
+        }
+
+        const previous_resource = this.texture_resource;
+        this.texture_resource = resource;
+        this.texture = resource.handle;
+        if (previous_resource) {
+            previous_resource.destroy();
+        }
+        Texture.trigger('update', this);
+    }
+
+    // Return the injected GPU resource for renderers that own texture bindings.
+    getResource() {
+        return this.texture_resource;
+    }
+
     // Determines appropriate filtering mode
     setFiltering(options = {}) {
         return Context.withContext(this.gl, () => {
@@ -286,6 +341,13 @@ export default class Texture {
         }
 
         options.filtering = options.filtering || 'linear';
+
+        if (this.texture_resource) {
+            this.filtering = options.filtering;
+            this.power_of_2 = Utils.isPowerOf2(this.width) && Utils.isPowerOf2(this.height);
+            Texture.trigger('update', this);
+            return;
+        }
 
         var gl = this.gl;
         this.bind();
@@ -472,7 +534,8 @@ Texture.sliceOptions = function(options) {
         TEXTURE_WRAP_S: options.TEXTURE_WRAP_S,
         TEXTURE_WRAP_T: options.TEXTURE_WRAP_T,
         UNPACK_FLIP_Y_WEBGL: options.UNPACK_FLIP_Y_WEBGL,
-        UNPACK_PREMULTIPLY_ALPHA_WEBGL: options.UNPACK_PREMULTIPLY_ALPHA_WEBGL
+        UNPACK_PREMULTIPLY_ALPHA_WEBGL: options.UNPACK_PREMULTIPLY_ALPHA_WEBGL,
+        textureFactory: options.textureFactory
     };
 };
 
@@ -560,9 +623,25 @@ Texture.getMaxTextureSize = function (gl) {
     return gl.getParameter(gl.MAX_TEXTURE_SIZE);
 };
 
+// Register an injected GPU texture factory for all textures created against a context.
+Texture.setResourceFactory = function (gl, texture_factory) {
+    if (texture_factory) {
+        Texture.resource_factories.set(gl, texture_factory);
+    }
+};
+
+Texture.getResourceFactory = function (gl) {
+    return Texture.resource_factories.get(gl);
+};
+
+Texture.clearResourceFactory = function (gl) {
+    Texture.resource_factories.delete(gl);
+};
+
 // Global set of textures, by name
 Texture.textures = {};
 Texture.texture_configs = {};
+Texture.resource_factories = new WeakMap();
 Texture.boundTexture = null;
 Texture.activeUnit = null;
 Texture.resetBindings = function () {
