@@ -60,7 +60,9 @@ export default class Renderer {
         if (force) {
             this.scene.dirty = true;
         }
-        return this.scene.updateScene({ renderPass });
+        const rendered = this.scene.updateScene({ renderPass });
+        this.scene.processTasks();
+        return rendered;
     }
 
     destroy() {

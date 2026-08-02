@@ -39,11 +39,13 @@ describe('Renderer', function () {
         const renderer = Renderer.create({});
         const render_pass = {};
         sinon.stub(renderer.scene, 'updateScene').returns(true);
+        sinon.spy(renderer.scene, 'processTasks');
 
         const rendered = renderer.render({ force: true, renderPass: render_pass });
 
         assert.isTrue(rendered);
         assert.isTrue(renderer.scene.dirty);
         assert.isTrue(renderer.scene.updateScene.calledWith({ renderPass: render_pass }));
+        assert.isTrue(renderer.scene.processTasks.calledOnce);
     });
 });

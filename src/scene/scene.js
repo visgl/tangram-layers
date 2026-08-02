@@ -517,9 +517,7 @@ export default class Scene {
         // Update and render the scene
         this.update();
 
-        // Pending background tasks
-        Task.setState({ user_moving_view: this.view.user_input_active });
-        Task.processAll();
+        this.processTasks();
 
         // Request the next frame if not scheduled to stop
         if (!this.render_loop_stop) {
@@ -529,6 +527,14 @@ export default class Scene {
             this.render_loop_stop = false;
             this.render_loop_active = false;
         }
+    }
+
+    // Advance background work normally serviced by Tangram's animation loop.
+    // Host-driven renderers must call this once per frame so tile labels and
+    // other incremental work can complete without a standalone render loop.
+    processTasks () {
+        Task.setState({ user_moving_view: this.view.user_input_active });
+        Task.processAll();
     }
 
     // Setup the render loop
