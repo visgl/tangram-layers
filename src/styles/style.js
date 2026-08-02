@@ -408,6 +408,7 @@ export var Style = {
         this.uniform_blocks = uniform_blocks;
         this.shader_factory = options.shaderFactory;
         this.mesh_buffer_factory = options.meshBufferFactory;
+        this.defer_uniform_blocks = options.deferUniformBlocks === true;
         this.max_texture_size = Texture.getMaxTextureSize(this.gl);
     },
 
@@ -497,6 +498,7 @@ export var Style = {
                 defines,
                 uniforms,
                 uniform_blocks: this.uniform_blocks,
+                deferUniformBlocks: this.defer_uniform_blocks,
                 shaderFactory: this.shader_factory,
                 blocks,
                 block_scopes,
@@ -514,6 +516,7 @@ export var Style = {
                     defines: selection_defines,
                     uniforms,
                     uniform_blocks: this.uniform_blocks,
+                    deferUniformBlocks: this.defer_uniform_blocks,
                     shaderFactory: this.shader_factory,
                     blocks,
                     block_scopes,

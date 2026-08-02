@@ -43,6 +43,7 @@ export default class ShaderProgram {
 
         this.uniforms = {}; // program locations of uniforms, lazily added as each uniform is set
         this.uniform_blocks = Object.assign({}, options.uniform_blocks || {});
+        this.defer_uniform_blocks = options.deferUniformBlocks === true;
         this.shader_factory = options.shaderFactory;
         this.vertex_shader_resource = null;
         this.fragment_shader_resource = null;
@@ -67,7 +68,7 @@ export default class ShaderProgram {
     }
 
     // Use program wrapper with simple state cache
-    use() {
+    use({ bindUniformBlocks = !this.defer_uniform_blocks } = {}) {
         if (!this.compiled) {
             return;
         }
@@ -77,7 +78,9 @@ export default class ShaderProgram {
             this.gl.useProgram(this.program);
         }
         ShaderProgram.current = this;
-        this.bindUniformBlocks();
+        if (bindUniformBlocks) {
+            this.bindUniformBlocks({ force: true });
+        }
     }
 
     compile() {
@@ -430,14 +433,14 @@ export default class ShaderProgram {
     // Register a WebGL2 uniform buffer with this program.
     setUniformBlock(name, uniform_buffer) {
         this.uniform_blocks[name] = uniform_buffer;
-        if (this.compiled) {
+        if (this.compiled && !this.defer_uniform_blocks) {
             uniform_buffer.bind(this.program);
         }
     }
 
     // Bind all registered WebGL2 uniform buffers to this program.
-    bindUniformBlocks() {
-        if (!this.compiled) {
+    bindUniformBlocks({ force = false } = {}) {
+        if (!this.compiled || (this.defer_uniform_blocks && !force)) {
             return;
         }
         for (const uniform_buffer of Object.values(this.uniform_blocks)) {

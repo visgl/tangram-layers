@@ -96,10 +96,12 @@ export default class VBOMesh  {
                 renderPass: options.renderPass,
                 visibleTime: visible_time
             });
-            return Boolean(needs_redraw) || visible_time < this.fade_in_time;
+            if (needs_redraw !== null) {
+                return Boolean(needs_redraw) || visible_time < this.fade_in_time;
+            }
         }
 
-        program.use();
+        program.use(options.meshRenderer ? { bindUniformBlocks: true } : undefined);
 
         if (this.uniforms) {
             program.saveUniforms(this.uniforms);

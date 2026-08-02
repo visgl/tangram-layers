@@ -1257,7 +1257,8 @@ export default class Scene {
         for (let style in this.styles) {
             this.styles[style].setGL(this.gl, this.uniform_buffers, {
                 shaderFactory: this.shader_factory,
-                meshBufferFactory: this.mesh_buffer_factory
+                meshBufferFactory: this.mesh_buffer_factory,
+                deferUniformBlocks: Boolean(this.mesh_renderer)
             });
         }
 

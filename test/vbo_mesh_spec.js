@@ -130,6 +130,40 @@ describe('VBOMesh render backend', function () {
         assert.strictEqual(program.use_calls, 0);
     });
 
+    it('falls back to raw drawing and forces uniform block bindings when requested', function () {
+        const use_options = [];
+        const program = {
+            use(options) {
+                use_options.push(options);
+            },
+            uniform() {}
+        };
+        const draw_calls = [];
+        const mesh = Object.assign(Object.create(VBOMesh.prototype), {
+            created_at: +new Date(),
+            fade_in_time: 0,
+            valid: true,
+            uniforms: null,
+            toggle_element_array: false,
+            draw_mode: 0x0004,
+            vertex_count: 3,
+            gl: {
+                getExtension() {
+                    return null;
+                },
+                drawArrays(...args) {
+                    draw_calls.push(args);
+                }
+            },
+            bind() {}
+        });
+        const mesh_renderer = { drawMesh: () => null };
+
+        assert.isFalse(mesh.render({ program, meshRenderer: mesh_renderer }));
+        assert.deepEqual(use_options, [{ bindUniformBlocks: true }]);
+        assert.deepEqual(draw_calls, [[0x0004, 0, 3]]);
+    });
+
     it('routes the active render pass and mesh renderer through Scene.renderStyle', function () {
         const render_pass = {};
         const mesh_renderer = { drawMesh() {} };

@@ -199,6 +199,30 @@ describe('UniformBuffer', function () {
         assert.deepEqual(uniform_buffer.calls, [program.program, program.program, program.program]);
     });
 
+    it('can defer uniform block bindings to an injected renderer', function () {
+        const gl = createFakeWebGL2Context();
+        const uniform_buffer = {
+            calls: [],
+            bind(program) {
+                this.calls.push(program);
+            }
+        };
+        const program = new ShaderProgram(gl, '', '', {
+            uniform_blocks: { TangramView: uniform_buffer },
+            deferUniformBlocks: true
+        });
+        program.program = {};
+        program.compiled = true;
+
+        ShaderProgram.resetCurrent();
+        program.use();
+        program.bindUniformBlocks();
+        assert.lengthOf(uniform_buffer.calls, 0);
+
+        program.use({ bindUniformBlocks: true });
+        assert.deepEqual(uniform_buffer.calls, [program.program]);
+    });
+
     it('upgrades legacy Tangram shader syntax and compiles a real WebGL2 uniform block', function () {
         const gl = document.createElement('canvas').getContext('webgl2');
         if (!gl) {
