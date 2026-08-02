@@ -1287,6 +1287,77 @@ function sliceObject(obj, keys) {
   return sliced;
 }
 
+// WebGL context wrapper
+
+var Context;
+var Context$1 = Context = {};
+var context_id = 0;
+var context_scopes = new WeakMap();
+
+// Register a WebGL context for Tangram use without taking ownership of it.
+Context.configure = function configure(gl, scope) {
+  if (gl._tangram_id == null) {
+    gl._tangram_id = context_id++;
+  }
+  if (scope) {
+    context_scopes.set(gl, scope);
+  }
+  return gl;
+};
+
+// Run WebGL work inside an optional host-managed state scope.
+Context.withContext = function withContext(gl, callback) {
+  var scope = gl && context_scopes.get(gl);
+  return scope ? scope(callback) : callback();
+};
+Context.hasContextScope = function hasContextScope(gl) {
+  return Boolean(gl && context_scopes.has(gl));
+};
+
+// Setup a WebGL context
+// If no canvas element is provided, one is created and added to the document body
+Context.getContext = function getContext(canvas, options) {
+  var fullscreen = false;
+  if (canvas == null) {
+    canvas = document.createElement('canvas');
+    canvas.style.position = 'absolute';
+    canvas.style.top = 0;
+    canvas.style.left = 0;
+    canvas.style.zIndex = -1;
+    document.body.appendChild(canvas);
+    fullscreen = true;
+  }
+
+  // powerPreference context option spec requires listeners for context loss/restore,
+  // though it's not clear these are required in practice.
+  // https://www.khronos.org/registry/webgl/specs/latest/1.0/#5.2.1
+  canvas.addEventListener('webglcontextlost', function () {});
+  canvas.addEventListener('webglcontextrestored', function () {});
+  var gl = canvas.getContext('webgl', options) || canvas.getContext('experimental-webgl', options);
+  if (!gl) {
+    throw new Error('Couldn\'t create WebGL context.');
+  }
+  Context.configure(gl);
+  if (!fullscreen) {
+    Context.resize(gl, parseFloat(canvas.style.width), parseFloat(canvas.style.height), options.device_pixel_ratio);
+  } else {
+    Context.resize(gl, window.innerWidth, window.innerHeight, options.device_pixel_ratio);
+    window.addEventListener('resize', function () {
+      Context.resize(gl, window.innerWidth, window.innerHeight, options.device_pixel_ratio);
+    });
+  }
+  return gl;
+};
+Context.resize = function (gl, width, height, device_pixel_ratio) {
+  device_pixel_ratio = device_pixel_ratio || window.devicePixelRatio || 1;
+  gl.canvas.style.width = width + 'px';
+  gl.canvas.style.height = height + 'px';
+  gl.canvas.width = Math.round(width * device_pixel_ratio);
+  gl.canvas.height = Math.round(height * device_pixel_ratio);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+};
+
 // GL texture wrapper object for keeping track of a global set of textures, keyed by a unique user-defined name
 var Texture = /*#__PURE__*/function () {
   function Texture(gl, name) {
@@ -1340,6 +1411,15 @@ var Texture = /*#__PURE__*/function () {
   return _createClass(Texture, [{
     key: "destroy",
     value: function destroy() {
+      var _this = this;
+      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      return Context$1.withContext(this.gl, function () {
+        return _this.destroyTexture(options);
+      });
+    }
+  }, {
+    key: "destroyTexture",
+    value: function destroyTexture() {
       var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
         force = _ref.force;
       if (this.retain_count > 0 && !force) {
@@ -1394,7 +1474,7 @@ var Texture = /*#__PURE__*/function () {
   }, {
     key: "load",
     value: function load(options) {
-      var _this = this;
+      var _this2 = this;
       if (!options) {
         return this.loading || Promise.resolve(this);
       }
@@ -1410,8 +1490,8 @@ var Texture = /*#__PURE__*/function () {
         this.setData(options.width, options.height, options.data, options);
       }
       this.loading = this.loading && this.loading.then(function () {
-        _this.calculateSprites();
-        return _this;
+        _this2.calculateSprites();
+        return _this2;
       }) || Promise.resolve(this);
       return this.loading;
     }
@@ -1420,7 +1500,7 @@ var Texture = /*#__PURE__*/function () {
   }, {
     key: "setUrl",
     value: function setUrl(url) {
-      var _this2 = this;
+      var _this3 = this;
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
       if (!this.valid) {
         return;
@@ -1433,46 +1513,46 @@ var Texture = /*#__PURE__*/function () {
           try {
             // For data URL images, first draw the image to a separate canvas element. Workaround for
             // obscure bug seen with small (<28px) SVG images encoded as data URLs in Chrome and Safari.
-            if (_this2.url.slice(0, 5) === 'data:') {
+            if (_this3.url.slice(0, 5) === 'data:') {
               var canvas = document.createElement('canvas');
               var ctx = canvas.getContext('2d');
               canvas.width = image.width;
               canvas.height = image.height;
               ctx.drawImage(image, 0, 0);
-              _this2.setElement(canvas, options);
+              _this3.setElement(canvas, options);
             } else {
-              _this2.setElement(image, options);
+              _this3.setElement(image, options);
             }
           } catch (e) {
-            _this2.loaded = false;
-            log('warn', "Texture '".concat(_this2.name, "': failed to load url: '").concat(_this2.url, "'"), e, options);
+            _this3.loaded = false;
+            log('warn', "Texture '".concat(_this3.name, "': failed to load url: '").concat(_this3.url, "'"), e, options);
             Texture.trigger('warning', {
-              message: "Failed to load texture from ".concat(_this2.url),
+              message: "Failed to load texture from ".concat(_this3.url),
               error: e,
               texture: options
             });
           }
-          _this2.loaded = true;
-          resolve(_this2);
+          _this3.loaded = true;
+          resolve(_this3);
         };
         image.onerror = function (e) {
           // Warn and resolve on error
-          _this2.loaded = false;
-          log('warn', "Texture '".concat(_this2.name, "': failed to load url: '").concat(_this2.url, "'"), e, options);
+          _this3.loaded = false;
+          log('warn', "Texture '".concat(_this3.name, "': failed to load url: '").concat(_this3.url, "'"), e, options);
           Texture.trigger('warning', {
-            message: "Failed to load texture from ".concat(_this2.url),
+            message: "Failed to load texture from ".concat(_this3.url),
             error: e,
             texture: options
           });
-          resolve(_this2);
+          resolve(_this3);
         };
 
         // Safari has a bug loading data-URL images with CORS enabled, so it must be disabled in that case
         // https://bugs.webkit.org/show_bug.cgi?id=123978
-        if (!(Utils.isSafari() && _this2.url.slice(0, 5) === 'data:')) {
+        if (!(Utils.isSafari() && _this3.url.slice(0, 5) === 'data:')) {
           image.crossOrigin = 'anonymous';
         }
-        image.src = _this2.url;
+        image.src = _this3.url;
       });
       return this.loading;
     }
@@ -1528,6 +1608,18 @@ var Texture = /*#__PURE__*/function () {
   }, {
     key: "update",
     value: function update(source) {
+      var _this4 = this;
+      var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+      return Context$1.withContext(this.gl, function () {
+        if (Context$1.hasContextScope(_this4.gl)) {
+          Texture.resetBindings();
+        }
+        return _this4.updateTexture(source, options);
+      });
+    }
+  }, {
+    key: "updateTexture",
+    value: function updateTexture(source) {
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
       if (!this.valid) {
         return;
@@ -1558,6 +1650,18 @@ var Texture = /*#__PURE__*/function () {
   }, {
     key: "setFiltering",
     value: function setFiltering() {
+      var _this5 = this;
+      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      return Context$1.withContext(this.gl, function () {
+        if (Context$1.hasContextScope(_this5.gl)) {
+          Texture.resetBindings();
+        }
+        return _this5.updateFiltering(options);
+      });
+    }
+  }, {
+    key: "updateFiltering",
+    value: function updateFiltering() {
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       if (!this.valid) {
         return;
@@ -1829,6 +1933,10 @@ Texture.textures = {};
 Texture.texture_configs = {};
 Texture.boundTexture = null;
 Texture.activeUnit = null;
+Texture.resetBindings = function () {
+  Texture.boundTexture = null;
+  Texture.activeUnit = null;
+};
 WorkerBroker$1.addTarget('Texture', Texture);
 subscribeMixin(Texture);
 
@@ -2174,6 +2282,9 @@ var parseShaderErrors = /*@__PURE__*/getDefaultExportFromCjs(glShaderErrorsExpor
 // Regex patterns
 var re_pragma = /^\s*#pragma.*$/gm; // for removing unused pragmas after shader block injection
 var re_continue_line = /\\\s*\n/mg; // for removing backslash line continuations
+var re_fragment_color = /\bgl_FragColor\b/g;
+var re_texture_2d = /\btexture2D\b/g;
+var re_texture_cube = /\btextureCube\b/g;
 var ShaderProgram = /*#__PURE__*/function () {
   function ShaderProgram(gl, vertex_source, fragment_source, options) {
     _classCallCheck(this, ShaderProgram);
@@ -2198,6 +2309,12 @@ var ShaderProgram = /*#__PURE__*/function () {
     // for each will be injected.
     this.dependent_uniforms = options.uniforms;
     this.uniforms = {}; // program locations of uniforms, lazily added as each uniform is set
+    this.uniform_blocks = Object.assign({}, options.uniform_blocks || {});
+    this.defer_uniform_blocks = options.deferUniformBlocks === true;
+    this.shader_factory = options.shaderFactory;
+    this.vertex_shader_resource = null;
+    this.fragment_shader_resource = null;
+    this.glsl_version = options.glsl_version || (Object.keys(this.uniform_blocks).length > 0 ? 300 : 100);
     this.attribs = {}; // program locations of vertex attributes, lazily added as each attribute is accessed
 
     this.vertex_source = vertex_source;
@@ -2210,6 +2327,7 @@ var ShaderProgram = /*#__PURE__*/function () {
     value: function destroy() {
       this.gl.useProgram(null);
       this.gl.deleteProgram(this.program);
+      this.destroyShaderResources();
       this.program = null;
       this.uniforms = {};
       this.attribs = {};
@@ -2220,13 +2338,22 @@ var ShaderProgram = /*#__PURE__*/function () {
   }, {
     key: "use",
     value: function use() {
+      var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        _ref$bindUniformBlock = _ref.bindUniformBlocks,
+        bindUniformBlocks = _ref$bindUniformBlock === void 0 ? !this.defer_uniform_blocks : _ref$bindUniformBlock;
       if (!this.compiled) {
         return;
       }
-      if (ShaderProgram.current !== this) {
+      var changed = ShaderProgram.current !== this;
+      if (changed) {
         this.gl.useProgram(this.program);
       }
       ShaderProgram.current = this;
+      if (bindUniformBlocks) {
+        this.bindUniformBlocks({
+          force: true
+        });
+      }
     }
   }, {
     key: "compile",
@@ -2302,6 +2429,7 @@ var ShaderProgram = /*#__PURE__*/function () {
 
       // Inject uniform definitions
       this.ensureUniforms(this.dependent_uniforms);
+      this.ensureUniformBlocks();
 
       // Build & inject extensions & defines
       // This is done *after* code injection so that we can add defines for which code points were injected
@@ -2314,6 +2442,7 @@ var ShaderProgram = /*#__PURE__*/function () {
       }
       defines['TANGRAM_VERTEX_SHADER'] = true;
       defines['TANGRAM_FRAGMENT_SHADER'] = false;
+      defines['TANGRAM_WEBGL2'] = this.glsl_version >= 300;
       this.computed_vertex_source = precision + ShaderProgram.buildDefineString(defines) + this.computed_vertex_source;
 
       // Precision qualifier only valid in fragment shader
@@ -2326,12 +2455,36 @@ var ShaderProgram = /*#__PURE__*/function () {
       // Replace multi-line backslashes
       this.computed_vertex_source = this.computed_vertex_source.replace(re_continue_line, '');
       this.computed_fragment_source = this.computed_fragment_source.replace(re_continue_line, '');
+      if (this.glsl_version >= 300) {
+        this.computed_vertex_source = ShaderProgram.convertToWebGL2(this.computed_vertex_source, 'vertex');
+        this.computed_fragment_source = ShaderProgram.convertToWebGL2(this.computed_fragment_source, 'fragment');
+      }
 
       // Compile & set uniforms to cached values
       try {
-        this.program = ShaderProgram.updateProgram(this.gl, this.program, this.computed_vertex_source, this.computed_fragment_source);
+        var shader_resources;
+        if (this.shader_factory) {
+          shader_resources = this.createShaderResources(this.computed_vertex_source, this.computed_fragment_source);
+        }
+        try {
+          this.program = ShaderProgram.updateProgram(this.gl, this.program, this.computed_vertex_source, this.computed_fragment_source, shader_resources);
+        } catch (error) {
+          destroyShaderResource(shader_resources && shader_resources.vertex_shader);
+          destroyShaderResource(shader_resources && shader_resources.fragment_shader);
+          throw error;
+        }
+        this.destroyShaderResources();
+        this.vertex_shader_resource = shader_resources && shader_resources.vertex_shader;
+        this.fragment_shader_resource = shader_resources && shader_resources.fragment_shader;
         this.compiled = true;
         this.compiling = false;
+        ShaderProgram.current = null; // updateProgram() explicitly unbinds the current GL program
+        for (var _i = 0, _Object$values = Object.values(this.uniform_blocks); _i < _Object$values.length; _i++) {
+          var uniform_buffer = _Object$values[_i];
+          if (typeof uniform_buffer.invalidateProgram === 'function') {
+            uniform_buffer.invalidateProgram(this.program);
+          }
+        }
       } catch (error) {
         this.program = null;
         this.compiled = false;
@@ -2359,6 +2512,42 @@ var ShaderProgram = /*#__PURE__*/function () {
       this.use();
       this.refreshUniforms();
       this.refreshAttributes();
+    }
+  }, {
+    key: "createShaderResources",
+    value: function createShaderResources(vertex_source, fragment_source) {
+      var vertex_shader;
+      try {
+        vertex_shader = this.shader_factory({
+          id: "".concat(this.name || this.id, "-vertex"),
+          stage: 'vertex',
+          source: vertex_source
+        });
+        var fragment_shader = this.shader_factory({
+          id: "".concat(this.name || this.id, "-fragment"),
+          stage: 'fragment',
+          source: fragment_source
+        });
+        if (!vertex_shader || !vertex_shader.handle || typeof vertex_shader.destroy !== 'function' || !fragment_shader || !fragment_shader.handle || typeof fragment_shader.destroy !== 'function') {
+          destroyShaderResource(fragment_shader);
+          throw new Error('ShaderProgram: shaderFactory must return a resource with handle and destroy');
+        }
+        return {
+          vertex_shader: vertex_shader,
+          fragment_shader: fragment_shader
+        };
+      } catch (error) {
+        destroyShaderResource(vertex_shader);
+        throw error;
+      }
+    }
+  }, {
+    key: "destroyShaderResources",
+    value: function destroyShaderResources() {
+      destroyShaderResource(this.vertex_shader_resource);
+      destroyShaderResource(this.fragment_shader_resource);
+      this.vertex_shader_resource = null;
+      this.fragment_shader_resource = null;
     }
 
     // Make list of defines (global, then program-specific)
@@ -2450,10 +2639,10 @@ var ShaderProgram = /*#__PURE__*/function () {
       }
 
       // Get GLSL definitions
-      var inject = Object.entries(uniforms).map(function (_ref) {
-        var _ref2 = _slicedToArray(_ref, 2),
-          name = _ref2[0],
-          uniform = _ref2[1];
+      var inject = Object.entries(uniforms).map(function (_ref2) {
+        var _ref3 = _slicedToArray(_ref2, 2),
+          name = _ref3[0],
+          uniform = _ref3[1];
         return GLSL.defineUniform(name, uniform);
       }).filter(function (x) {
         return x;
@@ -2464,6 +2653,28 @@ var ShaderProgram = /*#__PURE__*/function () {
       // this could cause some issues with certain #pragmas, or other functions that might expect #defines
       this.computed_vertex_source = inject.join('\n') + this.computed_vertex_source;
       this.computed_fragment_source = inject.join('\n') + this.computed_fragment_source;
+    }
+
+    // Replace standalone uniforms with std140 uniform-block declarations.
+  }, {
+    key: "ensureUniformBlocks",
+    value: function ensureUniformBlocks() {
+      for (var _i2 = 0, _Object$values2 = Object.values(this.uniform_blocks); _i2 < _Object$values2.length; _i2++) {
+        var uniform_buffer = _Object$values2[_i2];
+        var uniforms = uniform_buffer.layout && uniform_buffer.layout.uniforms;
+        if (!uniforms || typeof uniform_buffer.getDeclaration !== 'function') {
+          continue;
+        }
+        for (var _i3 = 0, _Object$keys = Object.keys(uniforms); _i3 < _Object$keys.length; _i3++) {
+          var name = _Object$keys[_i3];
+          var _declaration = new RegExp("^\\s*uniform\\s+[A-Za-z0-9_]+\\s+".concat(escapeRegExp(name), "\\s*;\\s*(?://.*)?$"), 'gm');
+          this.computed_vertex_source = this.computed_vertex_source.replace(_declaration, '');
+          this.computed_fragment_source = this.computed_fragment_source.replace(_declaration, '');
+        }
+        var declaration = uniform_buffer.getDeclaration() + '\n';
+        this.computed_vertex_source = declaration + this.computed_vertex_source;
+        this.computed_fragment_source = declaration + this.computed_fragment_source;
+      }
     }
 
     // Set uniforms from a JS object, with inferred types
@@ -2487,11 +2698,11 @@ var ShaderProgram = /*#__PURE__*/function () {
       }
 
       // Parse uniform types and values from the JS object
-      GLSL.parseUniforms(uniforms).forEach(function (_ref3) {
-        var name = _ref3.name,
-          type = _ref3.type,
-          value = _ref3.value,
-          method = _ref3.method;
+      GLSL.parseUniforms(uniforms).forEach(function (_ref4) {
+        var name = _ref4.name,
+          type = _ref4.type,
+          value = _ref4.value,
+          method = _ref4.method;
         if (type === 'sampler2D') {
           // For textures, we need to track texture units, so we have a special setter
           _this2.setTextureUniform(name, value);
@@ -2499,6 +2710,75 @@ var ShaderProgram = /*#__PURE__*/function () {
           _this2.uniform(method, name, value);
         }
       });
+    }
+
+    // Register a WebGL2 uniform buffer with this program.
+  }, {
+    key: "setUniformBlock",
+    value: function setUniformBlock(name, uniform_buffer) {
+      this.uniform_blocks[name] = uniform_buffer;
+      if (this.compiled && !this.defer_uniform_blocks) {
+        uniform_buffer.bind(this.program);
+      }
+    }
+
+    // Bind all registered WebGL2 uniform buffers to this program.
+  }, {
+    key: "bindUniformBlocks",
+    value: function bindUniformBlocks() {
+      var _ref5 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        _ref5$force = _ref5.force,
+        force = _ref5$force === void 0 ? false : _ref5$force;
+      if (!this.compiled || this.defer_uniform_blocks && !force) {
+        return;
+      }
+      for (var _i4 = 0, _Object$values3 = Object.values(this.uniform_blocks); _i4 < _Object$values3.length; _i4++) {
+        var uniform_buffer = _Object$values3[_i4];
+        uniform_buffer.bind(this.program);
+      }
+    }
+
+    // Return portable luma.gl binding metadata for registered uniform blocks.
+  }, {
+    key: "getUniformBlockBindingLayouts",
+    value: function getUniformBlockBindingLayouts() {
+      return Object.values(this.uniform_blocks).filter(function (uniform_buffer) {
+        return typeof uniform_buffer.getBindingLayout === 'function';
+      }).map(function (uniform_buffer) {
+        return uniform_buffer.getBindingLayout();
+      });
+    }
+
+    // Return luma.gl Buffer resources keyed by shader block name.
+  }, {
+    key: "getUniformBlockBindings",
+    value: function getUniformBlockBindings() {
+      var bindings = {};
+      for (var _i5 = 0, _Object$entries = Object.entries(this.uniform_blocks); _i5 < _Object$entries.length; _i5++) {
+        var _Object$entries$_i = _slicedToArray(_Object$entries[_i5], 2),
+          name = _Object$entries$_i[0],
+          uniform_buffer = _Object$entries$_i[1];
+        if (uniform_buffer.buffer_resource) {
+          bindings[name] = uniform_buffer.buffer_resource;
+        }
+      }
+      return bindings;
+    }
+
+    // Return the current scalar uniform values for renderers that own the draw call.
+  }, {
+    key: "getUniformValues",
+    value: function getUniformValues() {
+      var values = {};
+      for (var _i6 = 0, _Object$entries2 = Object.entries(this.uniforms); _i6 < _Object$entries2.length; _i6++) {
+        var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i6], 2),
+          name = _Object$entries2$_i[0],
+          uniform = _Object$entries2$_i[1];
+        if (uniform.value !== undefined) {
+          values[name] = uniform.value;
+        }
+      }
+      return values;
     }
 
     // Cache some or all uniform values so they can be restored
@@ -2781,6 +3061,24 @@ ShaderProgram.reset = function () {
 };
 ShaderProgram.reset();
 
+// Invalidate Tangram's program cache when another renderer shares the context.
+ShaderProgram.resetCurrent = function () {
+  ShaderProgram.current = null;
+};
+
+// Upgrade the subset of GLSL ES 1.00 syntax emitted by Tangram to GLSL ES 3.00.
+ShaderProgram.convertToWebGL2 = function (source, type) {
+  source = source.replace(re_texture_2d, 'texture').replace(re_texture_cube, 'texture');
+  if (type === 'vertex') {
+    source = source.replace(/\battribute\b/g, 'in').replace(/\bvarying\b/g, 'out');
+    source = source.replace(/(^|\n)(\s*)in\s+([^;\n]*\ba_position\b[^;\n]*;)/, '$1$2layout(location = 0) in $3');
+  } else if (type === 'fragment') {
+    source = source.replace(/\bvarying\b/g, 'in').replace(re_fragment_color, 'tangram_FragColor');
+    source = source.replace(/(precision\s+(?:lowp|mediump|highp)\s+float\s*;)/, '$1\nlayout(location = 0) out vec4 tangram_FragColor;');
+  }
+  return '#version 300 es\n' + source;
+};
+
 // Turn an object of key/value pairs into single string of #define statements
 ShaderProgram.buildDefineString = function (defines) {
   var define_str = '';
@@ -2818,6 +3116,9 @@ ShaderProgram.addBlock = function (key) {
   }
   (_ShaderProgram$blocks = ShaderProgram.blocks[key]).push.apply(_ShaderProgram$blocks, blocks);
 };
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 // Remove all global shader blocks for a given key
 ShaderProgram.removeBlock = function (key) {
@@ -2834,14 +3135,20 @@ ShaderProgram.replaceBlock = function (key) {
 // Compile & link a WebGL program from provided vertex and fragment shader sources
 // update a program if one is passed in. Create one if not. Alert and don't update anything if the shaders don't compile.
 ShaderProgram.updateProgram = function (gl, program, vertex_shader_source, fragment_shader_source) {
+  var shader_resources = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
+  var use_shader_resources = Boolean(shader_resources.vertex_shader || shader_resources.fragment_shader);
+  if (use_shader_resources && (!shader_resources.vertex_shader || !shader_resources.fragment_shader)) {
+    throw new Error('ShaderProgram.updateProgram requires both vertex and fragment shader resources');
+  }
+
   // Program with this exact vertex and fragment shader sources already cached?
   var key = hashString(gl._tangram_id + '::' + vertex_shader_source + '::' + fragment_shader_source);
-  if (ShaderProgram.programs_by_source[key]) {
+  if (!use_shader_resources && ShaderProgram.programs_by_source[key]) {
     log('trace', 'Reusing identical source GL program object');
     return ShaderProgram.programs_by_source[key];
   }
-  var vertex_shader = ShaderProgram.createShader(gl, vertex_shader_source, gl.VERTEX_SHADER);
-  var fragment_shader = ShaderProgram.createShader(gl, fragment_shader_source, gl.FRAGMENT_SHADER);
+  var vertex_shader = use_shader_resources ? shader_resources.vertex_shader.handle : ShaderProgram.createShader(gl, vertex_shader_source, gl.VERTEX_SHADER);
+  var fragment_shader = use_shader_resources ? shader_resources.fragment_shader.handle : ShaderProgram.createShader(gl, fragment_shader_source, gl.FRAGMENT_SHADER);
   gl.useProgram(null);
   if (program != null) {
     var old_shaders = gl.getAttachedShaders(program);
@@ -2874,7 +3181,9 @@ ShaderProgram.updateProgram = function (gl, program, vertex_shader_source, fragm
       type: 'program'
     });
   }
-  ShaderProgram.programs_by_source[key] = program; // cache by exact source
+  if (!use_shader_resources) {
+    ShaderProgram.programs_by_source[key] = program; // cache by exact source
+  }
   return program;
 };
 
@@ -2901,9 +3210,35 @@ ShaderProgram.createShader = function (gl, source, stype) {
   ShaderProgram.shaders_by_source[key] = shader; // cache by exact source
   return shader;
 };
+function destroyShaderResource(shader) {
+  if (shader && typeof shader.destroy === 'function') {
+    shader.destroy();
+  }
+}
 
 // Creates a Vertex Array Object if the extension is available, or falls back on standard attribute calls
 
+var native_extensions = new WeakMap();
+function getVertexArrayExtension(gl) {
+  var extension = getExtension(gl, 'OES_vertex_array_object');
+  if (extension || typeof gl.createVertexArray !== 'function') {
+    return extension;
+  }
+  if (!native_extensions.has(gl)) {
+    native_extensions.set(gl, {
+      createVertexArrayOES: function createVertexArrayOES() {
+        return gl.createVertexArray();
+      },
+      deleteVertexArrayOES: function deleteVertexArrayOES(vao) {
+        return gl.deleteVertexArray(vao);
+      },
+      bindVertexArrayOES: function bindVertexArrayOES(vao) {
+        return gl.bindVertexArray(vao);
+      }
+    });
+  }
+  return native_extensions.get(gl);
+}
 var VertexArrayObject = {
   disabled: false,
   // set to true to disable VAOs even if extension is available
@@ -2912,7 +3247,7 @@ var VertexArrayObject = {
   init: function init(gl) {
     var ext;
     if (this.disabled !== true) {
-      ext = getExtension(gl, 'OES_vertex_array_object');
+      ext = getVertexArrayExtension(gl);
     }
     if (ext != null) {
       log('info', 'Vertex Array Object extension available');
@@ -2924,6 +3259,9 @@ var VertexArrayObject = {
   },
   getExtension: function getExtension$1(gl, ext_name) {
     if (this.disabled !== true) {
+      if (ext_name === 'OES_vertex_array_object') {
+        return getVertexArrayExtension(gl);
+      }
       return getExtension(gl, ext_name);
     }
   },
@@ -4605,7 +4943,14 @@ var VBOMesh = /*#__PURE__*/function () {
     this.vertex_data = vertex_data; // typed array
     this.element_data = element_data; // typed array
     this.vertex_layout = vertex_layout;
-    this.vertex_buffer = this.gl.createBuffer();
+    this.id = options.id != null ? options.id : VBOMesh.id++;
+    this.buffer_factory = options.bufferFactory;
+    this.vertex_buffer_resource = createBufferResource(this.buffer_factory, {
+      id: "mesh-".concat(this.id, "-vertices"),
+      usage: 'vertex',
+      data: this.vertex_data
+    });
+    this.vertex_buffer = this.vertex_buffer_resource ? this.vertex_buffer_resource.handle : this.gl.createBuffer();
     this.buffer_size = this.vertex_data.byteLength;
     this.draw_mode = options.draw_mode || this.gl.TRIANGLES;
     this.data_usage = options.data_usage || this.gl.STATIC_DRAW;
@@ -4626,14 +4971,32 @@ var VBOMesh = /*#__PURE__*/function () {
       this.element_count = this.element_data.length;
       this.geometry_count = this.element_count / this.vertices_per_geometry;
       this.element_type = this.element_data.constructor === Uint16Array ? this.gl.UNSIGNED_SHORT : this.gl.UNSIGNED_INT;
-      this.element_buffer = this.gl.createBuffer();
+      try {
+        this.element_buffer_resource = createBufferResource(this.buffer_factory, {
+          id: "mesh-".concat(this.id, "-indices"),
+          usage: 'index',
+          indexType: this.element_data.constructor === Uint16Array ? 'uint16' : 'uint32',
+          data: this.element_data
+        });
+      } catch (error) {
+        if (this.vertex_buffer_resource) {
+          this.vertex_buffer_resource.destroy();
+          this.vertex_buffer_resource = null;
+        }
+        throw error;
+      }
+      this.element_buffer = this.element_buffer_resource ? this.element_buffer_resource.handle : this.gl.createBuffer();
       this.buffer_size += this.element_data.byteLength;
-      this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.element_buffer);
-      this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.element_data, this.data_usage);
+      if (!this.element_buffer_resource) {
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.element_buffer);
+        this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.element_data, this.data_usage);
+      }
     } else {
       this.geometry_count = this.vertex_count / this.vertices_per_geometry;
     }
-    this.upload();
+    if (!this.vertex_buffer_resource) {
+      this.upload();
+    }
     if (!this.retain) {
       delete this.vertex_data;
       delete this.element_data;
@@ -4651,12 +5014,25 @@ var VBOMesh = /*#__PURE__*/function () {
         return false;
       }
       var program = options.program || ShaderProgram.current;
-      program.use();
+      var visible_time = (+new Date() - this.created_at) / 1000;
+      if (options.meshRenderer && typeof options.meshRenderer.drawMesh === 'function') {
+        var needs_redraw = options.meshRenderer.drawMesh({
+          mesh: this,
+          program: program,
+          renderPass: options.renderPass,
+          visibleTime: visible_time
+        });
+        if (needs_redraw !== null) {
+          return Boolean(needs_redraw) || visible_time < this.fade_in_time;
+        }
+      }
+      program.use(options.meshRenderer ? {
+        bindUniformBlocks: true
+      } : undefined);
       if (this.uniforms) {
         program.saveUniforms(this.uniforms);
         program.setUniforms(this.uniforms, false); // don't reset texture unit
       }
-      var visible_time = (+new Date() - this.created_at) / 1000;
       program.uniform('1f', 'u_visible_time', visible_time);
       this.bind(program);
       if (this.toggle_element_array) {
@@ -4671,6 +5047,22 @@ var VBOMesh = /*#__PURE__*/function () {
 
       // Request next render if mesh is fading in
       return visible_time < this.fade_in_time;
+    }
+
+    // Return the renderer-independent resources and draw parameters for this mesh.
+  }, {
+    key: "getDrawDescriptor",
+    value: function getDrawDescriptor() {
+      return {
+        topology: getTopology(this.draw_mode),
+        vertexCount: this.vertex_count,
+        indexCount: this.element_count,
+        indexType: this.toggle_element_array ? this.element_type === this.gl.UNSIGNED_SHORT ? 'uint16' : 'uint32' : null,
+        vertexBuffer: this.vertex_buffer_resource,
+        indexBuffer: this.element_buffer_resource || null,
+        bufferLayout: this.vertex_layout.getBufferLayout(),
+        staticAttributes: this.vertex_layout.getStaticAttributes()
+      };
     }
 
     // Bind buffers and vertex attributes to prepare for rendering
@@ -4711,10 +5103,20 @@ var VBOMesh = /*#__PURE__*/function () {
       for (var v in this.vaos) {
         VertexArrayObject.destroy(this.gl, this.vaos[v]);
       }
-      this.gl.deleteBuffer(this.vertex_buffer);
+      if (this.vertex_buffer_resource) {
+        this.vertex_buffer_resource.destroy();
+        this.vertex_buffer_resource = null;
+      } else {
+        this.gl.deleteBuffer(this.vertex_buffer);
+      }
       this.vertex_buffer = null;
       if (this.element_buffer) {
-        this.gl.deleteBuffer(this.element_buffer);
+        if (this.element_buffer_resource) {
+          this.element_buffer_resource.destroy();
+          this.element_buffer_resource = null;
+        } else {
+          this.gl.deleteBuffer(this.element_buffer);
+        }
         this.element_buffer = null;
       }
       delete this.vertex_data;
@@ -4728,6 +5130,33 @@ var VBOMesh = /*#__PURE__*/function () {
     }
   }]);
 }();
+VBOMesh.id = 0;
+function createBufferResource(buffer_factory, options) {
+  if (typeof buffer_factory !== 'function') {
+    return null;
+  }
+  var resource = buffer_factory(options);
+  if (!resource || !resource.handle || typeof resource.destroy !== 'function') {
+    throw new Error('VBOMesh: bufferFactory must return a resource with handle and destroy');
+  }
+  return resource;
+}
+function getTopology(draw_mode) {
+  switch (draw_mode) {
+    case 0x0000:
+      return 'point-list';
+    case 0x0001:
+      return 'line-list';
+    case 0x0003:
+      return 'line-strip';
+    case 0x0004:
+      return 'triangle-list';
+    case 0x0005:
+      return 'triangle-strip';
+    default:
+      throw new Error("VBOMesh: unsupported draw mode ".concat(draw_mode));
+  }
+}
 
 var material_source = `/*
 
@@ -7181,6 +7610,7 @@ var Style = {
     }
     WorkerBroker$1.removeTarget(this.main_thread_target);
     this.gl = null;
+    this.uniform_blocks = null;
     this.initialized = false;
   },
   reset: function reset() {},
@@ -7458,11 +7888,20 @@ var Style = {
     return 0;
   },
   /*** GL state and rendering ***/setGL: function setGL(gl) {
+    var uniform_blocks = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
     this.gl = gl;
+    this.uniform_blocks = uniform_blocks;
+    this.shader_factory = options.shaderFactory;
+    this.mesh_buffer_factory = options.meshBufferFactory;
+    this.defer_uniform_blocks = options.deferUniformBlocks === true;
     this.max_texture_size = Texture.getMaxTextureSize(this.gl);
   },
   makeMesh: function makeMesh(vertex_data, vertex_elements) {
     var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    options = _objectSpread$4(_objectSpread$4({}, options), {}, {
+      bufferFactory: this.mesh_buffer_factory
+    });
     var vertex_layout = this.vertexLayoutForMeshVariant(options.variant);
     if (debugSettings$1.wireframe) {
       // In wireframe debug mode, transform mesh into lines
@@ -7473,8 +7912,8 @@ var Style = {
     }
     return new VBOMesh(this.gl, vertex_data, vertex_elements, vertex_layout, options);
   },
-  render: function render(mesh) {
-    return mesh.render();
+  render: function render(mesh, options) {
+    return mesh.render(options);
   },
   // Get a specific program, compiling if necessary
   getProgram: function getProgram() {
@@ -7538,6 +7977,9 @@ var Style = {
       name: this.name,
       defines: defines,
       uniforms: uniforms,
+      uniform_blocks: this.uniform_blocks,
+      deferUniformBlocks: this.defer_uniform_blocks,
+      shaderFactory: this.shader_factory,
       blocks: blocks,
       block_scopes: block_scopes,
       extensions: extensions
@@ -7547,6 +7989,9 @@ var Style = {
         name: this.name + ' (selection)',
         defines: selection_defines,
         uniforms: uniforms,
+        uniform_blocks: this.uniform_blocks,
+        deferUniformBlocks: this.defer_uniform_blocks,
+        shaderFactory: this.shader_factory,
         blocks: blocks,
         block_scopes: block_scopes,
         extensions: extensions
@@ -8193,6 +8638,37 @@ var VertexLayout = /*#__PURE__*/function () {
       return new VertexData(this);
     }
 
+    // Return a luma.gl-compatible description of the interleaved vertex buffer.
+    // Static attributes are omitted because they are supplied independently of the buffer.
+  }, {
+    key: "getBufferLayout",
+    value: function getBufferLayout() {
+      var name = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'vertices';
+      return {
+        name: name,
+        byteStride: this.stride,
+        attributes: this.dynamic_attribs.map(function (attrib) {
+          return {
+            attribute: attrib.name,
+            format: getVertexFormat(attrib),
+            byteOffset: attrib.offset
+          };
+        })
+      };
+    }
+
+    // Return constant vertex attributes for renderers that don't use Tangram's VAO wrapper.
+  }, {
+    key: "getStaticAttributes",
+    value: function getStaticAttributes() {
+      return this.static_attribs.map(function (attrib) {
+        return {
+          attribute: attrib.name,
+          value: attrib.static.slice()
+        };
+      });
+    }
+
     // Lazily create the add vertex function
   }, {
     key: "getAddVertexFunction",
@@ -8243,6 +8719,43 @@ VertexLayout.enabled_attribs = {};
 
 // Functions to add plain JS vertex array to typed VBO arrays
 VertexLayout.add_vertex_funcs = {}; // keyed by unique set of attributes
+
+function getVertexFormat(attrib) {
+  var type;
+  switch (attrib.type) {
+    case gl$1.BYTE:
+      type = attrib.normalized ? 'snorm8' : 'sint8';
+      break;
+    case gl$1.UNSIGNED_BYTE:
+      type = attrib.normalized ? 'unorm8' : 'uint8';
+      break;
+    case gl$1.SHORT:
+      type = attrib.normalized ? 'snorm16' : 'sint16';
+      break;
+    case gl$1.UNSIGNED_SHORT:
+      type = attrib.normalized ? 'unorm16' : 'uint16';
+      break;
+    case gl$1.INT:
+      type = 'sint32';
+      break;
+    case gl$1.UNSIGNED_INT:
+      type = 'uint32';
+      break;
+    case gl$1.FLOAT:
+      type = 'float32';
+      break;
+    default:
+      throw new Error("VertexLayout: unsupported attribute type ".concat(attrib.type));
+  }
+  if (attrib.size === 1) {
+    return type;
+  }
+  if (attrib.size < 2 || attrib.size > 4) {
+    throw new Error("VertexLayout: unsupported attribute size ".concat(attrib.size));
+  }
+  var webgl_only = attrib.size === 3 && attrib.type !== gl$1.FLOAT && attrib.type !== gl$1.INT && attrib.type !== gl$1.UNSIGNED_INT;
+  return "".concat(type, "x").concat(attrib.size).concat(webgl_only ? '-webgl' : '');
+}
 
 // Geometry building functions
 var tile_bounds = [{
@@ -14360,16 +14873,24 @@ var Camera = /*#__PURE__*/function () {
     // Set model-view and normal matrices
   }, {
     key: "setupMatrices",
-    value: function setupMatrices(matrices, program) {
+    value: function setupMatrices(matrices, program, uniform_buffer) {
       // Model view matrix - transform tile space into view space (meters, relative to camera)
       mat4.multiply(matrices.model_view32, this.view_matrix, matrices.model);
-      program.uniform('Matrix4fv', 'u_modelView', matrices.model_view32);
 
       // Normal matrices - transforms surface normals into view space
       mat3.normalFromMat4(matrices.normal32, matrices.model_view32);
       mat3.invert(matrices.inverse_normal32, matrices.normal32);
-      program.uniform('Matrix3fv', 'u_normalMatrix', matrices.normal32);
-      program.uniform('Matrix3fv', 'u_inverseNormalMatrix', matrices.inverse_normal32);
+      if (uniform_buffer) {
+        uniform_buffer.setUniforms({
+          u_modelView: matrices.model_view32,
+          u_normalMatrix: matrices.normal32,
+          u_inverseNormalMatrix: matrices.inverse_normal32
+        });
+      } else {
+        program.uniform('Matrix4fv', 'u_modelView', matrices.model_view32);
+        program.uniform('Matrix3fv', 'u_normalMatrix', matrices.normal32);
+        program.uniform('Matrix3fv', 'u_inverseNormalMatrix', matrices.inverse_normal32);
+      }
     }
   }], [{
     key: "create",
@@ -14508,10 +15029,18 @@ var PerspectiveCamera = /*#__PURE__*/function (_Camera) {
     }
   }, {
     key: "setupProgram",
-    value: function setupProgram(program) {
-      program.uniform('Matrix4fv', 'u_projection', this.projection_matrix);
-      program.uniform('3f', 'u_eye', [0, 0, this.position_meters[2]]);
-      program.uniform('2fv', 'u_vanishing_point', this.vanishing_point_skew);
+    value: function setupProgram(program, uniform_buffer) {
+      if (uniform_buffer) {
+        uniform_buffer.setUniforms({
+          u_projection: this.projection_matrix,
+          u_eye: [0, 0, this.position_meters[2]],
+          u_vanishing_point: this.vanishing_point_skew
+        });
+      } else {
+        program.uniform('Matrix4fv', 'u_projection', this.projection_matrix);
+        program.uniform('3f', 'u_eye', [0, 0, this.position_meters[2]]);
+        program.uniform('2fv', 'u_vanishing_point', this.vanishing_point_skew);
+      }
     }
   }]);
 }(Camera); // Isometric-style projection
@@ -14570,11 +15099,19 @@ var IsometricCamera = /*#__PURE__*/function (_Camera2) {
     }
   }, {
     key: "setupProgram",
-    value: function setupProgram(program) {
-      program.uniform('Matrix4fv', 'u_projection', this.projection_matrix);
-      program.uniform('3fv', 'u_eye', [0, 0, this.viewport_height]);
-      // program.uniform('3f', 'u_eye', this.viewport_height * this.axis.x, this.viewport_height * this.axis.y, this.viewport_height);
-      program.uniform('2fv', 'u_vanishing_point', [0, 0]);
+    value: function setupProgram(program, uniform_buffer) {
+      if (uniform_buffer) {
+        uniform_buffer.setUniforms({
+          u_projection: this.projection_matrix,
+          u_eye: [0, 0, this.viewport_height],
+          u_vanishing_point: [0, 0]
+        });
+      } else {
+        program.uniform('Matrix4fv', 'u_projection', this.projection_matrix);
+        program.uniform('3fv', 'u_eye', [0, 0, this.viewport_height]);
+        // program.uniform('3f', 'u_eye', this.viewport_height * this.axis.x, this.viewport_height * this.axis.y, this.viewport_height);
+        program.uniform('2fv', 'u_vanishing_point', [0, 0]);
+      }
     }
   }]);
 }(Camera); // Flat projection (e.g. just top-down, no perspective) - a degenerate isometric camera
@@ -14925,25 +15462,42 @@ var View = /*#__PURE__*/function () {
   }, {
     key: "setupTile",
     value: function setupTile(tile, program) {
+      var uniform_buffer = this.scene.uniform_buffers && this.scene.uniform_buffers.TangramTile;
+
       // Tile-specific state
       // TODO: calc these once per tile (currently being needlessly re-calculated per-tile-per-style)
-      tile.setupProgram(this.matrices, program);
+      tile.setupProgram(this.matrices, program, uniform_buffer);
 
       // Model-view and normal matrices
-      this.camera.setupMatrices(this.matrices, program);
+      this.camera.setupMatrices(this.matrices, program, uniform_buffer);
+      if (uniform_buffer) {
+        program.bindUniformBlocks();
+      }
     }
 
     // Set general uniforms that must be updated once per program
   }, {
     key: "setupProgram",
     value: function setupProgram(program) {
-      program.uniform('2fv', 'u_resolution', [this.size.device.width, this.size.device.height]);
-      program.uniform('3fv', 'u_map_position', [this.center.meters.x, this.center.meters.y, this.zoom]);
-      program.uniform('1f', 'u_meters_per_pixel', this.meters_per_pixel);
-      program.uniform('1f', 'u_device_pixel_ratio', Utils.device_pixel_ratio);
-      program.uniform('1f', 'u_view_pan_snap_timer', this.pan_snap_timer);
-      program.uniform('1i', 'u_view_panning', this.panning);
-      this.camera.setupProgram(program);
+      var uniform_buffers = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+      if (uniform_buffers.TangramView) {
+        uniform_buffers.TangramView.setUniforms({
+          u_resolution: [this.size.device.width, this.size.device.height],
+          u_map_position: [this.center.meters.x, this.center.meters.y, this.zoom],
+          u_meters_per_pixel: this.meters_per_pixel,
+          u_device_pixel_ratio: Utils.device_pixel_ratio,
+          u_view_pan_snap_timer: this.pan_snap_timer,
+          u_view_panning: this.panning
+        });
+      } else {
+        program.uniform('2fv', 'u_resolution', [this.size.device.width, this.size.device.height]);
+        program.uniform('3fv', 'u_map_position', [this.center.meters.x, this.center.meters.y, this.zoom]);
+        program.uniform('1f', 'u_meters_per_pixel', this.meters_per_pixel);
+        program.uniform('1f', 'u_device_pixel_ratio', Utils.device_pixel_ratio);
+        program.uniform('1f', 'u_view_pan_snap_timer', this.pan_snap_timer);
+        program.uniform('1i', 'u_view_panning', this.panning);
+      }
+      this.camera.setupProgram(program, uniform_buffers.TangramCamera);
     }
 
     // View requires some animation, such as after panning stops
@@ -18943,23 +19497,31 @@ var Tile = /*#__PURE__*/function () {
     // Update model matrix and tile uniforms
   }, {
     key: "setupProgram",
-    value: function setupProgram(_ref3, program) {
+    value: function setupProgram(_ref3, program, uniform_buffer) {
       var model = _ref3.model,
         model32 = _ref3.model32;
-      // Tile origin
-      program.uniform('4fv', 'u_tile_origin', [this.min.x, this.min.y, this.style_z, this.coords.z]);
-      program.uniform('1f', 'u_tile_proxy_order_offset', this.proxy_order_offset);
-
       // Model - transform tile space into world space (meters, absolute mercator position)
       mat4.identity(model);
       mat4.translate(model, model, vec3.fromValues(this.min.x, this.min.y, 0));
       mat4.scale(model, model, vec3.fromValues(this.span.x / Geo$1.tile_scale, this.span.y / Geo$1.tile_scale, 1)); // scale tile local coords to meters
       mat4.copy(model32, model);
-      program.uniform('Matrix4fv', 'u_model', model32);
+      var tile_fade_in = this.fade_in && this.proxied_as !== 'child';
+      if (uniform_buffer) {
+        uniform_buffer.setUniforms({
+          u_tile_origin: [this.min.x, this.min.y, this.style_z, this.coords.z],
+          u_tile_proxy_order_offset: this.proxy_order_offset,
+          u_model: model32,
+          u_tile_fade_in: tile_fade_in
+        });
+      } else {
+        program.uniform('4fv', 'u_tile_origin', [this.min.x, this.min.y, this.style_z, this.coords.z]);
+        program.uniform('1f', 'u_tile_proxy_order_offset', this.proxy_order_offset);
+        program.uniform('Matrix4fv', 'u_model', model32);
 
-      // Fade in labels according to proxy status, avoiding "flickering" where
-      // labels quickly go from invisible back to visible
-      program.uniform('1i', 'u_tile_fade_in', this.fade_in && this.proxied_as !== 'child');
+        // Fade in labels according to proxy status, avoiding "flickering" where
+        // labels quickly go from invisible back to visible
+        program.uniform('1i', 'u_tile_fade_in', tile_fade_in);
+      }
     }
 
     // Slice a subset of keys out of a tile
@@ -22289,6 +22851,7 @@ DataSource.register('TopoJSON', function (source) {
 });
 
 exports.Collision = Collision;
+exports.Context = Context$1;
 exports.DataSource = DataSource;
 exports.FeatureSelection = FeatureSelection;
 exports.FilterOptions = FilterOptions;
@@ -22713,55 +23276,351 @@ topojson.WorkerBroker.addTarget('self', SceneWorker);
 
 define(['./shared'], (function (topojson) { 'use strict';
 
-// WebGL context wrapper
+// WebGL2 uniform buffer wrapper with std140-compatible CPU-side packing.
 
-var Context;
-var Context$1 = Context = {};
-var context_id = 0;
-
-// Setup a WebGL context
-// If no canvas element is provided, one is created and added to the document body
-Context.getContext = function getContext(canvas, options) {
-  var fullscreen = false;
-  if (canvas == null) {
-    canvas = document.createElement('canvas');
-    canvas.style.position = 'absolute';
-    canvas.style.top = 0;
-    canvas.style.left = 0;
-    canvas.style.zIndex = -1;
-    document.body.appendChild(canvas);
-    fullscreen = true;
+var BLOCK_ALIGNMENT = 16;
+var INVALID_INDEX = 0xFFFFFFFF;
+var TYPES = {
+  float: {
+    alignment: 4,
+    size: 4,
+    components: 1,
+    kind: 'float',
+    wgsl: 'f32'
+  },
+  int: {
+    alignment: 4,
+    size: 4,
+    components: 1,
+    kind: 'int',
+    wgsl: 'i32'
+  },
+  bool: {
+    alignment: 4,
+    size: 4,
+    components: 1,
+    kind: 'int',
+    wgsl: 'u32'
+  },
+  vec2: {
+    alignment: 8,
+    size: 8,
+    components: 2,
+    kind: 'float',
+    wgsl: 'vec2<f32>'
+  },
+  ivec2: {
+    alignment: 8,
+    size: 8,
+    components: 2,
+    kind: 'int',
+    wgsl: 'vec2<i32>'
+  },
+  vec3: {
+    alignment: 16,
+    size: 16,
+    components: 3,
+    kind: 'float',
+    wgsl: 'vec3<f32>'
+  },
+  ivec3: {
+    alignment: 16,
+    size: 16,
+    components: 3,
+    kind: 'int',
+    wgsl: 'vec3<i32>'
+  },
+  vec4: {
+    alignment: 16,
+    size: 16,
+    components: 4,
+    kind: 'float',
+    wgsl: 'vec4<f32>'
+  },
+  ivec4: {
+    alignment: 16,
+    size: 16,
+    components: 4,
+    kind: 'int',
+    wgsl: 'vec4<i32>'
+  },
+  mat3: {
+    alignment: 16,
+    size: 48,
+    columns: 3,
+    rows: 3,
+    kind: 'float',
+    wgsl: 'mat3x3<f32>'
+  },
+  mat4: {
+    alignment: 16,
+    size: 64,
+    columns: 4,
+    rows: 4,
+    kind: 'float',
+    wgsl: 'mat4x4<f32>'
   }
-
-  // powerPreference context option spec requires listeners for context loss/restore,
-  // though it's not clear these are required in practice.
-  // https://www.khronos.org/registry/webgl/specs/latest/1.0/#5.2.1
-  canvas.addEventListener('webglcontextlost', function () {});
-  canvas.addEventListener('webglcontextrestored', function () {});
-  var gl = canvas.getContext('webgl', options) || canvas.getContext('experimental-webgl', options);
-  if (!gl) {
-    throw new Error('Couldn\'t create WebGL context.');
-  }
-  gl._tangram_id = context_id++;
-  if (!fullscreen) {
-    Context.resize(gl, parseFloat(canvas.style.width), parseFloat(canvas.style.height), options.device_pixel_ratio);
-  } else {
-    Context.resize(gl, window.innerWidth, window.innerHeight, options.device_pixel_ratio);
-    window.addEventListener('resize', function () {
-      Context.resize(gl, window.innerWidth, window.innerHeight, options.device_pixel_ratio);
+};
+var UniformBuffer = /*#__PURE__*/function () {
+  function UniformBuffer(gl) {
+    var _this = this;
+    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    topojson._classCallCheck(this, UniformBuffer);
+    if (!UniformBuffer.isSupported(gl)) {
+      throw new Error('UniformBuffer requires a WebGL2 context');
+    }
+    if (!options.name) {
+      throw new Error('UniformBuffer requires a uniform block name');
+    }
+    this.gl = gl;
+    this.name = options.name;
+    this.binding = options.binding || 0;
+    this.usage = options.usage || gl.DYNAMIC_DRAW;
+    this.layout = UniformBuffer.createLayout(options.uniforms || {});
+    this.data = new ArrayBuffer(this.layout.byte_length);
+    this.data_view = new DataView(this.data);
+    var has_buffer_factory = typeof options.bufferFactory === 'function';
+    this.buffer_resource = has_buffer_factory && options.bufferFactory({
+      id: this.name,
+      byteLength: this.layout.byte_length,
+      usage: 'uniform'
     });
+    this.buffer = has_buffer_factory ? this.buffer_resource && this.buffer_resource.handle : gl.createBuffer();
+    this.program_indices = new WeakMap();
+    this.dirty = false;
+    if (!this.buffer) {
+      throw new Error("UniformBuffer: could not create buffer '".concat(this.name, "'"));
+    }
+    if (this.buffer_resource) {
+      if (typeof this.buffer_resource.write !== 'function' || typeof this.buffer_resource.destroy !== 'function') {
+        throw new Error('UniformBuffer: bufferFactory must return a resource with handle, write, and destroy');
+      }
+    } else {
+      this.withBufferBinding(function () {
+        gl.bufferData(gl.UNIFORM_BUFFER, _this.layout.byte_length, _this.usage);
+      });
+    }
   }
-  return gl;
-};
-Context.resize = function (gl, width, height, device_pixel_ratio) {
-  device_pixel_ratio = device_pixel_ratio || window.devicePixelRatio || 1;
-  gl.canvas.style.width = width + 'px';
-  gl.canvas.style.height = height + 'px';
-  gl.canvas.width = Math.round(width * device_pixel_ratio);
-  gl.canvas.height = Math.round(height * device_pixel_ratio);
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-};
+  return topojson._createClass(UniformBuffer, [{
+    key: "byteLength",
+    get: function get() {
+      return this.layout.byte_length;
+    }
+  }, {
+    key: "getDeclaration",
+    value: function getDeclaration() {
+      var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        _ref$language = _ref.language,
+        language = _ref$language === void 0 ? 'glsl' : _ref$language,
+        _ref$group = _ref.group,
+        group = _ref$group === void 0 ? 0 : _ref$group,
+        variableName = _ref.variableName;
+      if (language === 'wgsl') {
+        return this.getWGSLDeclaration({
+          group: group,
+          variableName: variableName
+        });
+      }
+      if (language !== 'glsl') {
+        throw new Error("UniformBuffer: unsupported shader language '".concat(language, "'"));
+      }
+      var declarations = Object.values(this.layout.uniforms).map(function (uniform) {
+        return "    ".concat(uniform.type, " ").concat(uniform.name, ";");
+      }).join('\n');
+      return "layout(std140) uniform ".concat(this.name, " {\n").concat(declarations, "\n};");
+    }
+  }, {
+    key: "getWGSLDeclaration",
+    value: function getWGSLDeclaration() {
+      var _ref2 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        _ref2$group = _ref2.group,
+        group = _ref2$group === void 0 ? 0 : _ref2$group,
+        variableName = _ref2.variableName;
+      variableName = variableName || lowerFirst(this.name);
+      var declarations = Object.values(this.layout.uniforms).map(function (uniform) {
+        // WGSL vec3 values have a natural size of 12 bytes. Preserve Tangram's
+        // std140-compatible 16-byte slot so the same packed data works in both APIs.
+        var size = uniform.type === 'vec3' || uniform.type === 'ivec3' ? '@size(16) ' : '';
+        return "    ".concat(size).concat(uniform.name, ": ").concat(uniform.wgsl, ",");
+      }).join('\n');
+      return ["struct ".concat(this.name, " {"), declarations, '};', "@group(".concat(group, ") @binding(").concat(this.binding, ") var<uniform> ").concat(variableName, ": ").concat(this.name, ";")].join('\n');
+    }
+  }, {
+    key: "getBindingLayout",
+    value: function getBindingLayout() {
+      var _ref3 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        _ref3$group = _ref3.group,
+        group = _ref3$group === void 0 ? 0 : _ref3$group;
+      return {
+        type: 'uniform',
+        name: this.name,
+        group: group,
+        location: this.binding,
+        minBindingSize: this.byteLength
+      };
+    }
+  }, {
+    key: "setUniform",
+    value: function setUniform(name, value) {
+      var uniform = this.layout.uniforms[name];
+      if (!uniform) {
+        throw new Error("UniformBuffer '".concat(this.name, "' has no uniform '").concat(name, "'"));
+      }
+      var values = typeof value === 'number' || typeof value === 'boolean' ? [value] : value;
+      var required = uniform.columns ? uniform.columns * uniform.rows : uniform.components;
+      if (!values || values.length !== required) {
+        throw new Error("UniformBuffer '".concat(this.name, ".").concat(name, "' requires ").concat(required, " values"));
+      }
+      if (uniform.columns) {
+        for (var column = 0; column < uniform.columns; column++) {
+          for (var row = 0; row < uniform.rows; row++) {
+            var index = column * uniform.rows + row;
+            this.data_view.setFloat32(uniform.offset + column * BLOCK_ALIGNMENT + row * 4, values[index], true);
+          }
+        }
+      } else {
+        for (var component = 0; component < uniform.components; component++) {
+          var offset = uniform.offset + component * 4;
+          if (uniform.kind === 'int') {
+            this.data_view.setInt32(offset, values[component], true);
+          } else {
+            this.data_view.setFloat32(offset, values[component], true);
+          }
+        }
+      }
+      this.dirty = true;
+      return this;
+    }
+  }, {
+    key: "setUniforms",
+    value: function setUniforms(uniforms) {
+      for (var _i = 0, _Object$entries = Object.entries(uniforms); _i < _Object$entries.length; _i++) {
+        var _Object$entries$_i = topojson._slicedToArray(_Object$entries[_i], 2),
+          name = _Object$entries$_i[0],
+          value = _Object$entries$_i[1];
+        this.setUniform(name, value);
+      }
+      return this;
+    }
+  }, {
+    key: "upload",
+    value: function upload() {
+      var _this2 = this;
+      if (!this.buffer || !this.dirty) {
+        return false;
+      }
+      var data = new Uint8Array(this.data);
+      if (this.buffer_resource) {
+        this.buffer_resource.write(data);
+      } else {
+        this.withBufferBinding(function () {
+          _this2.gl.bufferSubData(_this2.gl.UNIFORM_BUFFER, 0, data);
+        });
+      }
+      this.dirty = false;
+      return true;
+    }
+  }, {
+    key: "bind",
+    value: function bind(program) {
+      if (!this.buffer || !program) {
+        return false;
+      }
+      var program_binding = this.program_indices.get(program);
+      if (program_binding === undefined) {
+        var index = this.gl.getUniformBlockIndex(program, this.name);
+        if (index === this.gl.INVALID_INDEX || index === INVALID_INDEX) {
+          program_binding = null;
+        } else {
+          program_binding = {
+            index: index
+          };
+          this.gl.uniformBlockBinding(program, index, this.binding);
+        }
+        this.program_indices.set(program, program_binding);
+      }
+      if (program_binding == null) {
+        return false;
+      }
+      this.upload();
+      this.gl.bindBufferBase(this.gl.UNIFORM_BUFFER, this.binding, this.buffer);
+      return true;
+    }
+  }, {
+    key: "invalidateProgram",
+    value: function invalidateProgram(program) {
+      if (this.program_indices && program) {
+        this.program_indices.delete(program);
+      }
+    }
+  }, {
+    key: "destroy",
+    value: function destroy() {
+      if (this.buffer) {
+        if (this.buffer_resource) {
+          this.buffer_resource.destroy();
+        } else {
+          this.gl.deleteBuffer(this.buffer);
+        }
+        this.buffer = null;
+      }
+      this.buffer_resource = null;
+      this.gl = null;
+      this.data = null;
+      this.data_view = null;
+      this.program_indices = null;
+    }
+  }, {
+    key: "withBufferBinding",
+    value: function withBufferBinding(callback) {
+      var gl = this.gl;
+      var previous = typeof gl.getParameter === 'function' && gl.UNIFORM_BUFFER_BINDING != null ? gl.getParameter(gl.UNIFORM_BUFFER_BINDING) : null;
+      gl.bindBuffer(gl.UNIFORM_BUFFER, this.buffer);
+      try {
+        return callback();
+      } finally {
+        gl.bindBuffer(gl.UNIFORM_BUFFER, previous);
+      }
+    }
+  }], [{
+    key: "isSupported",
+    value: function isSupported(gl) {
+      return Boolean(gl && gl.UNIFORM_BUFFER != null && typeof gl.bindBufferBase === 'function' && typeof gl.getUniformBlockIndex === 'function' && typeof gl.uniformBlockBinding === 'function');
+    }
+  }, {
+    key: "createLayout",
+    value: function createLayout(uniforms) {
+      var offset = 0;
+      var layout = {};
+      for (var _i2 = 0, _Object$entries2 = Object.entries(uniforms); _i2 < _Object$entries2.length; _i2++) {
+        var _Object$entries2$_i = topojson._slicedToArray(_Object$entries2[_i2], 2),
+          name = _Object$entries2$_i[0],
+          type = _Object$entries2$_i[1];
+        var type_info = TYPES[type];
+        if (!type_info) {
+          throw new Error("UniformBuffer: unsupported std140 type '".concat(type, "' for '").concat(name, "'"));
+        }
+        offset = align(offset, type_info.alignment);
+        layout[name] = Object.assign({
+          name: name,
+          type: type,
+          offset: offset
+        }, type_info);
+        offset += type_info.size;
+      }
+      return {
+        byte_length: align(offset, BLOCK_ALIGNMENT),
+        uniforms: layout
+      };
+    }
+  }]);
+}();
+function align(value, alignment) {
+  return Math.ceil(value / alignment) * alignment;
+}
+function lowerFirst(value) {
+  return value.charAt(0).toLowerCase() + value.slice(1);
+}
 
 // Get a value for a nested property with path provided as an array (`a.b.c` => ['a', 'b', 'c'])
 function getPropertyPath(object, path) {
@@ -29634,6 +30493,7 @@ var TileManager = /*#__PURE__*/function () {
   }, {
     key: "buildTileStylesCompleted",
     value: function buildTileStylesCompleted(_ref2) {
+      var _this6 = this;
       var tile = _ref2.tile,
         progress = _ref2.progress;
       // Removed this tile during load?
@@ -29661,7 +30521,9 @@ var TileManager = /*#__PURE__*/function () {
         if (progress.done) {
           tile.built = true;
         }
-        tile.buildMeshes(this.scene.styles, progress);
+        this.scene.withWebGLContext(function () {
+          return tile.buildMeshes(_this6.scene.styles, progress);
+        });
         this.updateTileStates();
         this.scene.requestRedraw();
       }
@@ -29779,79 +30641,95 @@ var RenderState = /*#__PURE__*/function () {
         this.value = value;
       }
     }
+  }, {
+    key: "invalidate",
+    value: function invalidate() {
+      this.value = null;
+    }
   }]);
 }();
-var RenderStateManager = /*#__PURE__*/topojson._createClass(function RenderStateManager(gl) {
-  topojson._classCallCheck(this, RenderStateManager);
-  this.defaults = {};
+var RenderStateManager = /*#__PURE__*/function () {
+  function RenderStateManager(gl) {
+    topojson._classCallCheck(this, RenderStateManager);
+    this.defaults = {};
 
-  // Culling
-  this.defaults.culling = true;
-  this.defaults.culling_face = gl.BACK;
+    // Culling
+    this.defaults.culling = true;
+    this.defaults.culling_face = gl.BACK;
 
-  // Blending
-  this.defaults.blending = false;
-  this.defaults.blending_src = gl.ONE_MINUS_SRC_ALPHA;
-  this.defaults.blending_dst = gl.ONE_MINUS_SRC_ALPHA;
-  this.defaults.blending_src_alpha = gl.ONE;
-  this.defaults.blending_dst_alpha = gl.ONE_MINUS_SRC_ALPHA;
+    // Blending
+    this.defaults.blending = false;
+    this.defaults.blending_src = gl.ONE_MINUS_SRC_ALPHA;
+    this.defaults.blending_dst = gl.ONE_MINUS_SRC_ALPHA;
+    this.defaults.blending_src_alpha = gl.ONE;
+    this.defaults.blending_dst_alpha = gl.ONE_MINUS_SRC_ALPHA;
 
-  // Depth test/write
-  this.defaults.depth_write = true;
-  this.defaults.depth_test = true;
-  gl.depthFunc(gl.LESS); // depth function only needs to be set once
+    // Depth test/write
+    this.defaults.depth_write = true;
+    this.defaults.depth_test = true;
+    gl.depthFunc(gl.LESS); // depth function only needs to be set once
 
-  // Culling
-  this.culling = new RenderState({
-    cull: this.defaults.culling,
-    face: this.defaults.culling_face
-  }, function (value) {
-    if (value.cull) {
-      gl.enable(gl.CULL_FACE);
-      gl.cullFace(value.face);
-    } else {
-      gl.disable(gl.CULL_FACE);
-    }
-  });
-
-  // Blending mode
-  this.blending = new RenderState({
-    blend: this.defaults.blending,
-    src: this.defaults.blending_src,
-    dst: this.defaults.blending_dst,
-    src_alpha: this.defaults.blending_src_alpha,
-    dst_alpha: this.defaults.blending_dst_alpha
-  }, function (value) {
-    if (value.blend) {
-      gl.enable(gl.BLEND);
-      if (value.src_alpha && value.dst_alpha) {
-        gl.blendFuncSeparate(value.src, value.dst, value.src_alpha, value.dst_alpha);
+    // Culling
+    this.culling = new RenderState({
+      cull: this.defaults.culling,
+      face: this.defaults.culling_face
+    }, function (value) {
+      if (value.cull) {
+        gl.enable(gl.CULL_FACE);
+        gl.cullFace(value.face);
       } else {
-        gl.blendFunc(value.src, value.dst);
+        gl.disable(gl.CULL_FACE);
       }
-    } else {
-      gl.disable(gl.BLEND);
-    }
-  });
+    });
 
-  // Depth write
-  this.depth_write = new RenderState({
-    depth_write: this.defaults.depth_write
-  }, function (value) {
-    gl.depthMask(value.depth_write);
-  });
+    // Blending mode
+    this.blending = new RenderState({
+      blend: this.defaults.blending,
+      src: this.defaults.blending_src,
+      dst: this.defaults.blending_dst,
+      src_alpha: this.defaults.blending_src_alpha,
+      dst_alpha: this.defaults.blending_dst_alpha
+    }, function (value) {
+      if (value.blend) {
+        gl.enable(gl.BLEND);
+        if (value.src_alpha && value.dst_alpha) {
+          gl.blendFuncSeparate(value.src, value.dst, value.src_alpha, value.dst_alpha);
+        } else {
+          gl.blendFunc(value.src, value.dst);
+        }
+      } else {
+        gl.disable(gl.BLEND);
+      }
+    });
 
-  // Depth test
-  this.depth_test = new RenderState({
-    depth_test: this.defaults.depth_test
-  }, function (value) {
-    if (value.depth_test) {
-      gl.enable(gl.DEPTH_TEST);
-    } else {
-      gl.disable(gl.DEPTH_TEST);
+    // Depth write
+    this.depth_write = new RenderState({
+      depth_write: this.defaults.depth_write
+    }, function (value) {
+      gl.depthMask(value.depth_write);
+    });
+
+    // Depth test
+    this.depth_test = new RenderState({
+      depth_test: this.defaults.depth_test
+    }, function (value) {
+      if (value.depth_test) {
+        gl.enable(gl.DEPTH_TEST);
+      } else {
+        gl.disable(gl.DEPTH_TEST);
+      }
+    });
+  }
+  return topojson._createClass(RenderStateManager, [{
+    key: "invalidate",
+    value: function invalidate() {
+      this.culling.invalidate();
+      this.blending.invalidate();
+      this.depth_write.invalidate();
+      this.depth_test.invalidate();
     }
-  });
-});
+  }]);
+}();
 
 var MediaCapture = /*#__PURE__*/function () {
   function MediaCapture() {
@@ -30247,6 +31125,16 @@ var Scene = /*#__PURE__*/function () {
     this.container = options.container;
     this.canvas = null;
     this.contextOptions = options.webGLContextOptions;
+    this.external_gl = options.webGLContext || null;
+    this.owns_gl = !this.external_gl;
+    this.webgl_context_scope = options.webGLContextScope;
+    this.redraw_callback = options.requestRedraw;
+    this.enable_uniform_buffers = options.enableUniformBuffers === true;
+    this.uniform_buffer_factory = options.uniformBufferFactory;
+    this.shader_factory = options.shaderFactory;
+    this.mesh_buffer_factory = options.meshBufferFactory;
+    this.mesh_renderer = options.meshRenderer;
+    this.uniform_buffers = {};
     this.lights = null;
     this.background = null;
     this.createListeners();
@@ -30375,26 +31263,36 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "destroy",
     value: function destroy() {
+      var _this2 = this;
+      return this.withWebGLContext(function () {
+        return _this2.destroyScene();
+      });
+    }
+  }, {
+    key: "destroyScene",
+    value: function destroyScene() {
       this.initialized = false;
       this.render_loop_stop = true; // schedule render loop to stop
 
       this.destroyListeners();
       this.destroyFeatureSelection();
-      if (this.canvas && this.canvas.parentNode) {
+      if (this.owns_gl && this.canvas && this.canvas.parentNode) {
         this.canvas.parentNode.removeChild(this.canvas);
-        this.canvas = null;
       }
+      this.canvas = null;
       this.container = null;
       if (this.gl) {
         topojson.Texture.destroy(this.gl);
         this.style_manager.destroy(this.gl);
         this.styles = {};
+        this.destroyUniformBuffers();
         topojson.ShaderProgram.reset();
-
-        // Force context loss
-        var ext = this.gl.getExtension('WEBGL_lose_context');
-        if (ext) {
-          ext.loseContext();
+        if (this.owns_gl) {
+          // Force context loss only when Tangram created and owns it
+          var ext = this.gl.getExtension('WEBGL_lose_context');
+          if (ext) {
+            ext.loseContext();
+          }
         }
         this.gl = null;
       }
@@ -30407,33 +31305,103 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "createCanvas",
     value: function createCanvas() {
-      if (this.canvas) {
+      var _this3 = this;
+      if (this.gl) {
         return;
       }
-      this.container = this.container || document.body;
-      this.canvas = document.createElement('canvas');
-      this.canvas.style.position = 'absolute';
-      this.canvas.style.top = 0;
-      this.canvas.style.left = 0;
+      return this.withWebGLContext(function () {
+        return _this3.createCanvasContext();
+      });
+    }
+  }, {
+    key: "createCanvasContext",
+    value: function createCanvasContext() {
+      if (this.external_gl) {
+        this.gl = topojson.Context.configure(this.external_gl, this.webgl_context_scope);
+        this.canvas = this.gl.canvas;
+      } else {
+        this.container = this.container || document.body;
+        this.canvas = document.createElement('canvas');
+        this.canvas.style.position = 'absolute';
+        this.canvas.style.top = 0;
+        this.canvas.style.left = 0;
 
-      // Force tangram canvas underneath all leaflet layers, and set background to transparent
-      this.container.style.backgroundColor = 'transparent';
-      this.container.appendChild(this.canvas);
-      try {
-        this.gl = Context$1.getContext(this.canvas, Object.assign({
-          alpha: true,
-          premultipliedAlpha: true,
-          stencil: true,
-          device_pixel_ratio: topojson.Utils.device_pixel_ratio,
-          powerPreference: 'high-performance'
-        }, this.contextOptions));
-      } catch (e) {
-        throw new Error('Couldn\'t create WebGL context. ' + 'Your browser may not support WebGL, or it\'s turned off? ' + 'Visit http://webglreport.com/ for more info.');
+        // Force tangram canvas underneath all leaflet layers, and set background to transparent
+        this.container.style.backgroundColor = 'transparent';
+        this.container.appendChild(this.canvas);
+        try {
+          this.gl = topojson.Context.getContext(this.canvas, Object.assign({
+            alpha: true,
+            premultipliedAlpha: true,
+            stencil: true,
+            device_pixel_ratio: topojson.Utils.device_pixel_ratio,
+            powerPreference: 'high-performance'
+          }, this.contextOptions));
+        } catch (e) {
+          throw new Error('Couldn\'t create WebGL context. ' + 'Your browser may not support WebGL, or it\'s turned off? ' + 'Visit http://webglreport.com/ for more info.');
+        }
       }
-      this.resizeMap(this.container.clientWidth, this.container.clientHeight);
+      if (this.owns_gl) {
+        this.resizeMap(this.container.clientWidth, this.container.clientHeight);
+      }
       topojson.VertexArrayObject.init(this.gl);
       this.render_states = new RenderStateManager(this.gl);
       this.media_capture.setCanvas(this.canvas, this.gl);
+      this.createUniformBuffers();
+    }
+  }, {
+    key: "createUniformBuffers",
+    value: function createUniformBuffers() {
+      if (!this.enable_uniform_buffers || !UniformBuffer.isSupported(this.gl)) {
+        return;
+      }
+      this.uniform_buffers.TangramView = new UniformBuffer(this.gl, {
+        name: 'TangramView',
+        binding: 0,
+        bufferFactory: this.uniform_buffer_factory,
+        uniforms: {
+          u_resolution: 'vec2',
+          u_time: 'float',
+          u_map_position: 'vec3',
+          u_meters_per_pixel: 'float',
+          u_device_pixel_ratio: 'float',
+          u_view_pan_snap_timer: 'float',
+          u_view_panning: 'bool'
+        }
+      });
+      this.uniform_buffers.TangramCamera = new UniformBuffer(this.gl, {
+        name: 'TangramCamera',
+        binding: 1,
+        bufferFactory: this.uniform_buffer_factory,
+        uniforms: {
+          u_projection: 'mat4',
+          u_eye: 'vec3',
+          u_vanishing_point: 'vec2'
+        }
+      });
+      this.uniform_buffers.TangramTile = new UniformBuffer(this.gl, {
+        name: 'TangramTile',
+        binding: 2,
+        bufferFactory: this.uniform_buffer_factory,
+        uniforms: {
+          u_tile_origin: 'vec4',
+          u_tile_proxy_order_offset: 'float',
+          u_model: 'mat4',
+          u_modelView: 'mat4',
+          u_normalMatrix: 'mat3',
+          u_inverseNormalMatrix: 'mat3',
+          u_tile_fade_in: 'bool'
+        }
+      });
+    }
+  }, {
+    key: "destroyUniformBuffers",
+    value: function destroyUniformBuffers() {
+      for (var _i = 0, _Object$values = Object.values(this.uniform_buffers); _i < _Object$values.length; _i++) {
+        var uniform_buffer = _Object$values[_i];
+        uniform_buffer.destroy();
+      }
+      this.uniform_buffers = {};
     }
 
     // Update list of any custom scripts (either at scene-level or data-source-level)
@@ -30489,18 +31457,18 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "makeWorkers",
     value: function makeWorkers() {
-      var _this2 = this;
+      var _this4 = this;
       // Let VertexElements know if 32 bit indices for element arrays are available
       var has_element_index_uint = this.gl.getExtension('OES_element_index_uint') ? true : false;
       var queue = [];
       this.workers = [];
       var _loop = function _loop() {
         var worker = new Worker(Tangram.workerURL); // eslint-disable-line no-undef
-        _this2.workers[id] = worker;
+        _this4.workers[id] = worker;
         topojson.WorkerBroker.addWorker(worker);
         topojson.log('debug', "Scene.makeWorkers: initializing worker ".concat(id));
         var _id = id;
-        queue.push(topojson.WorkerBroker.postMessage(worker, 'self.init', _this2.id, id, _this2.num_workers, _this2.log_level, topojson.Utils.device_pixel_ratio, has_element_index_uint, _this2.external_scripts).then(function (id) {
+        queue.push(topojson.WorkerBroker.postMessage(worker, 'self.init', _this4.id, id, _this4.num_workers, _this4.log_level, topojson.Utils.device_pixel_ratio, has_element_index_uint, _this4.external_scripts).then(function (id) {
           topojson.log('debug', "Scene.makeWorkers: initialized worker ".concat(id));
           return id;
         }, function (error) {
@@ -30513,7 +31481,7 @@ var Scene = /*#__PURE__*/function () {
       }
       this.next_worker = 0;
       return Promise.all(queue).then(function () {
-        topojson.log.setWorkers(_this2.workers);
+        topojson.log.setWorkers(_this4.workers);
       });
     }
   }, {
@@ -30543,12 +31511,12 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "updateDevicePixelRatio",
     value: function updateDevicePixelRatio() {
-      var _this3 = this;
+      var _this5 = this;
       if (topojson.Utils.updateDevicePixelRatio()) {
         topojson.WorkerBroker.postMessage(this.workers, 'self.updateDevicePixelRatio', topojson.Utils.device_pixel_ratio).then(function () {
-          return _this3.rebuild();
+          return _this5.rebuild();
         }).then(function () {
-          return _this3.resizeMap(_this3.view.size.css.width, _this3.view.size.css.height);
+          return _this5.resizeMap(_this5.view.size.css.width, _this5.view.size.css.height);
         });
       }
     }
@@ -30560,8 +31528,22 @@ var Scene = /*#__PURE__*/function () {
       }
       this.dirty = true;
       this.view.setViewportSize(width, height);
-      if (this.gl) {
-        Context$1.resize(this.gl, width, height, topojson.Utils.device_pixel_ratio);
+      if (this.gl && this.owns_gl) {
+        topojson.Context.resize(this.gl, width, height, topojson.Utils.device_pixel_ratio);
+      }
+    }
+  }, {
+    key: "withWebGLContext",
+    value: function withWebGLContext(callback) {
+      return this.webgl_context_scope ? this.webgl_context_scope(callback) : callback();
+    }
+  }, {
+    key: "resetWebGLState",
+    value: function resetWebGLState() {
+      topojson.ShaderProgram.resetCurrent();
+      topojson.Texture.resetBindings();
+      if (this.render_states) {
+        this.render_states.invalidate();
       }
     }
 
@@ -30570,6 +31552,9 @@ var Scene = /*#__PURE__*/function () {
     key: "requestRedraw",
     value: function requestRedraw() {
       this.dirty = true;
+      if (this.render_loop === false && this.redraw_callback) {
+        this.redraw_callback();
+      }
     }
 
     // Redraw scene immediately - don't wait for animation loop
@@ -30608,16 +31593,40 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "setupRenderLoop",
     value: function setupRenderLoop() {
-      var _this4 = this;
+      var _this6 = this;
       if (!this.render_loop_active) {
         setTimeout(function () {
-          _this4.renderLoop();
+          _this6.renderLoop();
         }, 0); // delay start by one tick
       }
     }
   }, {
     key: "update",
     value: function update() {
+      var _this7 = this;
+      var _ref2 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        _ref2$force = _ref2.force,
+        force = _ref2$force === void 0 ? false : _ref2$force,
+        _ref2$renderPass = _ref2.renderPass,
+        renderPass = _ref2$renderPass === void 0 ? null : _ref2$renderPass;
+      return this.withWebGLContext(function () {
+        if (force) {
+          _this7.dirty = true;
+        }
+        if (_this7.external_gl) {
+          _this7.resetWebGLState();
+        }
+        return _this7.updateScene({
+          renderPass: renderPass
+        });
+      });
+    }
+  }, {
+    key: "updateScene",
+    value: function updateScene() {
+      var _ref3 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        _ref3$renderPass = _ref3.renderPass,
+        renderPass = _ref3$renderPass === void 0 ? null : _ref3$renderPass;
       // Determine which passes (if any) to render
       var main = this.dirty;
       var selection = this.selection ? this.selection.hasPendingRequests() : false;
@@ -30639,7 +31648,8 @@ var Scene = /*#__PURE__*/function () {
       this.updateDevicePixelRatio();
       this.render({
         main: main,
-        selection: selection
+        selection: selection,
+        renderPass: renderPass
       });
       this.updateViewComplete(); // fires event when rendered tile set or style changes
       this.media_capture.completeScreenshot(); // completes screenshot capture if requested
@@ -30659,20 +31669,24 @@ var Scene = /*#__PURE__*/function () {
     // Accepts flags indicating which render passes should be made
   }, {
     key: "render",
-    value: function render(_ref2) {
-      var _this5 = this;
-      var main = _ref2.main,
-        selection = _ref2.selection;
+    value: function render(_ref4) {
+      var _this8 = this;
+      var main = _ref4.main,
+        selection = _ref4.selection,
+        _ref4$renderPass = _ref4.renderPass,
+        renderPass = _ref4$renderPass === void 0 ? null : _ref4$renderPass;
       var gl = this.gl;
       this.updateBackground();
       Object.keys(this.lights).forEach(function (i) {
-        return _this5.lights[i].update();
+        return _this8.lights[i].update();
       });
 
       // Render main pass
       this.render_count_changed = false;
       if (main) {
-        this.render_count = this.renderPass();
+        this.render_count = this.renderPass('program', {
+          renderPass: renderPass
+        });
         this.last_main_render = this.frame;
 
         // Update feature selection map if necessary
@@ -30680,8 +31694,8 @@ var Scene = /*#__PURE__*/function () {
           this.render_count_changed = true;
           this.logFirstFrame();
           this.getFeatureSelectionMapSize().then(function (size) {
-            _this5.selection_feature_count = size;
-            topojson.log('info', "Scene: rendered ".concat(_this5.render_count, " primitives (").concat(size, " features in selection map)"));
+            _this8.selection_feature_count = size;
+            topojson.log('info', "Scene: rendered ".concat(_this8.render_count, " primitives (").concat(size, " features in selection map)"));
           });
         }
         this.last_render_count = this.render_count;
@@ -30720,10 +31734,12 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "renderPass",
     value: function renderPass() {
-      var _this6 = this;
+      var _this9 = this;
       var program_key = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'program';
-      var _ref3 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-        allow_blend = _ref3.allow_blend;
+      var _ref5 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+        allow_blend = _ref5.allow_blend,
+        _ref5$renderPass = _ref5.renderPass,
+        _renderPass = _ref5$renderPass === void 0 ? null : _ref5$renderPass;
       // optionally force alpha off (e.g. for selection pass)
       allow_blend = allow_blend == null ? true : allow_blend;
       this.clearFrame();
@@ -30740,7 +31756,7 @@ var Scene = /*#__PURE__*/function () {
             blend_order = _step$value.blend_order,
             styles = _step$value.styles;
           var _loop2 = function _loop2() {
-            var style = _this6.styles[styles[s]];
+            var style = _this9.styles[styles[s]];
             if (style == null) {
               return 1; // continue
             }
@@ -30753,33 +31769,33 @@ var Scene = /*#__PURE__*/function () {
                 blend: allow_blend && style.blend
               } // enable/disable blending (e.g. no blend for selection)
               );
-              _this6.setRenderState(state);
+              _this9.setRenderState(state);
             }
             var blend = allow_blend && style.blend;
             if (blend === 'translucent') {
               // Depth pre-pass for translucency
-              _this6.gl.colorMask(false, false, false, false);
-              _this6.renderStyle(style.name, program_key, blend_order);
-              _this6.gl.colorMask(true, true, true, true);
-              _this6.gl.depthFunc(_this6.gl.EQUAL);
+              _this9.gl.colorMask(false, false, false, false);
+              _this9.renderStyle(style.name, program_key, blend_order, null, _renderPass);
+              _this9.gl.colorMask(true, true, true, true);
+              _this9.gl.depthFunc(_this9.gl.EQUAL);
 
               // Stencil buffer mask prevents overlap/flicker from compounding alpha of overlapping polys
-              _this6.gl.enable(_this6.gl.STENCIL_TEST);
-              _this6.gl.clearStencil(0);
-              _this6.gl.clear(_this6.gl.STENCIL_BUFFER_BIT);
-              _this6.gl.stencilFunc(_this6.gl.EQUAL, _this6.gl.ZERO, 0xFF);
-              _this6.gl.stencilOp(_this6.gl.KEEP, _this6.gl.KEEP, _this6.gl.INCR);
+              _this9.gl.enable(_this9.gl.STENCIL_TEST);
+              _this9.gl.clearStencil(0);
+              _this9.gl.clear(_this9.gl.STENCIL_BUFFER_BIT);
+              _this9.gl.stencilFunc(_this9.gl.EQUAL, _this9.gl.ZERO, 0xFF);
+              _this9.gl.stencilOp(_this9.gl.KEEP, _this9.gl.KEEP, _this9.gl.INCR);
 
               // Main render pass
-              count += _this6.renderStyle(style.name, program_key, blend_order);
+              count += _this9.renderStyle(style.name, program_key, blend_order, null, _renderPass);
 
               // Disable translucency-specific settings
-              _this6.gl.disable(_this6.gl.STENCIL_TEST);
-              _this6.gl.depthFunc(_this6.gl.LESS);
+              _this9.gl.disable(_this9.gl.STENCIL_TEST);
+              _this9.gl.depthFunc(_this9.gl.LESS);
             } else if (blend !== 'opaque' && style.stencil_proxy_tiles === true) {
               // Mask proxy tiles to with stencil buffer to avoid overlap/flicker from compounding alpha
               // Find unique levels of proxy tiles to render for this style
-              var proxy_levels = _this6.tile_manager.getRenderableTiles().filter(function (t) {
+              var proxy_levels = _this9.tile_manager.getRenderableTiles().filter(function (t) {
                 return t.meshes[style.name];
               }) // must have meshes for this style
               .map(function (t) {
@@ -30796,25 +31812,25 @@ var Scene = /*#__PURE__*/function () {
                 // tile levels, or multiple proxy tile levels but no non-proxy tiles, etc.):
                 // Render each proxy tile level to stencil buffer, masking each level such that it will not
                 // render over any pixel rendered by a previous proxy tile level.
-                _this6.gl.enable(_this6.gl.STENCIL_TEST);
-                _this6.gl.clearStencil(0);
-                _this6.gl.clear(_this6.gl.STENCIL_BUFFER_BIT);
-                _this6.gl.stencilOp(_this6.gl.KEEP, _this6.gl.KEEP, _this6.gl.REPLACE);
+                _this9.gl.enable(_this9.gl.STENCIL_TEST);
+                _this9.gl.clearStencil(0);
+                _this9.gl.clear(_this9.gl.STENCIL_BUFFER_BIT);
+                _this9.gl.stencilOp(_this9.gl.KEEP, _this9.gl.KEEP, _this9.gl.REPLACE);
                 for (var i = 0; i < proxy_levels.length; i++) {
                   // stencil test passes either for zero (not-yet-rendered),
                   // or for other pixels at this proxy level (but not previous proxy levels)
-                  _this6.gl.stencilFunc(_this6.gl.GEQUAL, proxy_levels.length - i, 0xFF);
-                  count += _this6.renderStyle(style.name, program_key, blend_order, proxy_levels[i]);
+                  _this9.gl.stencilFunc(_this9.gl.GEQUAL, proxy_levels.length - i, 0xFF);
+                  count += _this9.renderStyle(style.name, program_key, blend_order, proxy_levels[i], _renderPass);
                 }
-                _this6.gl.disable(_this6.gl.STENCIL_TEST);
+                _this9.gl.disable(_this9.gl.STENCIL_TEST);
               } else {
                 // No special render handling needed when there are no proxy tiles,
                 // or if there is ONLY a single proxy tile level (e.g. with no non-proxy tiles)
-                count += _this6.renderStyle(style.name, program_key, blend_order);
+                count += _this9.renderStyle(style.name, program_key, blend_order, null, _renderPass);
               }
             } else {
               // Regular render pass (no special blend handling, or selection buffer pass)
-              count += _this6.renderStyle(style.name, program_key, blend_order);
+              count += _this9.renderStyle(style.name, program_key, blend_order, null, _renderPass);
             }
             last_blend = style.blend;
           };
@@ -30833,8 +31849,9 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "renderStyle",
     value: function renderStyle(style_name, program_key, blend_order) {
-      var _this7 = this;
+      var _this10 = this;
       var proxy_level = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
+      var renderPass = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : null;
       var style = this.styles[style_name];
       var first_for_style = true; // TODO: allow this state to be passed in (for multilpe blend orders, stencil tests, etc)
       var render_count = 0;
@@ -30860,9 +31877,9 @@ var Scene = /*#__PURE__*/function () {
 
       // Mesh variants must be rendered in requested order across tiles, to prevent labels that cross
       // tile boundaries from rendering over adjacent tile features meant to be underneath
-      var max_mesh_order = Math.max.apply(Math, topojson._toConsumableArray(tile_meshes.map(function (_ref4) {
-        var _ref5 = topojson._slicedToArray(_ref4, 2),
-          meshes = _ref5[1];
+      var max_mesh_order = Math.max.apply(Math, topojson._toConsumableArray(tile_meshes.map(function (_ref6) {
+        var _ref7 = topojson._slicedToArray(_ref6, 2),
+          meshes = _ref7[1];
         return Math.max.apply(Math, topojson._toConsumableArray(meshes.map(function (m) {
           return m.variant.mesh_order;
         })));
@@ -30899,7 +31916,7 @@ var Scene = /*#__PURE__*/function () {
                 // (lazy init, not all styles will be used in all screen views; some styles might be defined but never used)
                 if (first_for_style === true) {
                   first_for_style = false;
-                  program = _this7.setupStyle(style, program_key);
+                  program = _this10.setupStyle(style, program_key);
                   if (!program) {
                     // no program found, e.g. happens when rendering selection pass, but style doesn't support selection
                     return {
@@ -30915,12 +31932,15 @@ var Scene = /*#__PURE__*/function () {
                   // Tile-specific state
                   if (first_for_tile === true) {
                     first_for_tile = false;
-                    _this7.view.setupTile(tile, program);
+                    _this10.view.setupTile(tile, program);
                   }
 
                   // Render this mesh variant
-                  if (style.render(mesh)) {
-                    _this7.requestRedraw();
+                  if (style.render(mesh, {
+                    renderPass: renderPass,
+                    meshRenderer: _this10.mesh_renderer
+                  })) {
+                    _this10.requestRedraw();
                   }
                   render_count += mesh.geometry_count;
                 });
@@ -30965,8 +31985,15 @@ var Scene = /*#__PURE__*/function () {
       }
       program.use();
       style.setup();
-      program.uniform('1f', 'u_time', this.animated ? (+new Date() - this.start_time) / 1000 : 0);
-      this.view.setupProgram(program);
+      var time = this.animated ? (+new Date() - this.start_time) / 1000 : 0;
+      if (this.uniform_buffers.TangramView) {
+        this.uniform_buffers.TangramView.setUniform('u_time', time);
+        this.view.setupProgram(program, this.uniform_buffers);
+        program.bindUniformBlocks();
+      } else {
+        program.uniform('1f', 'u_time', time);
+        this.view.setupProgram(program);
+      }
       for (var i in this.lights) {
         this.lights[i].setupProgram(program);
       }
@@ -30986,11 +32013,11 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "setRenderState",
     value: function setRenderState() {
-      var _ref6 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        depth_test = _ref6.depth_test,
-        depth_write = _ref6.depth_write,
-        cull_face = _ref6.cull_face,
-        blend = _ref6.blend;
+      var _ref8 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        depth_test = _ref8.depth_test,
+        depth_write = _ref8.depth_write,
+        cull_face = _ref8.cull_face,
+        blend = _ref8.blend;
       if (!this.initialized) {
         return;
       }
@@ -31063,8 +32090,8 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "getFeatureAt",
     value: function getFeatureAt(pixel) {
-      var _ref7 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-        radius = _ref7.radius;
+      var _ref9 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+        radius = _ref9.radius;
       if (!this.initialized) {
         topojson.log('debug', 'Scene.getFeatureAt() called before scene was initialized');
         return Promise.resolve();
@@ -31112,8 +32139,8 @@ var Scene = /*#__PURE__*/function () {
     value: function queryFeatures() {
       var $args = arguments;
       return new Promise(function ($return, $error) {
-        var _ref8, filter, _ref8$unique, unique, _ref8$group_by, group_by, _ref8$visible, visible, _ref8$geometry, geometry, uniqueify_on_id, uniqueify, group, tile_keys, results, features, keys, groups;
-        _ref8 = $args.length > 0 && $args[0] !== undefined ? $args[0] : {}, filter = _ref8.filter, _ref8$unique = _ref8.unique, unique = _ref8$unique === void 0 ? true : _ref8$unique, _ref8$group_by = _ref8.group_by, group_by = _ref8$group_by === void 0 ? null : _ref8$group_by, _ref8$visible = _ref8.visible, visible = _ref8$visible === void 0 ? null : _ref8$visible, _ref8$geometry = _ref8.geometry, geometry = _ref8$geometry === void 0 ? false : _ref8$geometry;
+        var _ref10, filter, _ref10$unique, unique, _ref10$group_by, group_by, _ref10$visible, visible, _ref10$geometry, geometry, uniqueify_on_id, uniqueify, group, tile_keys, results, features, keys, groups;
+        _ref10 = $args.length > 0 && $args[0] !== undefined ? $args[0] : {}, filter = _ref10.filter, _ref10$unique = _ref10.unique, unique = _ref10$unique === void 0 ? true : _ref10$unique, _ref10$group_by = _ref10.group_by, group_by = _ref10$group_by === void 0 ? null : _ref10$group_by, _ref10$visible = _ref10.visible, visible = _ref10$visible === void 0 ? null : _ref10$visible, _ref10$geometry = _ref10.geometry, geometry = _ref10$geometry === void 0 ? false : _ref10$geometry;
         if (!this.initialized) {
           return $return([]);
         }
@@ -31191,27 +32218,27 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "rebuild",
     value: function rebuild() {
-      var _this8 = this;
-      var _ref9 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        _ref9$initial = _ref9.initial,
-        initial = _ref9$initial === void 0 ? false : _ref9$initial,
-        _ref9$new_generation = _ref9.new_generation,
-        new_generation = _ref9$new_generation === void 0 ? true : _ref9$new_generation,
-        _ref9$sources = _ref9.sources,
-        sources = _ref9$sources === void 0 ? null : _ref9$sources,
-        serialize_funcs = _ref9.serialize_funcs,
-        _ref9$profile = _ref9.profile,
-        profile = _ref9$profile === void 0 ? false : _ref9$profile,
-        _ref9$fade_in = _ref9.fade_in,
-        fade_in = _ref9$fade_in === void 0 ? false : _ref9$fade_in;
+      var _this11 = this;
+      var _ref11 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        _ref11$initial = _ref11.initial,
+        initial = _ref11$initial === void 0 ? false : _ref11$initial,
+        _ref11$new_generation = _ref11.new_generation,
+        new_generation = _ref11$new_generation === void 0 ? true : _ref11$new_generation,
+        _ref11$sources = _ref11.sources,
+        sources = _ref11$sources === void 0 ? null : _ref11$sources,
+        serialize_funcs = _ref11.serialize_funcs,
+        _ref11$profile = _ref11.profile,
+        profile = _ref11$profile === void 0 ? false : _ref11$profile,
+        _ref11$fade_in = _ref11.fade_in,
+        fade_in = _ref11$fade_in === void 0 ? false : _ref11$fade_in;
       return new Promise(function (resolve, reject) {
         // Skip rebuild if already in progress
-        if (_this8.building) {
+        if (_this11.building) {
           // Queue up to one rebuild call at a time, only save last request
-          if (_this8.building.queued && _this8.building.queued.reject) {
+          if (_this11.building.queued && _this11.building.queued.reject) {
             // notify previous request that it did not complete
             topojson.log('debug', 'Scene.rebuild: request superceded by a newer call');
-            _this8.building.queued.resolve(false); // false flag indicates rebuild request was superceded
+            _this11.building.queued.resolve(false); // false flag indicates rebuild request was superceded
           }
 
           // Save queued request
@@ -31223,7 +32250,7 @@ var Scene = /*#__PURE__*/function () {
             profile: profile,
             fade_in: fade_in
           };
-          _this8.building.queued = {
+          _this11.building.queued = {
             resolve: resolve,
             reject: reject,
             options: options
@@ -31233,7 +32260,7 @@ var Scene = /*#__PURE__*/function () {
         }
 
         // Track tile build state
-        _this8.building = {
+        _this11.building = {
           resolve: resolve,
           reject: reject,
           initial: initial
@@ -31241,40 +32268,40 @@ var Scene = /*#__PURE__*/function () {
 
         // Profiling
         if (profile) {
-          _this8.debug.profile('Scene.rebuild');
+          _this11.debug.profile('Scene.rebuild');
         }
 
         // Increment generation to ensure style/tile building stay in sync
         // (skipped if calling function already incremented)
         if (new_generation) {
-          _this8.generation = ++Scene.generation;
-          for (var style in _this8.styles) {
-            _this8.styles[style].setGeneration(_this8.generation);
+          _this11.generation = ++Scene.generation;
+          for (var style in _this11.styles) {
+            _this11.styles[style].setGeneration(_this11.generation);
           }
         }
 
         // Update config (in case JS objects were manipulated directly)
-        _this8.syncConfigToWorker({
+        _this11.syncConfigToWorker({
           serialize_funcs: serialize_funcs
         });
-        _this8.resetWorkerFeatureSelection(sources);
-        _this8.resetTime();
+        _this11.resetWorkerFeatureSelection(sources);
+        _this11.resetTime();
 
         // Rebuild visible tiles
-        _this8.tile_manager.pruneToVisibleTiles();
-        _this8.tile_manager.forEachTile(function (tile) {
+        _this11.tile_manager.pruneToVisibleTiles();
+        _this11.tile_manager.forEachTile(function (tile) {
           if (!sources || sources.indexOf(tile.source.name) > -1) {
-            _this8.tile_manager.buildTile(tile, {
+            _this11.tile_manager.buildTile(tile, {
               fade_in: fade_in
             });
           }
         });
-        _this8.tile_manager.updateTilesForView(); // picks up additional tiles for any new/changed data sources
-        _this8.tile_manager.checkBuildQueue(); // resolve immediately if no tiles to build
+        _this11.tile_manager.updateTilesForView(); // picks up additional tiles for any new/changed data sources
+        _this11.tile_manager.checkBuildQueue(); // resolve immediately if no tiles to build
       }).then(function () {
         // Profiling
         if (profile) {
-          _this8.debug.profileEnd('Scene.rebuild');
+          _this11.debug.profileEnd('Scene.rebuild');
         }
       });
     }
@@ -31313,9 +32340,9 @@ var Scene = /*#__PURE__*/function () {
     value: function loadScene() {
       var $args = arguments;
       return new Promise(function ($return, $error) {
-        var config_source, _ref10, base_path, file_type, _await$SceneLoader$lo, config, bundle, texture_nodes;
+        var config_source, _ref12, base_path, file_type, _await$SceneLoader$lo, config, bundle, texture_nodes;
         config_source = $args.length > 0 && $args[0] !== undefined ? $args[0] : null;
-        _ref10 = $args.length > 1 && $args[1] !== undefined ? $args[1] : {}, base_path = _ref10.base_path, file_type = _ref10.file_type;
+        _ref12 = $args.length > 1 && $args[1] !== undefined ? $args[1] : {}, base_path = _ref12.base_path, file_type = _ref12.file_type;
         this.config_source = config_source || this.config_source;
         if (typeof this.config_source === 'string') {
           this.base_path = topojson.pathForURL(base_path || this.config_source);
@@ -31393,7 +32420,7 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "createDataSources",
     value: function createDataSources() {
-      var _this9 = this;
+      var _this12 = this;
       var rebuild_all = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
       var reset = []; // sources to reset
       var prev_source_names = Object.keys(this.sources);
@@ -31430,8 +32457,8 @@ var Scene = /*#__PURE__*/function () {
 
       // Sources that were removed
       prev_source_names.forEach(function (s) {
-        if (!_this9.config.sources[s]) {
-          delete _this9.sources[s]; // TODO: remove from workers too?
+        if (!_this12.config.sources[s]) {
+          delete _this12.sources[s]; // TODO: remove from workers too?
           reset.push(s);
         }
       });
@@ -31456,9 +32483,9 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "loadTextures",
     value: function loadTextures() {
-      var _this10 = this;
+      var _this13 = this;
       return topojson.Texture.createFromObject(this.gl, this.config.textures).then(function () {
-        return topojson.Texture.createDefault(_this10.gl);
+        return topojson.Texture.createDefault(_this13.gl);
       }); // create a 'default' texture for placeholders
     }
 
@@ -31466,13 +32493,13 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "freePreviousTextures",
     value: function freePreviousTextures() {
-      var _this11 = this;
+      var _this14 = this;
       if (!this.prev_textures) {
         return;
       }
       this.prev_textures.forEach(function (t) {
         // free textures that aren't in the new scene, but are still in the global texture set
-        if (!_this11.config.textures[t] && topojson.Texture.textures[t]) {
+        if (!_this14.config.textures[t] && topojson.Texture.textures[t]) {
           topojson.Texture.textures[t].destroy();
         }
       });
@@ -31493,7 +32520,11 @@ var Scene = /*#__PURE__*/function () {
 
       // Optionally set GL context (used when initializing or re-initializing GL resources)
       for (var style in this.styles) {
-        this.styles[style].setGL(this.gl);
+        this.styles[style].setGL(this.gl, this.uniform_buffers, {
+          shaderFactory: this.shader_factory,
+          meshBufferFactory: this.mesh_buffer_factory,
+          deferUniformBlocks: Boolean(this.mesh_renderer)
+        });
       }
       this.dirty = true;
     }
@@ -31502,10 +32533,10 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "animated",
     get: function get() {
-      var _this12 = this;
+      var _this15 = this;
       // Disable animation is scene flag requests it, otherwise enable animation if any animated styles are in view
       return this.config.scene.animated === false ? false : this.style_manager.getActiveStyles().some(function (s) {
-        return _this12.styles[s].animated;
+        return _this15.styles[s].animated;
       });
     }
 
@@ -31574,12 +32605,14 @@ var Scene = /*#__PURE__*/function () {
       })) {
         var _this$gl;
         // if background is fully opaque, set canvas background to match
-        if (color[3] === 1) {
-          this.canvas.style.backgroundColor = "rgba(".concat(color.map(function (c) {
-            return Math.floor(c * 255);
-          }).join(', '), ")");
-        } else {
-          this.canvas.style.backgroundColor = 'transparent';
+        if (this.owns_gl) {
+          if (color[3] === 1) {
+            this.canvas.style.backgroundColor = "rgba(".concat(color.map(function (c) {
+              return Math.floor(c * 255);
+            }).join(', '), ")");
+          } else {
+            this.canvas.style.backgroundColor = 'transparent';
+          }
         }
         (_this$gl = this.gl).clearColor.apply(_this$gl, topojson._toConsumableArray(color));
       }
@@ -31589,14 +32622,14 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "setIntrospection",
     value: function setIntrospection(val) {
-      var _this13 = this;
+      var _this16 = this;
       if (val !== this.introspection) {
         this.introspection = val != null ? val : false;
         this.updating++;
         return this.updateConfig({
           normalize: false
         }).then(function () {
-          return _this13.updating--;
+          return _this16.updating--;
         });
       }
       return Promise.resolve();
@@ -31607,19 +32640,19 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "updateConfig",
     value: function updateConfig() {
-      var _this14 = this;
-      var _ref11 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        _ref11$loading = _ref11.loading,
-        loading = _ref11$loading === void 0 ? false : _ref11$loading,
-        _ref11$rebuild = _ref11.rebuild,
-        rebuild = _ref11$rebuild === void 0 ? true : _ref11$rebuild,
-        serialize_funcs = _ref11.serialize_funcs,
-        _ref11$texture_nodes = _ref11.texture_nodes,
-        texture_nodes = _ref11$texture_nodes === void 0 ? {} : _ref11$texture_nodes,
-        _ref11$normalize = _ref11.normalize,
-        normalize = _ref11$normalize === void 0 ? true : _ref11$normalize,
-        _ref11$fade_in = _ref11.fade_in,
-        fade_in = _ref11$fade_in === void 0 ? false : _ref11$fade_in;
+      var _this17 = this;
+      var _ref13 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        _ref13$loading = _ref13.loading,
+        loading = _ref13$loading === void 0 ? false : _ref13$loading,
+        _ref13$rebuild = _ref13.rebuild,
+        rebuild = _ref13$rebuild === void 0 ? true : _ref13$rebuild,
+        serialize_funcs = _ref13.serialize_funcs,
+        _ref13$texture_nodes = _ref13.texture_nodes,
+        texture_nodes = _ref13$texture_nodes === void 0 ? {} : _ref13$texture_nodes,
+        _ref13$normalize = _ref13.normalize,
+        normalize = _ref13$normalize === void 0 ? true : _ref13$normalize,
+        _ref13$fade_in = _ref13.fade_in,
+        fade_in = _ref13$fade_in === void 0 ? false : _ref13$fade_in;
       this.generation = ++Scene.generation;
       this.updating++;
 
@@ -31633,16 +32666,18 @@ var Scene = /*#__PURE__*/function () {
       this.trigger(loading ? 'load' : 'update', {
         config: this.config
       });
-      this.style_manager.init();
-      this.view.reset();
-      this.createLights();
-      this.createDataSources(loading);
-      this.loadTextures();
-      this.setBackground();
-      topojson.FontManager.loadFonts(this.config.fonts);
+      this.withWebGLContext(function () {
+        _this17.style_manager.init();
+        _this17.view.reset();
+        _this17.createLights();
+        _this17.createDataSources(loading);
+        _this17.loadTextures();
+        _this17.setBackground();
+        topojson.FontManager.loadFonts(_this17.config.fonts);
 
-      // TODO: detect changes to styles? already (currently) need to recompile anyway when camera or lights change
-      this.updateStyles();
+        // TODO: detect changes to styles? already (currently) need to recompile anyway when camera or lights change
+        _this17.updateStyles();
+      });
 
       // Optionally rebuild geometry
       var done = rebuild ? this.rebuild(Object.assign({
@@ -31659,8 +32694,8 @@ var Scene = /*#__PURE__*/function () {
       this.view.updateBounds();
       this.requestRedraw();
       return done.then(function () {
-        _this14.last_render_count = 0; // force re-evaluation of selection map
-        _this14.requestRedraw();
+        _this17.last_render_count = 0; // force re-evaluation of selection map
+        _this17.requestRedraw();
       });
     }
 
@@ -31668,9 +32703,9 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "syncConfigToWorker",
     value: function syncConfigToWorker() {
-      var _ref12 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        _ref12$serialize_func = _ref12.serialize_funcs,
-        serialize_funcs = _ref12$serialize_func === void 0 ? true : _ref12$serialize_func;
+      var _ref14 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        _ref14$serialize_func = _ref14.serialize_funcs,
+        serialize_funcs = _ref14$serialize_func === void 0 ? true : _ref14$serialize_func;
       // Tell workers we're about to rebuild (so they can update styles, etc.)
       var config_serialized = serialize_funcs ? topojson.Utils.serializeWithFunctions(this.config) : JSON.stringify(this.config);
       return topojson.WorkerBroker.postMessage(this.workers, 'self.updateConfig', {
@@ -31684,20 +32719,20 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "createListeners",
     value: function createListeners() {
-      var _this15 = this;
+      var _this18 = this;
       this.listeners = {};
       this.listeners.view = {
         move: function move() {
-          return _this15.trigger('move');
+          return _this18.trigger('move');
         }
       };
       this.view.subscribe(this.listeners.view);
       this.listeners.texture = {
         update: function update() {
-          return _this15.dirty = true;
+          return _this18.dirty = true;
         },
         warning: function warning(data) {
-          return _this15.trigger('warning', Object.assign({
+          return _this18.trigger('warning', Object.assign({
             type: 'textures'
           }, data));
         }
@@ -31705,7 +32740,7 @@ var Scene = /*#__PURE__*/function () {
       topojson.Texture.subscribe(this.listeners.texture);
       this.listeners.scene_loader = {
         error: function error(data) {
-          return _this15.trigger('error', Object.assign({
+          return _this18.trigger('error', Object.assign({
             type: 'scene'
           }, data));
         }
@@ -31732,9 +32767,9 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "resetFeatureSelection",
     value: function resetFeatureSelection() {
-      var _this16 = this;
+      var _this19 = this;
       this.selection = new topojson.FeatureSelection(this.gl, this.workers, function () {
-        return _this16.building;
+        return _this19.building;
       });
       this.last_render_count = 0; // force re-evaluation of selection map
     }
@@ -31751,11 +32786,11 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "getFeatureSelectionMapSize",
     value: function getFeatureSelectionMapSize() {
-      var _this17 = this;
+      var _this20 = this;
       // Only allow one fetch process to run at a time
       if (this.fetching_selection_map == null) {
         this.fetching_selection_map = topojson.WorkerBroker.postMessage(this.workers, 'self.getFeatureSelectionMapSize').then(function (sizes) {
-          _this17.fetching_selection_map = null;
+          _this20.fetching_selection_map = null;
           return sizes.reduce(function (a, b) {
             return a + b;
           });
@@ -31796,9 +32831,9 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "screenshot",
     value: function screenshot() {
-      var _ref13 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        _ref13$background = _ref13.background,
-        background = _ref13$background === void 0 ? 'white' : _ref13$background;
+      var _ref15 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        _ref15$background = _ref15.background,
+        background = _ref15$background === void 0 ? 'white' : _ref15$background;
       this.requestRedraw();
       return this.media_capture.screenshot({
         background: background
@@ -32400,6 +33435,7 @@ var debug = {
   DataSource: topojson.DataSource,
   GLSL: topojson.GLSL,
   ShaderProgram: topojson.ShaderProgram,
+  UniformBuffer: UniformBuffer,
   VertexData: topojson.VertexData,
   Texture: topojson.Texture,
   Material: topojson.Material,
@@ -32435,7 +33471,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = 'd0b887d09a3645aad91a18bd3bd0362d74627da3';
+	Tangram.debug.SHA = '8bc35ef622cf51543246e839c013822f52537d15';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

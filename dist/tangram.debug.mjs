@@ -2086,6 +2086,7 @@ class ShaderProgram {
     this.dependent_uniforms = options.uniforms;
     this.uniforms = {}; // program locations of uniforms, lazily added as each uniform is set
     this.uniform_blocks = Object.assign({}, options.uniform_blocks || {});
+    this.defer_uniform_blocks = options.deferUniformBlocks === true;
     this.shader_factory = options.shaderFactory;
     this.vertex_shader_resource = null;
     this.fragment_shader_resource = null;
@@ -2108,7 +2109,9 @@ class ShaderProgram {
   }
 
   // Use program wrapper with simple state cache
-  use() {
+  use({
+    bindUniformBlocks = !this.defer_uniform_blocks
+  } = {}) {
     if (!this.compiled) {
       return;
     }
@@ -2117,7 +2120,11 @@ class ShaderProgram {
       this.gl.useProgram(this.program);
     }
     ShaderProgram.current = this;
-    this.bindUniformBlocks();
+    if (bindUniformBlocks) {
+      this.bindUniformBlocks({
+        force: true
+      });
+    }
   }
   compile() {
     if (this.compiling) {
@@ -2450,14 +2457,16 @@ class ShaderProgram {
   // Register a WebGL2 uniform buffer with this program.
   setUniformBlock(name, uniform_buffer) {
     this.uniform_blocks[name] = uniform_buffer;
-    if (this.compiled) {
+    if (this.compiled && !this.defer_uniform_blocks) {
       uniform_buffer.bind(this.program);
     }
   }
 
   // Bind all registered WebGL2 uniform buffers to this program.
-  bindUniformBlocks() {
-    if (!this.compiled) {
+  bindUniformBlocks({
+    force = false
+  } = {}) {
+    if (!this.compiled || this.defer_uniform_blocks && !force) {
       return;
     }
     for (const uniform_buffer of Object.values(this.uniform_blocks)) {
@@ -2479,6 +2488,17 @@ class ShaderProgram {
       }
     }
     return bindings;
+  }
+
+  // Return the current scalar uniform values for renderers that own the draw call.
+  getUniformValues() {
+    const values = {};
+    for (const [name, uniform] of Object.entries(this.uniforms)) {
+      if (uniform.value !== undefined) {
+        values[name] = uniform.value;
+      }
+    }
+    return values;
   }
 
   // Cache some or all uniform values so they can be restored
@@ -4579,9 +4599,13 @@ class VBOMesh {
         renderPass: options.renderPass,
         visibleTime: visible_time
       });
-      return Boolean(needs_redraw) || visible_time < this.fade_in_time;
+      if (needs_redraw !== null) {
+        return Boolean(needs_redraw) || visible_time < this.fade_in_time;
+      }
     }
-    program.use();
+    program.use(options.meshRenderer ? {
+      bindUniformBlocks: true
+    } : undefined);
     if (this.uniforms) {
       program.saveUniforms(this.uniforms);
       program.setUniforms(this.uniforms, false); // don't reset texture unit
@@ -4600,6 +4624,20 @@ class VBOMesh {
 
     // Request next render if mesh is fading in
     return visible_time < this.fade_in_time;
+  }
+
+  // Return the renderer-independent resources and draw parameters for this mesh.
+  getDrawDescriptor() {
+    return {
+      topology: getTopology(this.draw_mode),
+      vertexCount: this.vertex_count,
+      indexCount: this.element_count,
+      indexType: this.toggle_element_array ? this.element_type === this.gl.UNSIGNED_SHORT ? 'uint16' : 'uint32' : null,
+      vertexBuffer: this.vertex_buffer_resource,
+      indexBuffer: this.element_buffer_resource || null,
+      bufferLayout: this.vertex_layout.getBufferLayout(),
+      staticAttributes: this.vertex_layout.getStaticAttributes()
+    };
   }
 
   // Bind buffers and vertex attributes to prepare for rendering
@@ -4667,6 +4705,22 @@ function createBufferResource(buffer_factory, options) {
     throw new Error('VBOMesh: bufferFactory must return a resource with handle and destroy');
   }
   return resource;
+}
+function getTopology(draw_mode) {
+  switch (draw_mode) {
+    case 0x0000:
+      return 'point-list';
+    case 0x0001:
+      return 'line-list';
+    case 0x0003:
+      return 'line-strip';
+    case 0x0004:
+      return 'triangle-list';
+    case 0x0005:
+      return 'triangle-strip';
+    default:
+      throw new Error(`VBOMesh: unsupported draw mode ${draw_mode}`);
+  }
 }
 
 var material_source = `/*
@@ -7174,6 +7228,7 @@ var Style = {
     this.uniform_blocks = uniform_blocks;
     this.shader_factory = options.shaderFactory;
     this.mesh_buffer_factory = options.meshBufferFactory;
+    this.defer_uniform_blocks = options.deferUniformBlocks === true;
     this.max_texture_size = Texture.getMaxTextureSize(this.gl);
   },
   makeMesh(vertex_data, vertex_elements, options = {}) {
@@ -7255,6 +7310,7 @@ var Style = {
       defines,
       uniforms,
       uniform_blocks: this.uniform_blocks,
+      deferUniformBlocks: this.defer_uniform_blocks,
       shaderFactory: this.shader_factory,
       blocks,
       block_scopes,
@@ -7266,6 +7322,7 @@ var Style = {
         defines: selection_defines,
         uniforms,
         uniform_blocks: this.uniform_blocks,
+        deferUniformBlocks: this.defer_uniform_blocks,
         shaderFactory: this.shader_factory,
         blocks,
         block_scopes,
@@ -7837,6 +7894,28 @@ class VertexLayout {
     return new VertexData(this);
   }
 
+  // Return a luma.gl-compatible description of the interleaved vertex buffer.
+  // Static attributes are omitted because they are supplied independently of the buffer.
+  getBufferLayout(name = 'vertices') {
+    return {
+      name,
+      byteStride: this.stride,
+      attributes: this.dynamic_attribs.map(attrib => ({
+        attribute: attrib.name,
+        format: getVertexFormat(attrib),
+        byteOffset: attrib.offset
+      }))
+    };
+  }
+
+  // Return constant vertex attributes for renderers that don't use Tangram's VAO wrapper.
+  getStaticAttributes() {
+    return this.static_attribs.map(attrib => ({
+      attribute: attrib.name,
+      value: attrib.static.slice()
+    }));
+  }
+
   // Lazily create the add vertex function
   getAddVertexFunction() {
     if (this.addVertex == null) {
@@ -7883,6 +7962,43 @@ VertexLayout.enabled_attribs = {};
 
 // Functions to add plain JS vertex array to typed VBO arrays
 VertexLayout.add_vertex_funcs = {}; // keyed by unique set of attributes
+
+function getVertexFormat(attrib) {
+  let type;
+  switch (attrib.type) {
+    case gl$1.BYTE:
+      type = attrib.normalized ? 'snorm8' : 'sint8';
+      break;
+    case gl$1.UNSIGNED_BYTE:
+      type = attrib.normalized ? 'unorm8' : 'uint8';
+      break;
+    case gl$1.SHORT:
+      type = attrib.normalized ? 'snorm16' : 'sint16';
+      break;
+    case gl$1.UNSIGNED_SHORT:
+      type = attrib.normalized ? 'unorm16' : 'uint16';
+      break;
+    case gl$1.INT:
+      type = 'sint32';
+      break;
+    case gl$1.UNSIGNED_INT:
+      type = 'uint32';
+      break;
+    case gl$1.FLOAT:
+      type = 'float32';
+      break;
+    default:
+      throw new Error(`VertexLayout: unsupported attribute type ${attrib.type}`);
+  }
+  if (attrib.size === 1) {
+    return type;
+  }
+  if (attrib.size < 2 || attrib.size > 4) {
+    throw new Error(`VertexLayout: unsupported attribute size ${attrib.size}`);
+  }
+  const webgl_only = attrib.size === 3 && attrib.type !== gl$1.FLOAT && attrib.type !== gl$1.INT && attrib.type !== gl$1.UNSIGNED_INT;
+  return `${type}x${attrib.size}${webgl_only ? '-webgl' : ''}`;
+}
 
 // Geometry building functions
 const tile_bounds = [{
@@ -30199,7 +30315,8 @@ class Scene {
     for (let style in this.styles) {
       this.styles[style].setGL(this.gl, this.uniform_buffers, {
         shaderFactory: this.shader_factory,
-        meshBufferFactory: this.mesh_buffer_factory
+        meshBufferFactory: this.mesh_buffer_factory,
+        deferUniformBlocks: Boolean(this.mesh_renderer)
       });
     }
     this.dirty = true;
@@ -31051,7 +31168,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = '86177b10366a198f393ba1996dbb41be5a5d2d8b';
+	Tangram.debug.SHA = '8bc35ef622cf51543246e839c013822f52537d15';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}
