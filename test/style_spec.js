@@ -81,6 +81,26 @@ describe('Styles:', () => {
             assert.strictEqual(lines.shader_language, 'wgsl');
             assert.strictEqual(texcoord_attribute.type, gl.FLOAT);
             assert.isFalse(texcoord_attribute.normalized);
+
+            const polygons = style_manager.styles.polygons;
+            const polygon_layout = polygons.vertexLayoutForMeshVariant({
+                key: 'portable-polygons',
+                normal: 0,
+                selection: 0,
+                texcoords: 0
+            });
+            const normal_attribute = polygon_layout.dynamic_attribs.find(
+                attribute => attribute.name === 'a_normal'
+            );
+            assert.strictEqual(polygons.shader_language, 'wgsl');
+            assert.strictEqual(normal_attribute.size, 4);
+            assert.strictEqual(normal_attribute.static, null);
+            assert.strictEqual(
+                polygon_layout.getBufferLayout().attributes.find(
+                    attribute => attribute.attribute === 'a_normal'
+                ).format,
+                'snorm8x4'
+            );
         });
 
         describe('builds custom styles w/dependencies from stylesheet', () => {

@@ -25,7 +25,8 @@ export function buildPolygonsWGSL({ raster = false } = {}) {
 ${raster_declarations}
 struct PolygonAttributes {
     @location(0) a_position: vec4<i32>,
-    @location(1) a_color: vec4<f32>,
+    @location(1) a_normal: vec4<f32>,
+    @location(2) a_color: vec4<f32>,
 };
 
 struct PolygonVaryings {
@@ -49,8 +50,14 @@ fn vertexMain(attributes: PolygonAttributes) -> PolygonVaryings {
         TangramTile.u_tile_proxy_order_offset + 1.0;
     clip_position.z -= layer * ${LAYER_DELTA} * clip_position.w;
 
+    let surface_normal = normalize(attributes.a_normal.xyz);
+    let light_direction = normalize(vec3<f32>(0.35, -0.45, 0.82));
+    let diffuse = max(dot(surface_normal, light_direction), 0.0);
+    let side_amount = 1.0 - smoothstep(0.8, 0.98, abs(surface_normal.z));
+    let light = mix(1.0, 0.58 + 0.52 * diffuse, side_amount);
+
     output.position = clip_position;
-    output.color = attributes.a_color;
+    output.color = vec4<f32>(attributes.a_color.rgb * light, attributes.a_color.a);
     output.raster_uv = vec2<f32>(
         f32(attributes.a_position.x) / ${Geo.tile_scale}.0,
         -f32(attributes.a_position.y) / ${Geo.tile_scale}.0

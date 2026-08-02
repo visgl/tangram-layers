@@ -233,12 +233,7 @@ export default class LumaDeviceRenderer {
                 disableWarnings: true
             };
             if (render_state) {
-                pipeline_options.parameters = this.device.type === 'webgpu' ?
-                    Object.assign({}, render_state, {
-                        cullMode: 'none',
-                        depthCompare: 'always',
-                        depthWriteEnabled: false
-                    }) : render_state;
+                pipeline_options.parameters = render_state;
             }
             pipeline = this.device.createRenderPipeline(pipeline_options);
             states.set(state_key, pipeline);

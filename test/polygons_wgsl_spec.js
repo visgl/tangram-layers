@@ -6,8 +6,12 @@ describe('Polygon WGSL', function () {
         const source = buildPolygonsWGSL();
 
         assert.include(source, '@location(0) a_position: vec4<i32>');
+        assert.include(source, '@location(1) a_normal: vec4<f32>');
+        assert.include(source, '@location(2) a_color: vec4<f32>');
         assert.include(source, 'TangramCamera.u_projection');
         assert.include(source, 'TangramTile.u_modelView');
+        assert.include(source, 'let surface_normal = normalize(attributes.a_normal.xyz)');
+        assert.include(source, 'let side_amount = 1.0 - smoothstep');
         assert.include(source, 'return input.color;');
         assert.notInclude(source, 'var u_rasters: texture_2d<f32>');
     });

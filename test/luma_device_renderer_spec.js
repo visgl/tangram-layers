@@ -83,6 +83,40 @@ describe('LumaDeviceRenderer', function () {
         assert.isTrue(device.vertex_array.destroyed);
     });
 
+    it('preserves Tangram depth, cull, and blend state in WebGPU pipelines', function () {
+        const device = createDevice([]);
+        device.type = 'webgpu';
+        device.info.shadingLanguage = 'wgsl';
+        Object.defineProperty(device, 'handle', {
+            get() {
+                throw new Error('device.handle must not be read');
+            }
+        });
+        const renderer = new LumaDeviceRenderer(device);
+        const render_state = Object.freeze({
+            cullMode: 'back',
+            depthCompare: 'less',
+            depthWriteEnabled: false,
+            blend: true,
+            blendColorOperation: 'add',
+            blendColorSrcFactor: 'src-alpha',
+            blendColorDstFactor: 'one-minus-src-alpha',
+            blendAlphaOperation: 'add',
+            blendAlphaSrcFactor: 'one',
+            blendAlphaDstFactor: 'one-minus-src-alpha'
+        });
+
+        renderer.drawMesh({
+            mesh: createMesh(),
+            program: createProgram({}),
+            renderPass: createRenderPass(),
+            renderState: render_state,
+            visibleTime: 0
+        });
+
+        assert.strictEqual(device.pipeline.options.parameters, render_state);
+    });
+
     it('snapshots tile uniforms per mesh for deferred WebGPU execution', function () {
         const device = createDevice([]);
         device.type = 'webgpu';
@@ -178,6 +212,7 @@ function createDevice(calls) {
         createRenderPipeline(options) {
             this.pipeline = {
                 id: options.id,
+                options,
                 shaderLayout: {
                     attributes: [{ name: 'a_position', location: 0 }],
                     bindings: this.pipelineBindings || []

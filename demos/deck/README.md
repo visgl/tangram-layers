@@ -47,7 +47,9 @@ controller tilts and rotates the view.
 Tangram renders into deck.gl's active luma.gl render pass. On WebGL, the layer
 brackets Tangram GPU work with the WebGLDevice state stack and then leaves a
 clean depth/stencil buffer for the deck layers above it. The WebGPU path owns
-no raw context handle.
+no raw context handle. Tangram's depth, cull, and blend modes become immutable
+luma.gl render-pipeline parameters, so the basemap participates in the host
+depth buffer without mutating backend state.
 
 The bridge constructs the experimental `Tangram.debug.Renderer` rather than
 driving Tangram's standalone `Scene.update()` loop. The renderer accepts a
@@ -56,9 +58,11 @@ camera matrices, tile padding, and the active render pass. Standalone Tangram
 continues to use `Scene` for canvas construction and frame scheduling.
 
 On WebGPU, the default CARTO-backed TRON scene exercises portable polygon and
-expanded-line WGSL pipelines. Standalone labels retain Tangram's collision and
-canvas-atlas pipeline and render through a portable text-quad WGSL shader.
-Generic shader points and textured icons remain a later portability tranche.
+expanded-line WGSL pipelines. Extruded polygons carry buffered normals for
+stable directional side lighting while flat ground colors remain unchanged.
+Standalone labels retain Tangram's collision and canvas-atlas pipeline and
+render through a portable text-quad WGSL shader. Generic shader points and
+textured icons also use buffered portable attributes.
 For diagnostics, `?portable_text=0` disables WebGPU labels and `?traffic=0`
 pauses the portable vehicle pulses without changing the selected basemap.
 
@@ -80,15 +84,10 @@ and the deck bridge now allocates and updates those buffers through luma.gl's
 `Device` API. Tangram still binds the WebGL resource handles while issuing its
 legacy draw calls.
 
-The bridge now forwards deck's active `RenderPass` through `Scene` to every
-mesh, and `VBOMesh` has an injectable renderer that can take ownership before
-any raw WebGL draw calls are issued. Uniform blocks also expose luma-compatible
-binding layouts and WGSL struct declarations while preserving their std140
-packing. Generated GLSL is compiled into luma.gl `Shader` resources, with an
-explicit location for Tangram's position attribute, before Tangram performs its
-compatible synchronous program link. Mesh vertex and index storage is also
-allocated and destroyed as luma.gl `Buffer` resources while Tangram continues
-to bind their WebGL handles. luma.gl applies portable bindings as part of a
-render-pipeline draw, so the next migration is to build per-topology pipeline
-and vertex-array variants in the injected mesh renderer; only then can the
-remaining direct uniform-block bindings be removed.
+The bridge forwards deck's active `RenderPass` through `Scene` to every mesh,
+and `VBOMesh` delegates portable draws before any raw WebGL call is reachable.
+Uniform blocks expose luma-compatible binding layouts and WGSL declarations
+while preserving std140 packing. Shader, texture, vertex, index, uniform-buffer,
+pipeline, and vertex-array resources are all allocated and destroyed through
+the luma.gl `Device`; the WebGPU path never unwraps those resources or the
+device itself.

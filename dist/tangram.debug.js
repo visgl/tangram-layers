@@ -10301,7 +10301,7 @@ function buildPolygonsWGSL() {
     raster = _ref$raster === void 0 ? false : _ref$raster;
   var raster_declarations = raster ? "\n@group(0) @binding(3) var u_rasters: texture_2d<f32>;\n@group(0) @binding(4) var u_rastersSampler: sampler;\n" : '';
   var raster_fragment = raster ? "\n    // Tangram's raster images are uploaded without a WebGL Y flip on WebGPU,\n    // so use top-left texture coordinates for the tile-local geometry.\n    let raster_color = textureSample(u_rasters, u_rastersSampler, input.raster_uv);\n    return input.color * raster_color;\n" : '    return input.color;\n';
-  return "\n".concat(raster_declarations, "\nstruct PolygonAttributes {\n    @location(0) a_position: vec4<i32>,\n    @location(1) a_color: vec4<f32>,\n};\n\nstruct PolygonVaryings {\n    @builtin(position) position: vec4<f32>,\n    @location(0) color: vec4<f32>,\n    @location(1) raster_uv: vec2<f32>,\n};\n\n@vertex\nfn vertexMain(attributes: PolygonAttributes) -> PolygonVaryings {\n    var output: PolygonVaryings;\n    let local_position = vec4<f32>(\n        f32(attributes.a_position.x),\n        f32(attributes.a_position.y),\n        f32(attributes.a_position.z) / ").concat(Geo$1.height_scale, ".0,\n        1.0\n    );\n    var clip_position = TangramCamera.u_projection *\n        (TangramTile.u_modelView * local_position);\n    let layer = f32(attributes.a_position.w) +\n        TangramTile.u_tile_proxy_order_offset + 1.0;\n    clip_position.z -= layer * ").concat(LAYER_DELTA$1, " * clip_position.w;\n\n    output.position = clip_position;\n    output.color = attributes.a_color;\n    output.raster_uv = vec2<f32>(\n        f32(attributes.a_position.x) / ").concat(Geo$1.tile_scale, ".0,\n        -f32(attributes.a_position.y) / ").concat(Geo$1.tile_scale, ".0\n    );\n    return output;\n}\n\n@fragment\nfn fragmentMain(input: PolygonVaryings) -> @location(0) vec4<f32> {\n").concat(raster_fragment, "}\n");
+  return "\n".concat(raster_declarations, "\nstruct PolygonAttributes {\n    @location(0) a_position: vec4<i32>,\n    @location(1) a_normal: vec4<f32>,\n    @location(2) a_color: vec4<f32>,\n};\n\nstruct PolygonVaryings {\n    @builtin(position) position: vec4<f32>,\n    @location(0) color: vec4<f32>,\n    @location(1) raster_uv: vec2<f32>,\n};\n\n@vertex\nfn vertexMain(attributes: PolygonAttributes) -> PolygonVaryings {\n    var output: PolygonVaryings;\n    let local_position = vec4<f32>(\n        f32(attributes.a_position.x),\n        f32(attributes.a_position.y),\n        f32(attributes.a_position.z) / ").concat(Geo$1.height_scale, ".0,\n        1.0\n    );\n    var clip_position = TangramCamera.u_projection *\n        (TangramTile.u_modelView * local_position);\n    let layer = f32(attributes.a_position.w) +\n        TangramTile.u_tile_proxy_order_offset + 1.0;\n    clip_position.z -= layer * ").concat(LAYER_DELTA$1, " * clip_position.w;\n\n    let surface_normal = normalize(attributes.a_normal.xyz);\n    let light_direction = normalize(vec3<f32>(0.35, -0.45, 0.82));\n    let diffuse = max(dot(surface_normal, light_direction), 0.0);\n    let side_amount = 1.0 - smoothstep(0.8, 0.98, abs(surface_normal.z));\n    let light = mix(1.0, 0.58 + 0.52 * diffuse, side_amount);\n\n    output.position = clip_position;\n    output.color = vec4<f32>(attributes.a_color.rgb * light, attributes.a_color.a);\n    output.raster_uv = vec2<f32>(\n        f32(attributes.a_position.x) / ").concat(Geo$1.tile_scale, ".0,\n        -f32(attributes.a_position.y) / ").concat(Geo$1.tile_scale, ".0\n    );\n    return output;\n}\n\n@fragment\nfn fragmentMain(input: PolygonVaryings) -> @location(0) vec4<f32> {\n").concat(raster_fragment, "}\n");
 }
 
 // Polygon rendering style
@@ -10394,6 +10394,7 @@ Object.assign(Polygons, {
   // Create or return desired vertex layout permutation based on flags
   vertexLayoutForMeshVariant: function vertexLayoutForMeshVariant(variant) {
     if (this.vertex_layouts[variant.key] == null) {
+      var portable_normal = this.shader_language === 'wgsl';
       // Attributes for this mesh variant
       // Optional attributes have placeholder values assigned with `static` parameter
       var attribs = [{
@@ -10403,10 +10404,10 @@ Object.assign(Polygons, {
         normalized: false
       }, {
         name: 'a_normal',
-        size: 3,
+        size: portable_normal ? 4 : 3,
         type: gl$1.BYTE,
         normalized: true,
-        static: variant.normal ? null : [0, 0, 1]
+        static: variant.normal || portable_normal ? null : [0, 0, 1]
       },
       // gets padded to 4-bytes
       {
@@ -10452,10 +10453,13 @@ Object.assign(Polygons, {
 
     // a_normal.xyz - surface normal
     // only stored per-vertex for extruded features (hardcoded to 'up' for others)
-    if (mesh.variant.normal) {
+    if (mesh.variant.normal || this.shader_language === 'wgsl') {
       this.vertex_template[i++] = 0;
       this.vertex_template[i++] = 0;
       this.vertex_template[i++] = 1 * 127;
+      if (this.shader_language === 'wgsl') {
+        this.vertex_template[i++] = 0;
+      }
     }
 
     // a_color.rgba - feature color
@@ -11145,7 +11149,7 @@ var ATTRIBUTE_SCALE = 1024;
  * tranches.
  *
  * @param {object} options Shader options.
- * @param {boolean} options.animated Enables the portable data-stream pulse.
+ * @param {boolean} options.animated Enables the portable traffic vehicles.
  * @returns {string} Complete WGSL source for the line style.
  */
 function buildLinesWGSL() {
@@ -36652,11 +36656,7 @@ var LumaDeviceRenderer = /*#__PURE__*/function () {
           disableWarnings: true
         };
         if (render_state) {
-          pipeline_options.parameters = this.device.type === 'webgpu' ? Object.assign({}, render_state, {
-            cullMode: 'none',
-            depthCompare: 'always',
-            depthWriteEnabled: false
-          }) : render_state;
+          pipeline_options.parameters = render_state;
         }
         pipeline = this.device.createRenderPipeline(pipeline_options);
         states.set(state_key, pipeline);
@@ -36911,7 +36911,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = 'd682546e47a95ee9139f11b8a14c1f8a1815b472';
+	Tangram.debug.SHA = '203f6b08e703605b79f8b889c5ed226a0ee874e7';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

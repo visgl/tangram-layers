@@ -109,11 +109,18 @@ Object.assign(Polygons, {
     // Create or return desired vertex layout permutation based on flags
     vertexLayoutForMeshVariant (variant) {
         if (this.vertex_layouts[variant.key] == null) {
+            const portable_normal = this.shader_language === 'wgsl';
             // Attributes for this mesh variant
             // Optional attributes have placeholder values assigned with `static` parameter
             const attribs = [
                 { name: 'a_position', size: 4, type: gl.SHORT, normalized: false },
-                { name: 'a_normal', size: 3, type: gl.BYTE, normalized: true, static: (variant.normal ? null : [0, 0, 1]) }, // gets padded to 4-bytes
+                {
+                    name: 'a_normal',
+                    size: portable_normal ? 4 : 3,
+                    type: gl.BYTE,
+                    normalized: true,
+                    static: (variant.normal || portable_normal ? null : [0, 0, 1])
+                }, // gets padded to 4-bytes
                 { name: 'a_color', size: 4, type: gl.UNSIGNED_BYTE, normalized: true },
                 { name: 'a_selection_color', size: 4, type: gl.UNSIGNED_BYTE, normalized: true, static: (variant.selection ? null : [0, 0, 0, 0]) },
                 { name: 'a_texcoord', size: 2, type: gl.UNSIGNED_SHORT, normalized: true, static: (variant.texcoords ? null : [0, 0]) }
@@ -146,10 +153,13 @@ Object.assign(Polygons, {
 
         // a_normal.xyz - surface normal
         // only stored per-vertex for extruded features (hardcoded to 'up' for others)
-        if (mesh.variant.normal) {
+        if (mesh.variant.normal || this.shader_language === 'wgsl') {
             this.vertex_template[i++] = 0;
             this.vertex_template[i++] = 0;
             this.vertex_template[i++] = 1 * 127;
+            if (this.shader_language === 'wgsl') {
+                this.vertex_template[i++] = 0;
+            }
         }
 
         // a_color.rgba - feature color
