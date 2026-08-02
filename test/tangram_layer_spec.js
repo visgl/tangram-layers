@@ -116,6 +116,7 @@ describe('TangramLayer demo bridge', function () {
         assert.isTrue(scene.options.disableRenderLoop);
         assert.isTrue(scene.options.enableUniformBuffers);
         assert.isFunction(scene.options.uniformBufferFactory);
+        assert.isFunction(scene.options.shaderFactory);
         assert.isFunction(scene.options.webGLContextScope);
         assert.isFunction(scene.options.requestRedraw);
         assert.deepEqual(scene.resizeCalls, [[800, 600]]);
@@ -135,6 +136,19 @@ describe('TangramLayer demo bridge', function () {
             id: 'tangram-TangramView',
             byteLength: 64,
             usage: 0x0048
+        }]);
+
+        const shader = scene.options.shaderFactory({
+            id: 'polygons-vertex',
+            stage: 'vertex',
+            source: '#version 300 es\nvoid main() {}'
+        });
+        assert.strictEqual(shader, device.shaders[0]);
+        assert.deepEqual(device.shaderOptions, [{
+            id: 'tangram-polygons-vertex',
+            language: 'glsl',
+            stage: 'vertex',
+            source: '#version 300 es\nvoid main() {}'
         }]);
 
         layer.draw();
@@ -346,6 +360,8 @@ describe('TangramLayer demo bridge', function () {
             handle: gl,
             bufferOptions: [],
             buffers: [],
+            shaderOptions: [],
+            shaders: [],
             stateCalls: [],
             createBuffer(options) {
                 this.bufferOptions.push(options);
@@ -362,6 +378,18 @@ describe('TangramLayer demo bridge', function () {
                 };
                 this.buffers.push(buffer);
                 return buffer;
+            },
+            createShader(options) {
+                this.shaderOptions.push(options);
+                const shader = {
+                    handle: {},
+                    destroyed: false,
+                    destroy() {
+                        this.destroyed = true;
+                    }
+                };
+                this.shaders.push(shader);
+                return shader;
             },
             pushState() {
                 this.stateCalls.push('push');

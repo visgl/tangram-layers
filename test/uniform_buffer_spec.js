@@ -243,6 +243,61 @@ describe('UniformBuffer', function () {
         ShaderProgram.reset();
     });
 
+    it('can compile and own injected luma-style shader resources', function () {
+        const gl = document.createElement('canvas').getContext('webgl2');
+        if (!gl) {
+            this.skip();
+            return;
+        }
+        gl._tangram_id = 1001;
+        ShaderProgram.reset();
+        const shaders = [];
+        const shader_factory = options => {
+            const type = options.stage === 'vertex' ? gl.VERTEX_SHADER : gl.FRAGMENT_SHADER;
+            const handle = gl.createShader(type);
+            gl.shaderSource(handle, options.source);
+            gl.compileShader(handle);
+            const shader = {
+                handle,
+                options,
+                destroyed: false,
+                destroy() {
+                    gl.deleteShader(handle);
+                    this.destroyed = true;
+                }
+            };
+            shaders.push(shader);
+            return shader;
+        };
+        const program = new ShaderProgram(gl, [
+            'attribute vec4 a_position;',
+            'void main() {',
+            '    gl_Position = a_position;',
+            '}'
+        ].join('\n'), [
+            'void main() {',
+            '    gl_FragColor = vec4(1.0);',
+            '}'
+        ].join('\n'), {
+            glsl_version: 300,
+            shaderFactory: shader_factory
+        });
+
+        program.compile();
+
+        assert.isTrue(program.compiled);
+        assert.lengthOf(shaders, 2);
+        assert.strictEqual(program.vertex_shader_resource, shaders[0]);
+        assert.strictEqual(program.fragment_shader_resource, shaders[1]);
+        assert.include(shaders[0].options.source, 'layout(location = 0) in vec4 a_position;');
+        assert.deepEqual(ShaderProgram.programs_by_source, {}, 'injected resources bypass the raw shader cache');
+
+        program.destroy();
+        assert.isTrue(shaders[0].destroyed);
+        assert.isTrue(shaders[1].destroyed);
+        ShaderProgram.reset();
+    });
+
     it('compiles Tangram polygon and point styles with the TangramView block', function () {
         const gl = document.createElement('canvas').getContext('webgl2');
         if (!gl) {

@@ -97,6 +97,7 @@ export default class Scene {
         this.redraw_callback = options.requestRedraw;
         this.enable_uniform_buffers = options.enableUniformBuffers === true;
         this.uniform_buffer_factory = options.uniformBufferFactory;
+        this.shader_factory = options.shaderFactory;
         this.mesh_renderer = options.meshRenderer;
         this.uniform_buffers = {};
 
@@ -1253,7 +1254,9 @@ export default class Scene {
 
         // Optionally set GL context (used when initializing or re-initializing GL resources)
         for (let style in this.styles) {
-            this.styles[style].setGL(this.gl, this.uniform_buffers);
+            this.styles[style].setGL(this.gl, this.uniform_buffers, {
+                shaderFactory: this.shader_factory
+            });
         }
 
         this.dirty = true;

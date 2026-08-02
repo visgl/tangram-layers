@@ -119,7 +119,7 @@ export function createTangramLayerClass({ Layer, Scene }) {
             }
             if (!device || device.type !== 'webgl' || !gl ||
                 typeof device.pushState !== 'function' || typeof device.popState !== 'function' ||
-                typeof device.createBuffer !== 'function') {
+                typeof device.createBuffer !== 'function' || typeof device.createShader !== 'function') {
                 this._raiseBridgeError(new Error('a deck.gl WebGLDevice is required'));
                 return null;
             }
@@ -164,6 +164,7 @@ export function createTangramLayerClass({ Layer, Scene }) {
                     disableRenderLoop: true,
                     enableUniformBuffers: true,
                     uniformBufferFactory: options => createDeviceUniformBuffer(device, options),
+                    shaderFactory: options => createDeviceShader(device, options),
                     continuousZoom: true,
                     highDensityDisplay: true,
                     logLevel: 'warn'
@@ -424,6 +425,15 @@ function createDeviceUniformBuffer(device, options) {
         id: `tangram-${options.id}`,
         byteLength: options.byteLength,
         usage: LUMA_BUFFER_UNIFORM | LUMA_BUFFER_COPY_DST
+    });
+}
+
+function createDeviceShader(device, options) {
+    return device.createShader({
+        id: `tangram-${options.id}`,
+        language: 'glsl',
+        stage: options.stage,
+        source: options.source
     });
 }
 

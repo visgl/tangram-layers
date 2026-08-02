@@ -403,9 +403,10 @@ export var Style = {
 
     /*** GL state and rendering ***/
 
-    setGL (gl, uniform_blocks = {}) {
+    setGL (gl, uniform_blocks = {}, options = {}) {
         this.gl = gl;
         this.uniform_blocks = uniform_blocks;
+        this.shader_factory = options.shaderFactory;
         this.max_texture_size = Texture.getMaxTextureSize(this.gl);
     },
 
@@ -494,6 +495,7 @@ export var Style = {
                 defines,
                 uniforms,
                 uniform_blocks: this.uniform_blocks,
+                shaderFactory: this.shader_factory,
                 blocks,
                 block_scopes,
                 extensions
@@ -510,6 +512,7 @@ export var Style = {
                     defines: selection_defines,
                     uniforms,
                     uniform_blocks: this.uniform_blocks,
+                    shaderFactory: this.shader_factory,
                     blocks,
                     block_scopes,
                     extensions

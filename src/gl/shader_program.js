@@ -43,6 +43,9 @@ export default class ShaderProgram {
 
         this.uniforms = {}; // program locations of uniforms, lazily added as each uniform is set
         this.uniform_blocks = Object.assign({}, options.uniform_blocks || {});
+        this.shader_factory = options.shaderFactory;
+        this.vertex_shader_resource = null;
+        this.fragment_shader_resource = null;
         this.glsl_version = options.glsl_version || (Object.keys(this.uniform_blocks).length > 0 ? 300 : 100);
         this.attribs = {}; // program locations of vertex attributes, lazily added as each attribute is accessed
 
@@ -56,6 +59,7 @@ export default class ShaderProgram {
     destroy() {
         this.gl.useProgram(null);
         this.gl.deleteProgram(this.program);
+        this.destroyShaderResources();
         this.program = null;
         this.uniforms = {};
         this.attribs = {};
@@ -190,7 +194,30 @@ export default class ShaderProgram {
 
         // Compile & set uniforms to cached values
         try {
-            this.program = ShaderProgram.updateProgram(this.gl, this.program, this.computed_vertex_source, this.computed_fragment_source);
+            let shader_resources;
+            if (this.shader_factory) {
+                shader_resources = this.createShaderResources(
+                    this.computed_vertex_source,
+                    this.computed_fragment_source
+                );
+            }
+            try {
+                this.program = ShaderProgram.updateProgram(
+                    this.gl,
+                    this.program,
+                    this.computed_vertex_source,
+                    this.computed_fragment_source,
+                    shader_resources
+                );
+            }
+            catch (error) {
+                destroyShaderResource(shader_resources && shader_resources.vertex_shader);
+                destroyShaderResource(shader_resources && shader_resources.fragment_shader);
+                throw error;
+            }
+            this.destroyShaderResources();
+            this.vertex_shader_resource = shader_resources && shader_resources.vertex_shader;
+            this.fragment_shader_resource = shader_resources && shader_resources.fragment_shader;
             this.compiled = true;
             this.compiling = false;
             ShaderProgram.current = null; // updateProgram() explicitly unbinds the current GL program
@@ -229,6 +256,39 @@ export default class ShaderProgram {
         this.use();
         this.refreshUniforms();
         this.refreshAttributes();
+    }
+
+    createShaderResources(vertex_source, fragment_source) {
+        let vertex_shader;
+        try {
+            vertex_shader = this.shader_factory({
+                id: `${this.name || this.id}-vertex`,
+                stage: 'vertex',
+                source: vertex_source
+            });
+            const fragment_shader = this.shader_factory({
+                id: `${this.name || this.id}-fragment`,
+                stage: 'fragment',
+                source: fragment_source
+            });
+            if (!vertex_shader || !vertex_shader.handle || typeof vertex_shader.destroy !== 'function' ||
+                !fragment_shader || !fragment_shader.handle || typeof fragment_shader.destroy !== 'function') {
+                destroyShaderResource(fragment_shader);
+                throw new Error('ShaderProgram: shaderFactory must return a resource with handle and destroy');
+            }
+            return { vertex_shader, fragment_shader };
+        }
+        catch (error) {
+            destroyShaderResource(vertex_shader);
+            throw error;
+        }
+    }
+
+    destroyShaderResources() {
+        destroyShaderResource(this.vertex_shader_resource);
+        destroyShaderResource(this.fragment_shader_resource);
+        this.vertex_shader_resource = null;
+        this.fragment_shader_resource = null;
     }
 
     // Make list of defines (global, then program-specific)
@@ -685,6 +745,10 @@ ShaderProgram.convertToWebGL2 = function (source, type) {
         source = source
             .replace(/\battribute\b/g, 'in')
             .replace(/\bvarying\b/g, 'out');
+        source = source.replace(
+            /(^|\n)(\s*)in\s+([^;\n]*\ba_position\b[^;\n]*;)/,
+            '$1$2layout(location = 0) in $3'
+        );
     }
     else if (type === 'fragment') {
         source = source
@@ -750,16 +814,23 @@ ShaderProgram.replaceBlock = function (key, ...blocks) {
 
 // Compile & link a WebGL program from provided vertex and fragment shader sources
 // update a program if one is passed in. Create one if not. Alert and don't update anything if the shaders don't compile.
-ShaderProgram.updateProgram = function (gl, program, vertex_shader_source, fragment_shader_source) {
+ShaderProgram.updateProgram = function (gl, program, vertex_shader_source, fragment_shader_source, shader_resources = {}) {
+    const use_shader_resources = Boolean(shader_resources.vertex_shader || shader_resources.fragment_shader);
+    if (use_shader_resources && (!shader_resources.vertex_shader || !shader_resources.fragment_shader)) {
+        throw new Error('ShaderProgram.updateProgram requires both vertex and fragment shader resources');
+    }
+
     // Program with this exact vertex and fragment shader sources already cached?
     let key = hashString(gl._tangram_id + '::' + vertex_shader_source + '::' + fragment_shader_source);
-    if (ShaderProgram.programs_by_source[key]) {
+    if (!use_shader_resources && ShaderProgram.programs_by_source[key]) {
         log('trace', 'Reusing identical source GL program object');
         return ShaderProgram.programs_by_source[key];
     }
 
-    var vertex_shader = ShaderProgram.createShader(gl, vertex_shader_source, gl.VERTEX_SHADER);
-    var fragment_shader = ShaderProgram.createShader(gl, fragment_shader_source, gl.FRAGMENT_SHADER);
+    var vertex_shader = use_shader_resources ? shader_resources.vertex_shader.handle :
+        ShaderProgram.createShader(gl, vertex_shader_source, gl.VERTEX_SHADER);
+    var fragment_shader = use_shader_resources ? shader_resources.fragment_shader.handle :
+        ShaderProgram.createShader(gl, fragment_shader_source, gl.FRAGMENT_SHADER);
 
     gl.useProgram(null);
     if (program != null) {
@@ -803,7 +874,9 @@ ShaderProgram.updateProgram = function (gl, program, vertex_shader_source, fragm
         throw Object.assign(new Error(message), { type: 'program' });
     }
 
-    ShaderProgram.programs_by_source[key] = program; // cache by exact source
+    if (!use_shader_resources) {
+        ShaderProgram.programs_by_source[key] = program; // cache by exact source
+    }
     return program;
 };
 
@@ -831,3 +904,9 @@ ShaderProgram.createShader = function (gl, source, stype) {
     ShaderProgram.shaders_by_source[key] = shader; // cache by exact source
     return shader;
 };
+
+function destroyShaderResource(shader) {
+    if (shader && typeof shader.destroy === 'function') {
+        shader.destroy();
+    }
+}
