@@ -464,6 +464,7 @@ export default class ShaderProgram {
         const bindings = {};
         for (const [name, uniform_buffer] of Object.entries(this.uniform_blocks)) {
             if (uniform_buffer.buffer_resource) {
+                uniform_buffer.upload();
                 bindings[name] = uniform_buffer.buffer_resource;
             }
         }

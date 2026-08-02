@@ -153,10 +153,11 @@ describe('UniformBuffer', function () {
         assert.deepEqual(program.getUniformBlockBindings(), { TangramView: buffer_resource });
 
         uniform_buffer.setUniform('time', 0.5);
-        assert.isTrue(uniform_buffer.bind({}));
+        assert.deepEqual(program.getUniformBlockBindings(), { TangramView: buffer_resource });
         assert.lengthOf(writes, 1);
         assert.strictEqual(new Float32Array(new Uint8Array(writes[0]).buffer)[0], 0.5);
-        assert.deepEqual(gl.buffer_base_bindings, [[gl.UNIFORM_BUFFER, 3, handle]]);
+        assert.lengthOf(gl.uniform_block_queries, 0, 'renderer-owned bindings skip raw program queries');
+        assert.lengthOf(gl.buffer_base_bindings, 0, 'renderer-owned bindings skip raw WebGL binding');
 
         uniform_buffer.destroy();
         assert.isTrue(destroyed);
