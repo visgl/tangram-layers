@@ -29,7 +29,7 @@ Object.assign(Lines, {
     selection: true, // enable feature selection
 
     getWGSLShaderSource() {
-        return buildLinesWGSL();
+        return buildLinesWGSL({ animated: this.animated === true });
     },
 
     init() {

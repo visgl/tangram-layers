@@ -13,5 +13,16 @@ describe('Line WGSL', function () {
         assert.include(source, 'TangramTile.u_modelView * local_position');
         assert.include(source, 'TangramCamera.u_projection');
         assert.include(source, 'width_scale * midpoint_zoom_delta');
+        assert.notInclude(source, 'TangramView.u_time');
+    });
+
+    it('builds a portable animated data-stream line shader', function () {
+        const source = buildLinesWGSL({ animated: true });
+
+        assert.include(source, '@location(2) a_texcoord: vec2<f32>');
+        assert.include(source, '@location(3) a_color: vec4<f32>');
+        assert.include(source, 'TangramView.u_time');
+        assert.include(source, 'stream_color');
+        assert.include(source, 'direction');
     });
 });

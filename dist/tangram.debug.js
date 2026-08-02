@@ -11116,12 +11116,25 @@ var ATTRIBUTE_SCALE = 1024;
  *
  * Tangram's line builder emits expanded triangle geometry. The extrusion
  * vector and its fractional-zoom scaling are therefore applied before the
- * host-provided tile and camera matrices. Custom GLSL style blocks, offsets,
- * heights, textures, and selection are intentionally separate follow-up
- * tranches.
+ * host-provided tile and camera matrices. Animated styles use the generated
+ * line texture coordinates and Tangram's frame time to produce a portable
+ * data-stream pulse without additive blending. Offsets, heights, textures,
+ * arbitrary custom shader blocks, and selection remain follow-up tranches.
+ *
+ * @param {object} options Shader options.
+ * @param {boolean} options.animated Enables the portable data-stream pulse.
+ * @returns {string} Complete WGSL source for the line style.
  */
 function buildLinesWGSL() {
-  return "\nstruct LineAttributes {\n    @location(0) a_position: vec4<i32>,\n    @location(1) a_extrude: vec2<i32>,\n    @location(2) a_color: vec4<f32>,\n};\n\nstruct LineVaryings {\n    @builtin(position) position: vec4<f32>,\n    @location(0) color: vec4<f32>,\n};\n\n@vertex\nfn vertexMain(attributes: LineAttributes) -> LineVaryings {\n    var output: LineVaryings;\n    var extrusion = vec2<f32>(attributes.a_extrude);\n\n    var zoom_delta = clamp(\n        TangramView.u_map_position.z - TangramTile.u_tile_origin.z,\n        0.0,\n        4.0\n    );\n    zoom_delta += step(1.0, zoom_delta) * (1.0 - zoom_delta) +\n        mix(0.0, 2.0, clamp((zoom_delta - 2.0) / 2.0, 0.0, 1.0));\n\n    let midpoint_zoom_delta = (zoom_delta - 0.5) * 2.0;\n    let width_scale = f32(attributes.a_position.z) / ".concat(ATTRIBUTE_SCALE, ".0;\n    extrusion -= extrusion * width_scale * midpoint_zoom_delta;\n    extrusion *= exp2(\n        -zoom_delta - (TangramTile.u_tile_origin.z - TangramTile.u_tile_origin.w)\n    );\n\n    let local_position = vec4<f32>(\n        vec2<f32>(attributes.a_position.xy) + extrusion,\n        0.0,\n        1.0\n    );\n    var clip_position = TangramCamera.u_projection *\n        (TangramTile.u_modelView * local_position);\n    let layer = f32(attributes.a_position.w) +\n        TangramTile.u_tile_proxy_order_offset + 1.0;\n    clip_position.z -= layer * ").concat(LAYER_DELTA, " * clip_position.w;\n\n    output.position = clip_position;\n    output.color = attributes.a_color;\n    return output;\n}\n\n@fragment\nfn fragmentMain(input: LineVaryings) -> @location(0) vec4<f32> {\n    return input.color;\n}\n");
+  var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+    _ref$animated = _ref.animated,
+    animated = _ref$animated === void 0 ? false : _ref$animated;
+  var animated_attribute = animated ? '\n    @location(2) a_texcoord: vec2<f32>,' : '';
+  var color_location = animated ? 3 : 2;
+  var animated_varying = animated ? '\n    @location(1) texcoord: vec2<f32>,' : '';
+  var animated_vertex = animated ? '\n    output.texcoord = attributes.a_texcoord;' : '';
+  var animated_fragment = animated ? "\n    let direction = select(-1.0, 1.0, input.texcoord.x < 0.5);\n    let stream_coordinate = input.texcoord.y * 0.125 -\n        TangramView.u_time * 1.8 * direction;\n    let stream_phase = fract(stream_coordinate);\n    let stream_head = smoothstep(0.58, 0.72, stream_phase);\n    let stream_tail = 1.0 - smoothstep(0.82, 0.98, stream_phase);\n    let stream = stream_head * stream_tail;\n    let lane_center = 1.0 - abs(input.texcoord.x * 2.0 - 1.0);\n    let lane_mask = mix(0.55, 1.0, lane_center);\n    let palette_phase = fract(\n        TangramView.u_time * 0.08 + input.texcoord.y * 0.017\n    );\n    let stream_color = mix(\n        vec3<f32>(0.0, 0.95, 1.0),\n        vec3<f32>(0.86, 0.18, 0.95),\n        palette_phase\n    );\n    let animated_color = mix(\n        input.color.rgb,\n        stream_color,\n        stream * lane_mask * 0.82\n    );\n    return vec4<f32>(animated_color, input.color.a);\n" : '    return input.color;\n';
+  return "\nstruct LineAttributes {\n    @location(0) a_position: vec4<i32>,\n    @location(1) a_extrude: vec2<i32>,".concat(animated_attribute, "\n    @location(").concat(color_location, ") a_color: vec4<f32>,\n};\n\nstruct LineVaryings {\n    @builtin(position) position: vec4<f32>,\n    @location(0) color: vec4<f32>,").concat(animated_varying, "\n};\n\n@vertex\nfn vertexMain(attributes: LineAttributes) -> LineVaryings {\n    var output: LineVaryings;\n    var extrusion = vec2<f32>(attributes.a_extrude);\n\n    var zoom_delta = clamp(\n        TangramView.u_map_position.z - TangramTile.u_tile_origin.z,\n        0.0,\n        4.0\n    );\n    zoom_delta += step(1.0, zoom_delta) * (1.0 - zoom_delta) +\n        mix(0.0, 2.0, clamp((zoom_delta - 2.0) / 2.0, 0.0, 1.0));\n\n    let midpoint_zoom_delta = (zoom_delta - 0.5) * 2.0;\n    let width_scale = f32(attributes.a_position.z) / ").concat(ATTRIBUTE_SCALE, ".0;\n    extrusion -= extrusion * width_scale * midpoint_zoom_delta;\n    extrusion *= exp2(\n        -zoom_delta - (TangramTile.u_tile_origin.z - TangramTile.u_tile_origin.w)\n    );\n\n    let local_position = vec4<f32>(\n        vec2<f32>(attributes.a_position.xy) + extrusion,\n        0.0,\n        1.0\n    );\n    var clip_position = TangramCamera.u_projection *\n        (TangramTile.u_modelView * local_position);\n    let layer = f32(attributes.a_position.w) +\n        TangramTile.u_tile_proxy_order_offset + 1.0;\n    clip_position.z -= layer * ").concat(LAYER_DELTA, " * clip_position.w;\n\n    output.position = clip_position;\n    output.color = attributes.a_color;\n").concat(animated_vertex, "\n    return output;\n}\n\n@fragment\nfn fragmentMain(input: LineVaryings) -> @location(0) vec4<f32> {\n").concat(animated_fragment, "\n}\n");
 }
 
 // Line rendering style
@@ -11137,7 +11150,9 @@ Object.assign(Lines, {
   selection: true,
   // enable feature selection
   getWGSLShaderSource: function getWGSLShaderSource() {
-    return buildLinesWGSL();
+    return buildLinesWGSL({
+      animated: this.animated === true
+    });
   },
   init: function init() {
     Style.init.apply(this, arguments);
@@ -36691,7 +36706,7 @@ var Renderer = /*#__PURE__*/function () {
         renderPass: renderPass
       });
       this.scene.processTasks();
-      if (rendered && this.scene.animated) {
+      if (rendered && this.scene.config && this.scene.animated) {
         this.scene.requestRedraw();
       }
       return rendered;
@@ -36765,7 +36780,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = '7a95921e0a1d7289ec20e1e43790a8f6a364c5ca';
+	Tangram.debug.SHA = '7602fdac50dac89048bd4be34a62418ae60d974e';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}
