@@ -2388,6 +2388,7 @@ var ShaderProgram = /*#__PURE__*/function () {
     this.uniform_blocks = Object.assign({}, options.uniform_blocks || {});
     this.defer_uniform_blocks = options.deferUniformBlocks === true;
     this.defer_texture_bindings = options.deferTextureBindings === true;
+    this.defer_uniform_updates = options.deferUniformUpdates === true;
     this.texture_uniforms = {};
     this.shader_factory = options.shaderFactory;
     this.vertex_shader_resource = null;
@@ -2424,7 +2425,7 @@ var ShaderProgram = /*#__PURE__*/function () {
         return;
       }
       var changed = ShaderProgram.current !== this;
-      if (changed) {
+      if (changed && !this.defer_uniform_updates) {
         this.gl.useProgram(this.program);
       }
       ShaderProgram.current = this;
@@ -2944,7 +2945,7 @@ var ShaderProgram = /*#__PURE__*/function () {
       this.uniforms[name] = this.uniforms[name] || {};
       var uniform = this.uniforms[name];
       uniform.name = name;
-      if (uniform.location === undefined) {
+      if (uniform.location === undefined && !this.defer_uniform_updates) {
         uniform.location = this.gl.getUniformLocation(this.program, name);
       }
       uniform.method = method;
@@ -2959,7 +2960,13 @@ var ShaderProgram = /*#__PURE__*/function () {
       if (!this.compiled) {
         return;
       }
-      if (!uniform || uniform.location == null) {
+      if (!uniform) {
+        return;
+      }
+      if (this.defer_uniform_updates) {
+        return;
+      }
+      if (uniform.location == null) {
         return;
       }
       this.use();
@@ -3020,6 +3027,9 @@ var ShaderProgram = /*#__PURE__*/function () {
     key: "refreshUniforms",
     value: function refreshUniforms() {
       if (!this.compiled) {
+        return;
+      }
+      if (this.defer_uniform_updates) {
         return;
       }
       for (var u in this.uniforms) {
@@ -8004,6 +8014,7 @@ var Style = {
     this.mesh_buffer_factory = options.meshBufferFactory;
     this.defer_uniform_blocks = options.deferUniformBlocks === true;
     this.defer_texture_bindings = options.deferTextureBindings === true;
+    this.defer_uniform_updates = options.deferUniformUpdates === true;
     this.max_texture_size = options.maxTextureSize || Texture.getMaxTextureSize(this.gl);
   },
   makeMesh: function makeMesh(vertex_data, vertex_elements) {
@@ -8089,6 +8100,7 @@ var Style = {
       uniform_blocks: this.uniform_blocks,
       deferUniformBlocks: this.defer_uniform_blocks,
       deferTextureBindings: this.defer_texture_bindings,
+      deferUniformUpdates: this.defer_uniform_updates,
       shaderFactory: this.shader_factory,
       blocks: blocks,
       block_scopes: block_scopes,
@@ -8102,6 +8114,7 @@ var Style = {
         uniform_blocks: this.uniform_blocks,
         deferUniformBlocks: this.defer_uniform_blocks,
         deferTextureBindings: this.defer_texture_bindings,
+        deferUniformUpdates: this.defer_uniform_updates,
         shaderFactory: this.shader_factory,
         blocks: blocks,
         block_scopes: block_scopes,
@@ -32640,6 +32653,7 @@ var Scene = /*#__PURE__*/function () {
           meshBufferFactory: this.mesh_buffer_factory,
           deferUniformBlocks: Boolean(this.mesh_renderer),
           deferTextureBindings: Boolean(this.mesh_renderer),
+          deferUniformUpdates: Boolean(this.mesh_renderer),
           maxTextureSize: this.max_texture_size
         });
       }
@@ -33588,7 +33602,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = 'dd5539aa85bf0ce97f755e10cded94d9f5e0395c';
+	Tangram.debug.SHA = '6b88b2b073b39de2d4c2fb23c4419ba5bd668481';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}
