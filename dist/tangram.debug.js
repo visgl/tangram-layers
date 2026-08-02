@@ -1358,6 +1358,10 @@ Context.resize = function (gl, width, height, device_pixel_ratio) {
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 };
 
+function isTextureElement(source) {
+  return typeof HTMLCanvasElement !== 'undefined' && source instanceof HTMLCanvasElement || typeof HTMLVideoElement !== 'undefined' && source instanceof HTMLVideoElement || typeof HTMLImageElement !== 'undefined' && source instanceof HTMLImageElement && source.complete;
+}
+
 // GL texture wrapper object for keeping track of a global set of textures, keyed by a unique user-defined name
 var Texture = /*#__PURE__*/function () {
   function Texture(gl, name) {
@@ -1365,10 +1369,10 @@ var Texture = /*#__PURE__*/function () {
     _classCallCheck(this, Texture);
     options = Texture.sliceOptions(options); // exclude any non-texture-specific props
     this.gl = gl;
-    this.texture = gl.createTexture();
-    if (this.texture) {
-      this.valid = true;
-    }
+    this.texture_factory = options.textureFactory || Texture.getResourceFactory(gl);
+    this.texture_resource = null;
+    this.texture = this.texture_factory ? null : gl.createTexture();
+    this.valid = Boolean(this.texture_factory || this.texture);
     this.bind();
     this.name = name;
     this.retain_count = 0;
@@ -1429,7 +1433,12 @@ var Texture = /*#__PURE__*/function () {
       if (!this.valid) {
         return;
       }
-      this.gl.deleteTexture(this.texture);
+      if (this.texture_resource) {
+        this.texture_resource.destroy();
+        this.texture_resource = null;
+      } else {
+        this.gl.deleteTexture(this.texture);
+      }
       this.texture = null;
       if (Texture.textures[this.name] === this) {
         delete Texture.textures[this.name];
@@ -1459,6 +1468,9 @@ var Texture = /*#__PURE__*/function () {
     value: function bind() {
       var unit = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
       if (!this.valid) {
+        return;
+      }
+      if (this.texture_factory) {
         return;
       }
       if (Texture.activeUnit !== unit) {
@@ -1624,6 +1636,9 @@ var Texture = /*#__PURE__*/function () {
       if (!this.valid) {
         return;
       }
+      if (this.texture_factory) {
+        return this.updateTextureResource(source, options);
+      }
       this.bind();
 
       // Image or Canvas element
@@ -1644,6 +1659,46 @@ var Texture = /*#__PURE__*/function () {
         this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.width, this.height, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, source);
       }
       Texture.trigger('update', this);
+    }
+
+    // Replace the injected GPU texture resource because luma.gl texture dimensions are immutable.
+  }, {
+    key: "updateTextureResource",
+    value: function updateTextureResource(source) {
+      var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+      if (isTextureElement(source)) {
+        this.width = source.width;
+        this.height = source.height;
+      }
+      var power_of_2 = Utils.isPowerOf2(this.width) && Utils.isPowerOf2(this.height);
+      var filtering = options.filtering === 'mipmap' && !power_of_2 ? 'linear' : options.filtering || this.filtering || 'linear';
+      var resource = this.texture_factory({
+        id: this.name,
+        width: this.width,
+        height: this.height,
+        data: source,
+        filtering: filtering,
+        repeat: options.repeat === true && power_of_2,
+        flipY: options.UNPACK_FLIP_Y_WEBGL !== false,
+        premultipliedAlpha: options.UNPACK_PREMULTIPLY_ALPHA_WEBGL === true
+      });
+      if (!resource || !resource.handle || typeof resource.destroy !== 'function') {
+        throw new Error("Texture '".concat(this.name, "': texture factory must return a GPU resource"));
+      }
+      var previous_resource = this.texture_resource;
+      this.texture_resource = resource;
+      this.texture = resource.handle;
+      if (previous_resource) {
+        previous_resource.destroy();
+      }
+      Texture.trigger('update', this);
+    }
+
+    // Return the injected GPU resource for renderers that own texture bindings.
+  }, {
+    key: "getResource",
+    value: function getResource() {
+      return this.texture_resource;
     }
 
     // Determines appropriate filtering mode
@@ -1667,6 +1722,12 @@ var Texture = /*#__PURE__*/function () {
         return;
       }
       options.filtering = options.filtering || 'linear';
+      if (this.texture_resource) {
+        this.power_of_2 = Utils.isPowerOf2(this.width) && Utils.isPowerOf2(this.height);
+        this.filtering = options.filtering === 'mipmap' && !this.power_of_2 ? 'linear' : options.filtering;
+        Texture.trigger('update', this);
+        return;
+      }
       var gl = this.gl;
       this.bind();
 
@@ -1834,7 +1895,8 @@ Texture.sliceOptions = function (options) {
     TEXTURE_WRAP_S: options.TEXTURE_WRAP_S,
     TEXTURE_WRAP_T: options.TEXTURE_WRAP_T,
     UNPACK_FLIP_Y_WEBGL: options.UNPACK_FLIP_Y_WEBGL,
-    UNPACK_PREMULTIPLY_ALPHA_WEBGL: options.UNPACK_PREMULTIPLY_ALPHA_WEBGL
+    UNPACK_PREMULTIPLY_ALPHA_WEBGL: options.UNPACK_PREMULTIPLY_ALPHA_WEBGL,
+    textureFactory: options.textureFactory
   };
 };
 
@@ -1928,9 +1990,23 @@ Texture.getMaxTextureSize = function (gl) {
   return gl.getParameter(gl.MAX_TEXTURE_SIZE);
 };
 
+// Register an injected GPU texture factory for all textures created against a context.
+Texture.setResourceFactory = function (gl, texture_factory) {
+  if (texture_factory) {
+    Texture.resource_factories.set(gl, texture_factory);
+  }
+};
+Texture.getResourceFactory = function (gl) {
+  return Texture.resource_factories.get(gl);
+};
+Texture.clearResourceFactory = function (gl) {
+  Texture.resource_factories.delete(gl);
+};
+
 // Global set of textures, by name
 Texture.textures = {};
 Texture.texture_configs = {};
+Texture.resource_factories = new WeakMap();
 Texture.boundTexture = null;
 Texture.activeUnit = null;
 Texture.resetBindings = function () {
@@ -2311,6 +2387,8 @@ var ShaderProgram = /*#__PURE__*/function () {
     this.uniforms = {}; // program locations of uniforms, lazily added as each uniform is set
     this.uniform_blocks = Object.assign({}, options.uniform_blocks || {});
     this.defer_uniform_blocks = options.deferUniformBlocks === true;
+    this.defer_texture_bindings = options.deferTextureBindings === true;
+    this.texture_uniforms = {};
     this.shader_factory = options.shaderFactory;
     this.vertex_shader_resource = null;
     this.fragment_shader_resource = null;
@@ -2330,6 +2408,7 @@ var ShaderProgram = /*#__PURE__*/function () {
       this.destroyShaderResources();
       this.program = null;
       this.uniforms = {};
+      this.texture_uniforms = {};
       this.attribs = {};
       this.compiled = false;
     }
@@ -2765,15 +2844,39 @@ var ShaderProgram = /*#__PURE__*/function () {
       return bindings;
     }
 
+    // Return luma.gl Texture resources keyed by sampler uniform name.
+  }, {
+    key: "getTextureBindings",
+    value: function getTextureBindings() {
+      var bindings = {};
+      for (var _i6 = 0, _Object$entries2 = Object.entries(this.texture_uniforms); _i6 < _Object$entries2.length; _i6++) {
+        var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i6], 2),
+          uniform_name = _Object$entries2$_i[0],
+          texture = _Object$entries2$_i[1];
+        var resource = texture && texture.getResource && texture.getResource();
+        if (resource) {
+          bindings[uniform_name] = resource;
+        }
+      }
+      return bindings;
+    }
+
+    // Return all portable shader resources for a renderer-owned draw call.
+  }, {
+    key: "getBindings",
+    value: function getBindings() {
+      return Object.assign({}, this.getUniformBlockBindings(), this.getTextureBindings());
+    }
+
     // Return the current scalar uniform values for renderers that own the draw call.
   }, {
     key: "getUniformValues",
     value: function getUniformValues() {
       var values = {};
-      for (var _i6 = 0, _Object$entries2 = Object.entries(this.uniforms); _i6 < _Object$entries2.length; _i6++) {
-        var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i6], 2),
-          name = _Object$entries2$_i[0],
-          uniform = _Object$entries2$_i[1];
+      for (var _i7 = 0, _Object$entries3 = Object.entries(this.uniforms); _i7 < _Object$entries3.length; _i7++) {
+        var _Object$entries3$_i = _slicedToArray(_Object$entries3[_i7], 2),
+          name = _Object$entries3$_i[0],
+          uniform = _Object$entries3$_i[1];
         if (uniform.value !== undefined) {
           values[name] = uniform.value;
         }
@@ -2793,6 +2896,7 @@ var ShaderProgram = /*#__PURE__*/function () {
         }
       }
       this.saved_texture_unit = this.texture_unit || 0;
+      this.saved_texture_uniforms = Object.assign({}, this.texture_uniforms);
     }
 
     // Restore some or all uniforms to saved values
@@ -2808,6 +2912,7 @@ var ShaderProgram = /*#__PURE__*/function () {
         }
       }
       this.texture_unit = this.saved_texture_unit || 0;
+      this.texture_uniforms = this.saved_texture_uniforms || {};
     }
 
     // Set a texture uniform, finds texture by name or creates a new one
@@ -2819,8 +2924,11 @@ var ShaderProgram = /*#__PURE__*/function () {
         log('warn', "Cannot find texture '".concat(texture_name, "'"));
         return;
       }
-      texture.bind(this.texture_unit);
-      this.uniform('1i', uniform_name, this.texture_unit);
+      this.texture_uniforms[uniform_name] = texture;
+      if (!this.defer_texture_bindings) {
+        texture.bind(this.texture_unit);
+        this.uniform('1i', uniform_name, this.texture_unit);
+      }
       this.texture_unit++; // TODO: track max texture units and log/throw errors
     }
 
@@ -7895,7 +8003,8 @@ var Style = {
     this.shader_factory = options.shaderFactory;
     this.mesh_buffer_factory = options.meshBufferFactory;
     this.defer_uniform_blocks = options.deferUniformBlocks === true;
-    this.max_texture_size = Texture.getMaxTextureSize(this.gl);
+    this.defer_texture_bindings = options.deferTextureBindings === true;
+    this.max_texture_size = options.maxTextureSize || Texture.getMaxTextureSize(this.gl);
   },
   makeMesh: function makeMesh(vertex_data, vertex_elements) {
     var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
@@ -7979,6 +8088,7 @@ var Style = {
       uniforms: uniforms,
       uniform_blocks: this.uniform_blocks,
       deferUniformBlocks: this.defer_uniform_blocks,
+      deferTextureBindings: this.defer_texture_bindings,
       shaderFactory: this.shader_factory,
       blocks: blocks,
       block_scopes: block_scopes,
@@ -7991,6 +8101,7 @@ var Style = {
         uniforms: uniforms,
         uniform_blocks: this.uniform_blocks,
         deferUniformBlocks: this.defer_uniform_blocks,
+        deferTextureBindings: this.defer_texture_bindings,
         shaderFactory: this.shader_factory,
         blocks: blocks,
         block_scopes: block_scopes,
@@ -31134,6 +31245,8 @@ var Scene = /*#__PURE__*/function () {
     this.shader_factory = options.shaderFactory;
     this.mesh_buffer_factory = options.meshBufferFactory;
     this.mesh_renderer = options.meshRenderer;
+    this.texture_factory = options.textureFactory;
+    this.max_texture_size = options.maxTextureSize;
     this.uniform_buffers = {};
     this.lights = null;
     this.background = null;
@@ -31283,6 +31396,7 @@ var Scene = /*#__PURE__*/function () {
       this.container = null;
       if (this.gl) {
         topojson.Texture.destroy(this.gl);
+        topojson.Texture.clearResourceFactory(this.gl);
         this.style_manager.destroy(this.gl);
         this.styles = {};
         this.destroyUniformBuffers();
@@ -31344,6 +31458,7 @@ var Scene = /*#__PURE__*/function () {
       if (this.owns_gl) {
         this.resizeMap(this.container.clientWidth, this.container.clientHeight);
       }
+      topojson.Texture.setResourceFactory(this.gl, this.texture_factory);
       topojson.VertexArrayObject.init(this.gl);
       this.render_states = new RenderStateManager(this.gl);
       this.media_capture.setCanvas(this.canvas, this.gl);
@@ -32523,7 +32638,9 @@ var Scene = /*#__PURE__*/function () {
         this.styles[style].setGL(this.gl, this.uniform_buffers, {
           shaderFactory: this.shader_factory,
           meshBufferFactory: this.mesh_buffer_factory,
-          deferUniformBlocks: Boolean(this.mesh_renderer)
+          deferUniformBlocks: Boolean(this.mesh_renderer),
+          deferTextureBindings: Boolean(this.mesh_renderer),
+          maxTextureSize: this.max_texture_size
         });
       }
       this.dirty = true;
@@ -33471,7 +33588,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = '8bc35ef622cf51543246e839c013822f52537d15';
+	Tangram.debug.SHA = 'dd5539aa85bf0ce97f755e10cded94d9f5e0395c';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}
