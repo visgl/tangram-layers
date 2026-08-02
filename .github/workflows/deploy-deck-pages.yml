@@ -3,7 +3,7 @@ name: Deploy deck demo to GitHub Pages
 on:
   push:
     branches:
-      - ib/deck-layer
+      - ib/tangram-on-webgpu
   workflow_dispatch:
 
 permissions:
@@ -30,9 +30,10 @@ jobs:
 
       - name: Assemble demo site
         run: |
-          mkdir -p _site/demos/deck _site/demos/fonts _site/dist
+          mkdir -p _site/demos/deck _site/demos/fonts _site/demos/images _site/dist
           cp demos/deck/app.js demos/deck/index.html demos/deck/main.css demos/deck/tangram-layer.js _site/demos/deck/
           cp demos/fonts/montserrat.woff _site/demos/fonts/
+          cp demos/images/wheel.png _site/demos/images/
           cp dist/tangram.debug.mjs _site/dist/
           cp robots.txt _site/robots.txt
           touch _site/.nojekyll

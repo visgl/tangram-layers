@@ -1,6 +1,6 @@
 # TangramLayer bridge spike
 
-The public spike is deployed from `ib/deck-layer` to:
+The public spike is deployed from `ib/tangram-on-webgpu` to:
 
 ```text
 https://ibgreen.github.io/tangram/demos/deck/
