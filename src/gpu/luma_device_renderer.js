@@ -23,6 +23,7 @@ export default class LumaDeviceRenderer {
     getSceneOptions() {
         return {
             enableUniformBuffers: true,
+            shaderLanguage: this.device.info.shadingLanguage,
             uniformBufferFactory: options => this.createUniformBuffer(options),
             shaderFactory: options => this.createShader(options),
             meshBufferFactory: options => this.createMeshBuffer(options),

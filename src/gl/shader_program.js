@@ -47,6 +47,7 @@ export default class ShaderProgram {
         this.defer_texture_bindings = options.deferTextureBindings === true;
         this.defer_uniform_updates = options.deferUniformUpdates === true;
         this.texture_uniforms = {};
+        this.shader_language = options.shaderLanguage || 'glsl';
         this.shader_factory = options.shaderFactory;
         this.vertex_shader_resource = null;
         this.fragment_shader_resource = null;
@@ -61,8 +62,10 @@ export default class ShaderProgram {
     }
 
     destroy() {
-        this.gl.useProgram(null);
-        this.gl.deleteProgram(this.program);
+        if (this.shader_language === 'glsl') {
+            this.gl.useProgram(null);
+            this.gl.deleteProgram(this.program);
+        }
         this.destroyShaderResources();
         this.program = null;
         this.uniforms = {};
@@ -78,7 +81,7 @@ export default class ShaderProgram {
         }
 
         const changed = ShaderProgram.current !== this;
-        if (changed && !this.defer_uniform_updates) {
+        if (changed && this.shader_language === 'glsl' && !this.defer_uniform_updates) {
             this.gl.useProgram(this.program);
         }
         ShaderProgram.current = this;
@@ -88,6 +91,9 @@ export default class ShaderProgram {
     }
 
     compile() {
+        if (this.shader_language !== 'glsl') {
+            return this.compilePortable();
+        }
         if (this.compiling) {
             throw(new Error(`ShaderProgram.compile(): skipping for ${this.id} (${this.name}) because already compiling`));
         }
@@ -268,20 +274,31 @@ export default class ShaderProgram {
     createShaderResources(vertex_source, fragment_source) {
         let vertex_shader;
         try {
-            vertex_shader = this.shader_factory({
+            const vertex_options = {
                 id: `${this.name || this.id}-vertex`,
                 stage: 'vertex',
+                language: this.shader_language,
                 source: vertex_source
-            });
-            const fragment_shader = this.shader_factory({
+            };
+            const fragment_options = {
                 id: `${this.name || this.id}-fragment`,
                 stage: 'fragment',
+                language: this.shader_language,
                 source: fragment_source
-            });
-            if (!vertex_shader || !vertex_shader.handle || typeof vertex_shader.destroy !== 'function' ||
-                !fragment_shader || !fragment_shader.handle || typeof fragment_shader.destroy !== 'function') {
+            };
+            if (this.shader_language === 'wgsl') {
+                vertex_options.entryPoint = 'vertexMain';
+                fragment_options.entryPoint = 'fragmentMain';
+            }
+            vertex_shader = this.shader_factory(vertex_options);
+            const fragment_shader = this.shader_factory(fragment_options);
+            const resources_valid = vertex_shader && typeof vertex_shader.destroy === 'function' &&
+                fragment_shader && typeof fragment_shader.destroy === 'function';
+            const handles_valid = this.shader_language !== 'glsl' ||
+                (vertex_shader.handle && fragment_shader.handle);
+            if (!resources_valid || !handles_valid) {
                 destroyShaderResource(fragment_shader);
-                throw new Error('ShaderProgram: shaderFactory must return a resource with handle and destroy');
+                throw new Error('ShaderProgram: shaderFactory must return a portable shader resource');
             }
             return { vertex_shader, fragment_shader };
         }
@@ -296,6 +313,59 @@ export default class ShaderProgram {
         destroyShaderResource(this.fragment_shader_resource);
         this.vertex_shader_resource = null;
         this.fragment_shader_resource = null;
+    }
+
+    // Compile a non-GLSL program without creating or linking a raw WebGL program.
+    compilePortable() {
+        if (this.shader_language !== 'wgsl') {
+            throw new Error(`ShaderProgram: unsupported shader language '${this.shader_language}'`);
+        }
+        if (!this.shader_factory) {
+            throw new Error('ShaderProgram: portable compilation requires a shaderFactory');
+        }
+        if (this.compiling) {
+            throw new Error(`ShaderProgram.compile(): ${this.id} (${this.name}) is already compiling`);
+        }
+
+        this.compiling = true;
+        this.compiled = false;
+        this.error = null;
+        this.computed_vertex_source = this.prependPortableUniformBlocks(this.vertex_source);
+        this.computed_fragment_source = this.prependPortableUniformBlocks(this.fragment_source);
+
+        try {
+            const shader_resources = this.createShaderResources(
+                this.computed_vertex_source,
+                this.computed_fragment_source
+            );
+            this.destroyShaderResources();
+            this.vertex_shader_resource = shader_resources.vertex_shader;
+            this.fragment_shader_resource = shader_resources.fragment_shader;
+            this.program = null;
+            this.compiled = true;
+            this.compiling = false;
+            ShaderProgram.current = null;
+        }
+        catch (error) {
+            this.program = null;
+            this.compiled = false;
+            this.compiling = false;
+            this.error = error;
+            error.vertex_shader_source = this.computed_vertex_source;
+            error.fragment_shader_source = this.computed_fragment_source;
+            throw error;
+        }
+
+        this.computed_vertex_source = null;
+        this.computed_fragment_source = null;
+        this.use();
+    }
+
+    prependPortableUniformBlocks(source) {
+        const declarations = Object.values(this.uniform_blocks)
+            .filter(uniform_buffer => typeof uniform_buffer.getDeclaration === 'function')
+            .map(uniform_buffer => uniform_buffer.getDeclaration({ language: this.shader_language }));
+        return declarations.length > 0 ? `${declarations.join('\n')}\n${source}` : source;
     }
 
     // Make list of defines (global, then program-specific)

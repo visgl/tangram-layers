@@ -107,15 +107,16 @@ export default class UniformBuffer {
     }
 
     getWGSLDeclaration({ group = 0, variableName } = {}) {
-        variableName = variableName || lowerFirst(this.name);
+        variableName = variableName || this.name;
+        const struct_name = `${this.name}Uniforms`;
         const declarations = Object.values(this.layout.uniforms)
             .map(uniform => `    ${uniform.name}: ${uniform.wgsl},`)
             .join('\n');
         return [
-            `struct ${this.name} {`,
+            `struct ${struct_name} {`,
             declarations,
             '};',
-            `@group(${group}) @binding(${this.binding}) var<uniform> ${variableName}: ${this.name};`
+            `@group(${group}) @binding(${this.binding}) var<uniform> ${variableName}: ${struct_name};`
         ].join('\n');
     }
 
@@ -255,8 +256,4 @@ export default class UniformBuffer {
 
 function align(value, alignment) {
     return Math.ceil(value / alignment) * alignment;
-}
-
-function lowerFirst(value) {
-    return value.charAt(0).toLowerCase() + value.slice(1);
 }

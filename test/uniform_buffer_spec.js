@@ -36,11 +36,11 @@ describe('UniformBuffer', function () {
             '};'
         ].join('\n'));
         assert.strictEqual(uniform_buffer.getDeclaration({ language: 'wgsl', group: 2 }), [
-            'struct TangramView {',
+            'struct TangramViewUniforms {',
             '    time: f32,',
             '    resolution: vec2<f32>,',
             '};',
-            '@group(2) @binding(0) var<uniform> tangramView: TangramView;'
+            '@group(2) @binding(0) var<uniform> TangramView: TangramViewUniforms;'
         ].join('\n'));
         assert.deepEqual(uniform_buffer.getBindingLayout({ group: 2 }), {
             type: 'uniform',
@@ -59,11 +59,11 @@ describe('UniformBuffer', function () {
         assert.strictEqual(padded_uniform_buffer.layout.uniforms.panning.offset, 12);
         assert.strictEqual(padded_uniform_buffer.byteLength, 16);
         assert.strictEqual(padded_uniform_buffer.getDeclaration({ language: 'wgsl' }), [
-            'struct TangramCamera {',
+            'struct TangramCameraUniforms {',
             '    eye: vec3<f32>,',
             '    panning: u32,',
             '};',
-            '@group(0) @binding(3) var<uniform> tangramCamera: TangramCamera;'
+            '@group(0) @binding(3) var<uniform> TangramCamera: TangramCameraUniforms;'
         ].join('\n'));
     });
 

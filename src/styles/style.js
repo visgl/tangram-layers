@@ -406,6 +406,7 @@ export var Style = {
     setGL (gl, uniform_blocks = {}, options = {}) {
         this.gl = gl;
         this.uniform_blocks = uniform_blocks;
+        this.shader_language = options.shaderLanguage || 'glsl';
         this.shader_factory = options.shaderFactory;
         this.mesh_buffer_factory = options.meshBufferFactory;
         this.defer_uniform_blocks = options.deferUniformBlocks === true;
@@ -500,6 +501,7 @@ export var Style = {
                 defines,
                 uniforms,
                 uniform_blocks: this.uniform_blocks,
+                shaderLanguage: this.shader_language,
                 deferUniformBlocks: this.defer_uniform_blocks,
                 deferTextureBindings: this.defer_texture_bindings,
                 deferUniformUpdates: this.defer_uniform_updates,
@@ -520,6 +522,7 @@ export var Style = {
                     defines: selection_defines,
                     uniforms,
                     uniform_blocks: this.uniform_blocks,
+                    shaderLanguage: this.shader_language,
                     deferUniformBlocks: this.defer_uniform_blocks,
                     deferTextureBindings: this.defer_texture_bindings,
                     deferUniformUpdates: this.defer_uniform_updates,

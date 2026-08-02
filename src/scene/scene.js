@@ -97,6 +97,7 @@ export default class Scene {
         this.redraw_callback = options.requestRedraw;
         this.enable_uniform_buffers = options.enableUniformBuffers === true;
         this.uniform_buffer_factory = options.uniformBufferFactory;
+        this.shader_language = options.shaderLanguage || 'glsl';
         this.shader_factory = options.shaderFactory;
         this.mesh_buffer_factory = options.meshBufferFactory;
         this.mesh_renderer = options.meshRenderer;
@@ -1279,6 +1280,7 @@ export default class Scene {
         for (let style in this.styles) {
             this.styles[style].setGL(this.gl, this.uniform_buffers, {
                 shaderFactory: this.shader_factory,
+                shaderLanguage: this.shader_language,
                 meshBufferFactory: this.mesh_buffer_factory,
                 deferUniformBlocks: Boolean(this.mesh_renderer),
                 deferTextureBindings: Boolean(this.mesh_renderer),
