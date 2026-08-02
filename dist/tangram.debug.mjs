@@ -10399,7 +10399,7 @@ function buildLinesWGSL({
   const animated_attribute = animated ? '\n    @location(2) a_texcoord: vec2<f32>,' : '';
   const color_location = animated ? 3 : 2;
   const animated_varying = animated ? '\n    @location(1) texcoord: vec2<f32>,' : '';
-  const animated_vertex = animated ? '\n    output.texcoord = attributes.a_texcoord;' : '';
+  const animated_vertex = animated ? '\n    output.texcoord = attributes.a_texcoord / 65535.0;' : '';
   const animated_global = animated ? `
     fn traffic_random(value: f32) -> f32 {
         return fract(sin(value * 12.9898) * 43758.5453);
@@ -10409,14 +10409,21 @@ function buildLinesWGSL({
   const animated_fragment = animated ? `
 
     let direction = select(-1.0, 1.0, input.texcoord.x < 0.5);
-    let traffic_coordinate = input.texcoord.y * 64.0 -
-        TangramView.u_time * 7.0 * direction;
+    let tile_phase = traffic_random(
+        TangramTile.u_tile_origin.x * 0.00001 +
+        TangramTile.u_tile_origin.y * 0.00003
+    );
+    let lane_seed = select(1.0, 3.0, input.texcoord.x < 0.5);
+    let traffic_coordinate = input.texcoord.y * 512.0 -
+        TangramView.u_time * 1.2 * direction +
+        tile_phase + lane_seed * 0.31;
     let traffic_cell = floor(traffic_coordinate);
     let cell_position = fract(traffic_coordinate);
-    let lane_seed = floor(input.texcoord.x * 5.0);
-    let has_car = step(0.48, traffic_random(traffic_cell + lane_seed * 19.19));
-    let car_front = smoothstep(0.04, 0.12, cell_position);
-    let car_back = 1.0 - smoothstep(0.40, 0.52, cell_position);
+    let has_car = step(0.80, traffic_random(
+        traffic_cell + lane_seed * 19.19 + tile_phase * 31.7
+    ));
+    let car_front = smoothstep(0.02, 0.06, cell_position);
+    let car_back = 1.0 - smoothstep(0.30, 0.36, cell_position);
     let car_length = car_front * car_back * has_car;
     let lane_center = select(0.72, 0.28, direction > 0.0);
     let lane_distance = abs(input.texcoord.x - lane_center);
@@ -10942,8 +10949,8 @@ Object.assign(Lines, {
       }, {
         name: 'a_texcoord',
         size: 2,
-        type: gl$1.UNSIGNED_SHORT,
-        normalized: true,
+        type: this.shader_language === 'wgsl' ? gl$1.FLOAT : gl$1.UNSIGNED_SHORT,
+        normalized: this.shader_language !== 'wgsl',
         static: variant.texcoords ? null : [0, 0]
       }, {
         name: 'a_color',
@@ -34808,7 +34815,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = '448f17608403cbf5c78d98978806f5366ec44d0a';
+	Tangram.debug.SHA = '957742785f9f1cd700b61499ce9cb239f728a3ec';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

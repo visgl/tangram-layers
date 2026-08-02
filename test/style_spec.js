@@ -66,6 +66,21 @@ describe('Styles:', () => {
             const dynamic_attributes = layout.dynamic_attribs.map(attribute => attribute.name);
             assert.include(dynamic_attributes, 'a_texcoord');
             assert.include(dynamic_attributes, 'a_outline_color');
+
+            const lines = style_manager.styles.lines;
+            const line_layout = lines.vertexLayoutForMeshVariant({
+                key: 'portable-lines',
+                offset: 0,
+                z_or_offset: 0,
+                texcoords: 1,
+                selection: 0
+            });
+            const texcoord_attribute = line_layout.dynamic_attribs.find(
+                attribute => attribute.name === 'a_texcoord'
+            );
+            assert.strictEqual(lines.shader_language, 'wgsl');
+            assert.strictEqual(texcoord_attribute.type, gl.FLOAT);
+            assert.isFalse(texcoord_attribute.normalized);
         });
 
         describe('builds custom styles w/dependencies from stylesheet', () => {

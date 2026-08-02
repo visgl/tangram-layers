@@ -11142,9 +11142,9 @@ function buildLinesWGSL() {
   var animated_attribute = animated ? '\n    @location(2) a_texcoord: vec2<f32>,' : '';
   var color_location = animated ? 3 : 2;
   var animated_varying = animated ? '\n    @location(1) texcoord: vec2<f32>,' : '';
-  var animated_vertex = animated ? '\n    output.texcoord = attributes.a_texcoord;' : '';
+  var animated_vertex = animated ? '\n    output.texcoord = attributes.a_texcoord / 65535.0;' : '';
   var animated_global = animated ? "\n    fn traffic_random(value: f32) -> f32 {\n        return fract(sin(value * 12.9898) * 43758.5453);\n    }\n\n" : '';
-  var animated_fragment = animated ? "\n\n    let direction = select(-1.0, 1.0, input.texcoord.x < 0.5);\n    let traffic_coordinate = input.texcoord.y * 64.0 -\n        TangramView.u_time * 7.0 * direction;\n    let traffic_cell = floor(traffic_coordinate);\n    let cell_position = fract(traffic_coordinate);\n    let lane_seed = floor(input.texcoord.x * 5.0);\n    let has_car = step(0.48, traffic_random(traffic_cell + lane_seed * 19.19));\n    let car_front = smoothstep(0.04, 0.12, cell_position);\n    let car_back = 1.0 - smoothstep(0.40, 0.52, cell_position);\n    let car_length = car_front * car_back * has_car;\n    let lane_center = select(0.72, 0.28, direction > 0.0);\n    let lane_distance = abs(input.texcoord.x - lane_center);\n    let lane_mask = 1.0 - smoothstep(0.06, 0.16, lane_distance);\n    let car = car_length * lane_mask;\n    let car_color = vec3<f32>(0.15, 1.0, 0.96);\n    let animated_color = mix(\n        input.color.rgb,\n        car_color,\n        car * 0.98\n    );\n    return vec4<f32>(animated_color, input.color.a);\n" : '    return input.color;\n';
+  var animated_fragment = animated ? "\n\n    let direction = select(-1.0, 1.0, input.texcoord.x < 0.5);\n    let tile_phase = traffic_random(\n        TangramTile.u_tile_origin.x * 0.00001 +\n        TangramTile.u_tile_origin.y * 0.00003\n    );\n    let lane_seed = select(1.0, 3.0, input.texcoord.x < 0.5);\n    let traffic_coordinate = input.texcoord.y * 512.0 -\n        TangramView.u_time * 1.2 * direction +\n        tile_phase + lane_seed * 0.31;\n    let traffic_cell = floor(traffic_coordinate);\n    let cell_position = fract(traffic_coordinate);\n    let has_car = step(0.80, traffic_random(\n        traffic_cell + lane_seed * 19.19 + tile_phase * 31.7\n    ));\n    let car_front = smoothstep(0.02, 0.06, cell_position);\n    let car_back = 1.0 - smoothstep(0.30, 0.36, cell_position);\n    let car_length = car_front * car_back * has_car;\n    let lane_center = select(0.72, 0.28, direction > 0.0);\n    let lane_distance = abs(input.texcoord.x - lane_center);\n    let lane_mask = 1.0 - smoothstep(0.06, 0.16, lane_distance);\n    let car = car_length * lane_mask;\n    let car_color = vec3<f32>(0.15, 1.0, 0.96);\n    let animated_color = mix(\n        input.color.rgb,\n        car_color,\n        car * 0.98\n    );\n    return vec4<f32>(animated_color, input.color.a);\n" : '    return input.color;\n';
   return "\n".concat(animated_global, "\nstruct LineAttributes {\n    @location(0) a_position: vec4<i32>,\n    @location(1) a_extrude: vec2<i32>,").concat(animated_attribute, "\n    @location(").concat(color_location, ") a_color: vec4<f32>,\n};\n\nstruct LineVaryings {\n    @builtin(position) position: vec4<f32>,\n    @location(0) color: vec4<f32>,").concat(animated_varying, "\n};\n\n@vertex\nfn vertexMain(attributes: LineAttributes) -> LineVaryings {\n    var output: LineVaryings;\n    var extrusion = vec2<f32>(attributes.a_extrude);\n\n    var zoom_delta = clamp(\n        TangramView.u_map_position.z - TangramTile.u_tile_origin.z,\n        0.0,\n        4.0\n    );\n    zoom_delta += step(1.0, zoom_delta) * (1.0 - zoom_delta) +\n        mix(0.0, 2.0, clamp((zoom_delta - 2.0) / 2.0, 0.0, 1.0));\n\n    let midpoint_zoom_delta = (zoom_delta - 0.5) * 2.0;\n    let width_scale = f32(attributes.a_position.z) / ").concat(ATTRIBUTE_SCALE, ".0;\n    extrusion -= extrusion * width_scale * midpoint_zoom_delta;\n    extrusion *= exp2(\n        -zoom_delta - (TangramTile.u_tile_origin.z - TangramTile.u_tile_origin.w)\n    );\n\n    let local_position = vec4<f32>(\n        vec2<f32>(attributes.a_position.xy) + extrusion,\n        0.0,\n        1.0\n    );\n    var clip_position = TangramCamera.u_projection *\n        (TangramTile.u_modelView * local_position);\n    let layer = f32(attributes.a_position.w) +\n        TangramTile.u_tile_proxy_order_offset + 1.0;\n    clip_position.z -= layer * ").concat(LAYER_DELTA, " * clip_position.w;\n\n    output.position = clip_position;\n    output.color = attributes.a_color;\n").concat(animated_vertex, "\n    return output;\n}\n\n@fragment\nfn fragmentMain(input: LineVaryings) -> @location(0) vec4<f32> {\n").concat(animated_fragment, "\n}\n");
 }
 
@@ -11684,8 +11684,8 @@ Object.assign(Lines, {
       }, {
         name: 'a_texcoord',
         size: 2,
-        type: gl$1.UNSIGNED_SHORT,
-        normalized: true,
+        type: this.shader_language === 'wgsl' ? gl$1.FLOAT : gl$1.UNSIGNED_SHORT,
+        normalized: this.shader_language !== 'wgsl',
         static: variant.texcoords ? null : [0, 0]
       }, {
         name: 'a_color',
@@ -36886,7 +36886,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = '448f17608403cbf5c78d98978806f5366ec44d0a';
+	Tangram.debug.SHA = '957742785f9f1cd700b61499ce9cb239f728a3ec';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

@@ -492,7 +492,13 @@ Object.assign(Lines, {
                 { name: 'a_extrude', size: 2, type: gl.SHORT, normalized: false },
                 { name: 'a_offset', size: 2, type: gl.SHORT, normalized: false, static: (variant.offset ? null : [0, 0]) },
                 { name: 'a_z_and_offset_scale', size: 2, type: gl.SHORT, normalized: false, static: (variant.z_or_offset ? null : [0, 0]) },
-                { name: 'a_texcoord', size: 2, type: gl.UNSIGNED_SHORT, normalized: true, static: (variant.texcoords ? null : [0, 0]) },
+                {
+                    name: 'a_texcoord',
+                    size: 2,
+                    type: this.shader_language === 'wgsl' ? gl.FLOAT : gl.UNSIGNED_SHORT,
+                    normalized: this.shader_language !== 'wgsl',
+                    static: (variant.texcoords ? null : [0, 0])
+                },
                 { name: 'a_color', size: 4, type: gl.UNSIGNED_BYTE, normalized: true },
                 { name: 'a_selection_color', size: 4, type: gl.UNSIGNED_BYTE, normalized: true, static: (variant.selection ? null : [0, 0, 0, 0]) }
             ];
