@@ -32,6 +32,7 @@ blocks are enabled, and frame/view globals are supplied through a real
 `TangramView` block. The deck bridge also restores indexed uniform-buffer state
 that luma.gl's general WebGL state stack intentionally does not track.
 
-The next migration slice is to move camera and tile matrices into separate
-blocks before replacing the WebGL-specific buffer implementation with a luma.gl
-`Device` buffer for WebGPU.
+Camera projection state and per-tile transforms are supplied through separate
+`TangramCamera` and `TangramTile` blocks. The remaining WebGPU-oriented step is
+to replace the WebGL-specific buffer implementation with a luma.gl `Device`
+buffer and translate the generated shaders to WGSL.

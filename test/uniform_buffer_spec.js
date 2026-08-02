@@ -5,6 +5,7 @@ import UniformBuffer from '../src/gl/uniform_buffer';
 import {StyleManager} from '../src/styles/style_manager';
 import Camera from '../src/scene/camera';
 import Light from '../src/lights/light';
+import Tile from '../src/tile/tile';
 
 describe('UniformBuffer', function () {
     it('creates a std140-compatible layout and declaration', function () {
@@ -170,19 +171,7 @@ describe('UniformBuffer', function () {
         Camera.create('uniform-buffer-test', null, { type: 'flat' });
         Light.inject();
 
-        const uniform_buffer = new UniformBuffer(gl, {
-            name: 'TangramView',
-            uniforms: {
-                u_resolution: 'vec2',
-                u_time: 'float',
-                u_map_position: 'vec3',
-                u_meters_per_pixel: 'float',
-                u_device_pixel_ratio: 'float',
-                u_view_pan_snap_timer: 'float',
-                u_view_panning: 'bool'
-            }
-        });
-        const uniform_blocks = { TangramView: uniform_buffer };
+        const uniform_blocks = createTangramUniformBlocks(gl);
         const style_manager = new StyleManager();
         style_manager.init();
 
@@ -202,10 +191,115 @@ describe('UniformBuffer', function () {
         assert.strictEqual(gl.getError(), gl.NO_ERROR);
 
         style_manager.destroy(gl);
-        uniform_buffer.destroy();
+        Object.values(uniform_blocks).forEach(uniform_buffer => uniform_buffer.destroy());
         ShaderProgram.reset();
     });
+
+    it('routes camera and tile transforms through their uniform blocks', function () {
+        const view = {
+            aspect: 4 / 3,
+            center: { meters: { x: 100, y: 200 } },
+            meters_per_pixel: 1,
+            size: {
+                css: { width: 800, height: 600 },
+                meters: { x: 800, y: 600 }
+            },
+            zoom: 16
+        };
+        const camera = Camera.create('uniform-routing-test', view, { type: 'flat' });
+        camera.update();
+
+        const camera_uniforms = createUniformRecorder();
+        const tile_uniforms = createUniformRecorder();
+        const program = {
+            calls: [],
+            uniform(...args) {
+                this.calls.push(args);
+            }
+        };
+        const matrices = {
+            model: new Float64Array(16),
+            model32: new Float32Array(16),
+            model_view32: new Float32Array(16),
+            normal32: new Float32Array(9),
+            inverse_normal32: new Float32Array(9)
+        };
+        const tile = {
+            coords: { z: 14 },
+            fade_in: true,
+            min: { x: 10, y: 20 },
+            proxied_as: null,
+            proxy_order_offset: 0.5,
+            span: { x: 4096, y: 4096 },
+            style_z: 7
+        };
+
+        Tile.prototype.setupProgram.call(tile, matrices, program, tile_uniforms);
+        camera.setupMatrices(matrices, program, tile_uniforms);
+        camera.setupProgram(program, camera_uniforms);
+
+        assert.lengthOf(program.calls, 0, 'scalar uniform path is skipped');
+        assert.deepEqual(tile_uniforms.values.u_tile_origin, [10, 20, 7, 14]);
+        assert.strictEqual(tile_uniforms.values.u_tile_proxy_order_offset, 0.5);
+        assert.isTrue(tile_uniforms.values.u_tile_fade_in);
+        assert.instanceOf(tile_uniforms.values.u_model, Float32Array);
+        assert.instanceOf(tile_uniforms.values.u_modelView, Float32Array);
+        assert.instanceOf(tile_uniforms.values.u_normalMatrix, Float32Array);
+        assert.instanceOf(tile_uniforms.values.u_inverseNormalMatrix, Float32Array);
+        assert.deepEqual(camera_uniforms.values.u_eye, [0, 0, 600]);
+        assert.deepEqual(camera_uniforms.values.u_vanishing_point, [0, 0]);
+        assert.instanceOf(camera_uniforms.values.u_projection, Float32Array);
+    });
 });
+
+function createTangramUniformBlocks(gl) {
+    return {
+        TangramView: new UniformBuffer(gl, {
+            name: 'TangramView',
+            binding: 0,
+            uniforms: {
+                u_resolution: 'vec2',
+                u_time: 'float',
+                u_map_position: 'vec3',
+                u_meters_per_pixel: 'float',
+                u_device_pixel_ratio: 'float',
+                u_view_pan_snap_timer: 'float',
+                u_view_panning: 'bool'
+            }
+        }),
+        TangramCamera: new UniformBuffer(gl, {
+            name: 'TangramCamera',
+            binding: 1,
+            uniforms: {
+                u_projection: 'mat4',
+                u_eye: 'vec3',
+                u_vanishing_point: 'vec2'
+            }
+        }),
+        TangramTile: new UniformBuffer(gl, {
+            name: 'TangramTile',
+            binding: 2,
+            uniforms: {
+                u_tile_origin: 'vec4',
+                u_tile_proxy_order_offset: 'float',
+                u_model: 'mat4',
+                u_modelView: 'mat4',
+                u_normalMatrix: 'mat3',
+                u_inverseNormalMatrix: 'mat3',
+                u_tile_fade_in: 'bool'
+            }
+        })
+    };
+}
+
+function createUniformRecorder() {
+    return {
+        values: {},
+        setUniforms(values) {
+            Object.assign(this.values, values);
+        }
+    };
+}
 
 function createFakeWebGL2Context() {
     const gl = {

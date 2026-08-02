@@ -547,21 +547,31 @@ export default class Tile {
     }
 
     // Update model matrix and tile uniforms
-    setupProgram ({ model, model32 }, program) {
-        // Tile origin
-        program.uniform('4fv', 'u_tile_origin', [this.min.x, this.min.y, this.style_z, this.coords.z]);
-        program.uniform('1f', 'u_tile_proxy_order_offset', this.proxy_order_offset);
-
+    setupProgram ({ model, model32 }, program, uniform_buffer) {
         // Model - transform tile space into world space (meters, absolute mercator position)
         mat4.identity(model);
         mat4.translate(model, model, vec3.fromValues(this.min.x, this.min.y, 0));
         mat4.scale(model, model, vec3.fromValues(this.span.x / Geo.tile_scale, this.span.y / Geo.tile_scale, 1)); // scale tile local coords to meters
         mat4.copy(model32, model);
-        program.uniform('Matrix4fv', 'u_model', model32);
+        const tile_fade_in = this.fade_in && this.proxied_as !== 'child';
 
-        // Fade in labels according to proxy status, avoiding "flickering" where
-        // labels quickly go from invisible back to visible
-        program.uniform('1i', 'u_tile_fade_in', this.fade_in && this.proxied_as !== 'child');
+        if (uniform_buffer) {
+            uniform_buffer.setUniforms({
+                u_tile_origin: [this.min.x, this.min.y, this.style_z, this.coords.z],
+                u_tile_proxy_order_offset: this.proxy_order_offset,
+                u_model: model32,
+                u_tile_fade_in: tile_fade_in
+            });
+        }
+        else {
+            program.uniform('4fv', 'u_tile_origin', [this.min.x, this.min.y, this.style_z, this.coords.z]);
+            program.uniform('1f', 'u_tile_proxy_order_offset', this.proxy_order_offset);
+            program.uniform('Matrix4fv', 'u_model', model32);
+
+            // Fade in labels according to proxy status, avoiding "flickering" where
+            // labels quickly go from invisible back to visible
+            program.uniform('1i', 'u_tile_fade_in', tile_fade_in);
+        }
     }
 
     // Slice a subset of keys out of a tile

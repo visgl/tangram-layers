@@ -13521,16 +13521,24 @@ class Camera {
   }
 
   // Set model-view and normal matrices
-  setupMatrices(matrices, program) {
+  setupMatrices(matrices, program, uniform_buffer) {
     // Model view matrix - transform tile space into view space (meters, relative to camera)
     mat4.multiply(matrices.model_view32, this.view_matrix, matrices.model);
-    program.uniform('Matrix4fv', 'u_modelView', matrices.model_view32);
 
     // Normal matrices - transforms surface normals into view space
     mat3.normalFromMat4(matrices.normal32, matrices.model_view32);
     mat3.invert(matrices.inverse_normal32, matrices.normal32);
-    program.uniform('Matrix3fv', 'u_normalMatrix', matrices.normal32);
-    program.uniform('Matrix3fv', 'u_inverseNormalMatrix', matrices.inverse_normal32);
+    if (uniform_buffer) {
+      uniform_buffer.setUniforms({
+        u_modelView: matrices.model_view32,
+        u_normalMatrix: matrices.normal32,
+        u_inverseNormalMatrix: matrices.inverse_normal32
+      });
+    } else {
+      program.uniform('Matrix4fv', 'u_modelView', matrices.model_view32);
+      program.uniform('Matrix3fv', 'u_normalMatrix', matrices.normal32);
+      program.uniform('Matrix3fv', 'u_inverseNormalMatrix', matrices.inverse_normal32);
+    }
   }
 }
 
@@ -13666,10 +13674,18 @@ class PerspectiveCamera extends Camera {
     super.update();
     this.updateMatrices();
   }
-  setupProgram(program) {
-    program.uniform('Matrix4fv', 'u_projection', this.projection_matrix);
-    program.uniform('3f', 'u_eye', [0, 0, this.position_meters[2]]);
-    program.uniform('2fv', 'u_vanishing_point', this.vanishing_point_skew);
+  setupProgram(program, uniform_buffer) {
+    if (uniform_buffer) {
+      uniform_buffer.setUniforms({
+        u_projection: this.projection_matrix,
+        u_eye: [0, 0, this.position_meters[2]],
+        u_vanishing_point: this.vanishing_point_skew
+      });
+    } else {
+      program.uniform('Matrix4fv', 'u_projection', this.projection_matrix);
+      program.uniform('3f', 'u_eye', [0, 0, this.position_meters[2]]);
+      program.uniform('2fv', 'u_vanishing_point', this.vanishing_point_skew);
+    }
   }
 }
 
@@ -13733,11 +13749,19 @@ class IsometricCamera extends Camera {
     // convert meters to viewport
     mat4.scale(this.projection_matrix, this.projection_matrix, vec3.fromValues(2 / this.view.size.meters.x, 2 / this.view.size.meters.y, 2 / this.view.size.meters.y));
   }
-  setupProgram(program) {
-    program.uniform('Matrix4fv', 'u_projection', this.projection_matrix);
-    program.uniform('3fv', 'u_eye', [0, 0, this.viewport_height]);
-    // program.uniform('3f', 'u_eye', this.viewport_height * this.axis.x, this.viewport_height * this.axis.y, this.viewport_height);
-    program.uniform('2fv', 'u_vanishing_point', [0, 0]);
+  setupProgram(program, uniform_buffer) {
+    if (uniform_buffer) {
+      uniform_buffer.setUniforms({
+        u_projection: this.projection_matrix,
+        u_eye: [0, 0, this.viewport_height],
+        u_vanishing_point: [0, 0]
+      });
+    } else {
+      program.uniform('Matrix4fv', 'u_projection', this.projection_matrix);
+      program.uniform('3fv', 'u_eye', [0, 0, this.viewport_height]);
+      // program.uniform('3f', 'u_eye', this.viewport_height * this.axis.x, this.viewport_height * this.axis.y, this.viewport_height);
+      program.uniform('2fv', 'u_vanishing_point', [0, 0]);
+    }
   }
 }
 
@@ -14043,18 +14067,23 @@ class View {
 
   // Calculate and set model/view and normal matrices for a tile
   setupTile(tile, program) {
+    const uniform_buffer = this.scene.uniform_buffers && this.scene.uniform_buffers.TangramTile;
+
     // Tile-specific state
     // TODO: calc these once per tile (currently being needlessly re-calculated per-tile-per-style)
-    tile.setupProgram(this.matrices, program);
+    tile.setupProgram(this.matrices, program, uniform_buffer);
 
     // Model-view and normal matrices
-    this.camera.setupMatrices(this.matrices, program);
+    this.camera.setupMatrices(this.matrices, program, uniform_buffer);
+    if (uniform_buffer) {
+      program.bindUniformBlocks();
+    }
   }
 
   // Set general uniforms that must be updated once per program
-  setupProgram(program, uniform_buffer) {
-    if (uniform_buffer) {
-      uniform_buffer.setUniforms({
+  setupProgram(program, uniform_buffers = {}) {
+    if (uniform_buffers.TangramView) {
+      uniform_buffers.TangramView.setUniforms({
         u_resolution: [this.size.device.width, this.size.device.height],
         u_map_position: [this.center.meters.x, this.center.meters.y, this.zoom],
         u_meters_per_pixel: this.meters_per_pixel,
@@ -14070,7 +14099,7 @@ class View {
       program.uniform('1f', 'u_view_pan_snap_timer', this.pan_snap_timer);
       program.uniform('1i', 'u_view_panning', this.panning);
     }
-    this.camera.setupProgram(program);
+    this.camera.setupProgram(program, uniform_buffers.TangramCamera);
   }
 
   // View requires some animation, such as after panning stops
@@ -17998,21 +18027,29 @@ class Tile {
   setupProgram({
     model,
     model32
-  }, program) {
-    // Tile origin
-    program.uniform('4fv', 'u_tile_origin', [this.min.x, this.min.y, this.style_z, this.coords.z]);
-    program.uniform('1f', 'u_tile_proxy_order_offset', this.proxy_order_offset);
-
+  }, program, uniform_buffer) {
     // Model - transform tile space into world space (meters, absolute mercator position)
     mat4.identity(model);
     mat4.translate(model, model, vec3.fromValues(this.min.x, this.min.y, 0));
     mat4.scale(model, model, vec3.fromValues(this.span.x / Geo$1.tile_scale, this.span.y / Geo$1.tile_scale, 1)); // scale tile local coords to meters
     mat4.copy(model32, model);
-    program.uniform('Matrix4fv', 'u_model', model32);
+    const tile_fade_in = this.fade_in && this.proxied_as !== 'child';
+    if (uniform_buffer) {
+      uniform_buffer.setUniforms({
+        u_tile_origin: [this.min.x, this.min.y, this.style_z, this.coords.z],
+        u_tile_proxy_order_offset: this.proxy_order_offset,
+        u_model: model32,
+        u_tile_fade_in: tile_fade_in
+      });
+    } else {
+      program.uniform('4fv', 'u_tile_origin', [this.min.x, this.min.y, this.style_z, this.coords.z]);
+      program.uniform('1f', 'u_tile_proxy_order_offset', this.proxy_order_offset);
+      program.uniform('Matrix4fv', 'u_model', model32);
 
-    // Fade in labels according to proxy status, avoiding "flickering" where
-    // labels quickly go from invisible back to visible
-    program.uniform('1i', 'u_tile_fade_in', this.fade_in && this.proxied_as !== 'child');
+      // Fade in labels according to proxy status, avoiding "flickering" where
+      // labels quickly go from invisible back to visible
+      program.uniform('1i', 'u_tile_fade_in', tile_fade_in);
+    }
   }
 
   // Slice a subset of keys out of a tile
@@ -28963,6 +29000,28 @@ class Scene {
         u_view_panning: 'bool'
       }
     });
+    this.uniform_buffers.TangramCamera = new UniformBuffer(this.gl, {
+      name: 'TangramCamera',
+      binding: 1,
+      uniforms: {
+        u_projection: 'mat4',
+        u_eye: 'vec3',
+        u_vanishing_point: 'vec2'
+      }
+    });
+    this.uniform_buffers.TangramTile = new UniformBuffer(this.gl, {
+      name: 'TangramTile',
+      binding: 2,
+      uniforms: {
+        u_tile_origin: 'vec4',
+        u_tile_proxy_order_offset: 'float',
+        u_model: 'mat4',
+        u_modelView: 'mat4',
+        u_normalMatrix: 'mat3',
+        u_inverseNormalMatrix: 'mat3',
+        u_tile_fade_in: 'bool'
+      }
+    });
   }
   destroyUniformBuffers() {
     for (const uniform_buffer of Object.values(this.uniform_buffers)) {
@@ -29424,10 +29483,9 @@ class Scene {
     program.use();
     style.setup();
     const time = this.animated ? (+new Date() - this.start_time) / 1000 : 0;
-    const view_uniform_buffer = this.uniform_buffers.TangramView;
-    if (view_uniform_buffer) {
-      view_uniform_buffer.setUniform('u_time', time);
-      this.view.setupProgram(program, view_uniform_buffer);
+    if (this.uniform_buffers.TangramView) {
+      this.uniform_buffers.TangramView.setUniform('u_time', time);
+      this.view.setupProgram(program, this.uniform_buffers);
       program.bindUniformBlocks();
     } else {
       program.uniform('1f', 'u_time', time);
@@ -30757,7 +30815,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = '8115ddf86b0c906d7f457a3aad793f803b78940e';
+	Tangram.debug.SHA = 'f95f6671424cc931de08f0a78b506ff430c916c3';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

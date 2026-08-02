@@ -317,6 +317,28 @@ export default class Scene {
                 u_view_panning: 'bool'
             }
         });
+        this.uniform_buffers.TangramCamera = new UniformBuffer(this.gl, {
+            name: 'TangramCamera',
+            binding: 1,
+            uniforms: {
+                u_projection: 'mat4',
+                u_eye: 'vec3',
+                u_vanishing_point: 'vec2'
+            }
+        });
+        this.uniform_buffers.TangramTile = new UniformBuffer(this.gl, {
+            name: 'TangramTile',
+            binding: 2,
+            uniforms: {
+                u_tile_origin: 'vec4',
+                u_tile_proxy_order_offset: 'float',
+                u_model: 'mat4',
+                u_modelView: 'mat4',
+                u_normalMatrix: 'mat3',
+                u_inverseNormalMatrix: 'mat3',
+                u_tile_fade_in: 'bool'
+            }
+        });
     }
 
     destroyUniformBuffers() {
@@ -809,10 +831,9 @@ export default class Scene {
         style.setup();
 
         const time = this.animated ? (((+new Date()) - this.start_time) / 1000) : 0;
-        const view_uniform_buffer = this.uniform_buffers.TangramView;
-        if (view_uniform_buffer) {
-            view_uniform_buffer.setUniform('u_time', time);
-            this.view.setupProgram(program, view_uniform_buffer);
+        if (this.uniform_buffers.TangramView) {
+            this.uniform_buffers.TangramView.setUniform('u_time', time);
+            this.view.setupProgram(program, this.uniform_buffers);
             program.bindUniformBlocks();
         }
         else {

@@ -48,16 +48,25 @@ export default class Camera {
     }
 
     // Set model-view and normal matrices
-    setupMatrices (matrices, program) {
+    setupMatrices (matrices, program, uniform_buffer) {
         // Model view matrix - transform tile space into view space (meters, relative to camera)
         mat4.multiply(matrices.model_view32, this.view_matrix, matrices.model);
-        program.uniform('Matrix4fv', 'u_modelView', matrices.model_view32);
 
         // Normal matrices - transforms surface normals into view space
         mat3.normalFromMat4(matrices.normal32, matrices.model_view32);
         mat3.invert(matrices.inverse_normal32, matrices.normal32);
-        program.uniform('Matrix3fv', 'u_normalMatrix', matrices.normal32);
-        program.uniform('Matrix3fv', 'u_inverseNormalMatrix', matrices.inverse_normal32);
+        if (uniform_buffer) {
+            uniform_buffer.setUniforms({
+                u_modelView: matrices.model_view32,
+                u_normalMatrix: matrices.normal32,
+                u_inverseNormalMatrix: matrices.inverse_normal32
+            });
+        }
+        else {
+            program.uniform('Matrix4fv', 'u_modelView', matrices.model_view32);
+            program.uniform('Matrix3fv', 'u_normalMatrix', matrices.normal32);
+            program.uniform('Matrix3fv', 'u_inverseNormalMatrix', matrices.inverse_normal32);
+        }
     }
 
 }
@@ -198,10 +207,19 @@ class PerspectiveCamera extends Camera {
         this.updateMatrices();
     }
 
-    setupProgram(program) {
-        program.uniform('Matrix4fv', 'u_projection', this.projection_matrix);
-        program.uniform('3f', 'u_eye', [0, 0, this.position_meters[2]]);
-        program.uniform('2fv', 'u_vanishing_point', this.vanishing_point_skew);
+    setupProgram(program, uniform_buffer) {
+        if (uniform_buffer) {
+            uniform_buffer.setUniforms({
+                u_projection: this.projection_matrix,
+                u_eye: [0, 0, this.position_meters[2]],
+                u_vanishing_point: this.vanishing_point_skew
+            });
+        }
+        else {
+            program.uniform('Matrix4fv', 'u_projection', this.projection_matrix);
+            program.uniform('3f', 'u_eye', [0, 0, this.position_meters[2]]);
+            program.uniform('2fv', 'u_vanishing_point', this.vanishing_point_skew);
+        }
     }
 
 }
@@ -273,12 +291,20 @@ class IsometricCamera extends Camera {
         );
     }
 
-    setupProgram(program) {
-        program.uniform('Matrix4fv', 'u_projection', this.projection_matrix);
-
-        program.uniform('3fv', 'u_eye', [0, 0, this.viewport_height]);
-        // program.uniform('3f', 'u_eye', this.viewport_height * this.axis.x, this.viewport_height * this.axis.y, this.viewport_height);
-        program.uniform('2fv', 'u_vanishing_point', [0, 0]);
+    setupProgram(program, uniform_buffer) {
+        if (uniform_buffer) {
+            uniform_buffer.setUniforms({
+                u_projection: this.projection_matrix,
+                u_eye: [0, 0, this.viewport_height],
+                u_vanishing_point: [0, 0]
+            });
+        }
+        else {
+            program.uniform('Matrix4fv', 'u_projection', this.projection_matrix);
+            program.uniform('3fv', 'u_eye', [0, 0, this.viewport_height]);
+            // program.uniform('3f', 'u_eye', this.viewport_height * this.axis.x, this.viewport_height * this.axis.y, this.viewport_height);
+            program.uniform('2fv', 'u_vanishing_point', [0, 0]);
+        }
     }
 
 }
