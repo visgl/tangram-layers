@@ -374,7 +374,7 @@ Object.assign(Lines, {
             this.dash_textures[dash_key] = true;
             // Render line pattern
             const dash_texture = renderDashArray(dash, { scale: DASH_SCALE });
-            Texture.create(this.gl, dash_key, {
+            Texture.create(this.resource_context, dash_key, {
                 data: dash_texture.pixels,
                 height: dash_texture.length,
                 width: 1,

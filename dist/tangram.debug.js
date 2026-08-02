@@ -7836,6 +7836,7 @@ var Style = {
     }
     WorkerBroker$1.removeTarget(this.main_thread_target);
     this.gl = null;
+    this.resource_context = null;
     this.uniform_blocks = null;
     this.initialized = false;
   },
@@ -8117,10 +8118,12 @@ var Style = {
     var uniform_blocks = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
     this.gl = gl;
+    this.resource_context = options.resourceContext || gl;
     this.uniform_blocks = uniform_blocks;
     this.shader_language = options.shaderLanguage || 'glsl';
     this.shader_factory = options.shaderFactory;
     this.mesh_buffer_factory = options.meshBufferFactory;
+    this.texture_factory = options.textureFactory;
     this.defer_uniform_blocks = options.deferUniformBlocks === true;
     this.defer_texture_bindings = options.deferTextureBindings === true;
     this.defer_uniform_updates = options.deferUniformUpdates === true;
@@ -8136,7 +8139,7 @@ var Style = {
       // In wireframe debug mode, transform mesh into lines
       vertex_elements = makeWireframeForTriangleElementData(vertex_elements);
       return new VBOMesh(this.gl, vertex_data, vertex_elements, vertex_layout, _objectSpread$4(_objectSpread$4({}, options), {}, {
-        draw_mode: this.gl.LINES
+        draw_mode: gl$1.LINES
       }));
     }
     return new VBOMesh(this.gl, vertex_data, vertex_elements, vertex_layout, options);
@@ -8168,8 +8171,8 @@ var Style = {
     if (this.compile_setup) {
       return;
     }
-    if (!this.gl) {
-      throw new Error("style.compile(): skipping for ".concat(this.name, " because no GL context"));
+    if (!this.gl && !this.shader_factory) {
+      throw new Error("style.compile(): skipping for ".concat(this.name, " because no rendering backend is configured"));
     }
 
     // Build defines & for selection (need to create a new object since the first is stored as a reference by the program)
@@ -8447,7 +8450,7 @@ var Style = {
       });
       return Promise.resolve(Promise.all(queue)).then(function ($await_5) {
         try {
-          return Promise.resolve(Texture.createFromObject(this.gl, configs)).then(function ($await_6) {
+          return Promise.resolve(Texture.createFromObject(this.resource_context, configs)).then(function ($await_6) {
             try {
               return Promise.resolve(Promise.all(Object.keys(configs).map(function (t) {
                 return Texture.textures[t] && Texture.textures[t].load();
@@ -11484,7 +11487,7 @@ Object.assign(Lines, {
       var dash_texture = renderDashArray(dash, {
         scale: DASH_SCALE
       });
-      Texture.create(this.gl, dash_key, {
+      Texture.create(this.resource_context, dash_key, {
         data: dash_texture.pixels,
         height: dash_texture.length,
         width: 1,
@@ -13842,7 +13845,7 @@ var TextCanvas = /*#__PURE__*/function () {
     }
   }, {
     key: "rasterize",
-    value: function rasterize(texts, textures, tile_id, texture_prefix, gl) {
+    value: function rasterize(texts, textures, tile_id, texture_prefix, resource_context) {
       return Task.add({
         type: 'rasterizeLabels',
         run: this.processRasterizeTask.bind(this),
@@ -13854,7 +13857,7 @@ var TextCanvas = /*#__PURE__*/function () {
         texts: texts,
         textures: textures,
         texture_prefix: texture_prefix,
-        gl: gl,
+        resource_context: resource_context,
         tile_id: tile_id,
         cursor: {
           styles: Object.keys(texts),
@@ -13990,7 +13993,7 @@ var TextCanvas = /*#__PURE__*/function () {
 
         // Create GL texture (canvas element will be reused for next texture)
         var tname = task.texture_prefix + cursor.texture_idx;
-        Texture.create(task.gl, tname, {
+        Texture.create(task.resource_context, tname, {
           element: this.canvas,
           filtering: 'linear',
           UNPACK_PREMULTIPLY_ALPHA_WEBGL: true
@@ -14497,7 +14500,7 @@ var TextLabels = {
       textures = canvas.setTextureTextPositions(texts, max_texture_size);
       texture_prefix = ['labels', this.name, tile_key, tile_id, text_texture_id, ''].join('-');
       text_texture_id++;
-      return Promise.resolve(canvas.rasterize(texts, textures, tile_id, texture_prefix, this.gl)).then(function ($await_7) {
+      return Promise.resolve(canvas.rasterize(texts, textures, tile_id, texture_prefix, this.resource_context)).then(function ($await_7) {
         try {
           textures = $await_7;
           if (!textures) {
@@ -18492,14 +18495,14 @@ var StyleManager = /*#__PURE__*/function () {
       ShaderProgram.defines.TANGRAM_ALPHA_TEST = 0.5;
     }
 
-    // Destroy all styles for a given GL context
+    // Destroy all styles for a given rendering resource context
   }, {
     key: "destroy",
-    value: function destroy(gl) {
+    value: function destroy(resource_context) {
       var _this = this;
       Object.keys(this.styles).forEach(function (_name) {
         var style = _this.styles[_name];
-        if (style.gl === gl) {
+        if ((style.resource_context || style.gl) === resource_context) {
           log('trace', "StyleManager.destroy: destroying render style ".concat(style.name));
           if (style.base) {
             _this.remove(style.name);
@@ -31628,10 +31631,12 @@ var Scene = /*#__PURE__*/function () {
     this.canvas = options.canvas || null;
     this.contextOptions = options.webGLContextOptions;
     this.external_gl = options.webGLContext || null;
+    this.gl = null;
     this.device = options.device || null;
     this.shader_language = options.shaderLanguage || 'glsl';
     this.portable_rendering = Boolean(this.device && this.shader_language !== 'glsl');
     this.resource_context = this.portable_rendering ? this.device : null;
+    this.resources_initialized = false;
     this.owns_gl = !this.external_gl && !this.portable_rendering;
     this.webgl_context_scope = options.webGLContextScope;
     this.redraw_callback = options.requestRedraw;
@@ -31796,10 +31801,11 @@ var Scene = /*#__PURE__*/function () {
       }
       this.canvas = null;
       this.container = null;
-      if (this.gl) {
-        topojson.Texture.destroy(this.gl);
-        topojson.Texture.clearResourceFactory(this.gl);
-        this.style_manager.destroy(this.gl);
+      var resource_context = this.portable_rendering ? this.resource_context : this.gl;
+      if (resource_context) {
+        topojson.Texture.destroy(resource_context);
+        topojson.Texture.clearResourceFactory(resource_context);
+        this.style_manager.destroy(resource_context);
         this.styles = {};
         this.destroyUniformBuffers();
         topojson.ShaderProgram.reset();
@@ -31812,6 +31818,7 @@ var Scene = /*#__PURE__*/function () {
         }
         this.gl = null;
       }
+      this.resources_initialized = false;
       this.sources = {};
       this.destroyWorkers();
       this.tile_manager.destroy();
@@ -31822,7 +31829,7 @@ var Scene = /*#__PURE__*/function () {
     key: "createCanvas",
     value: function createCanvas() {
       var _this3 = this;
-      if (this.gl) {
+      if (this.gl || this.portable_rendering && this.resources_initialized) {
         return;
       }
       return this.withWebGLContext(function () {
@@ -31833,10 +31840,10 @@ var Scene = /*#__PURE__*/function () {
     key: "createCanvasContext",
     value: function createCanvasContext() {
       if (this.portable_rendering) {
-        this.gl = this.resource_context;
-        topojson.Texture.setResourceFactory(this.gl, this.texture_factory);
+        topojson.Texture.setResourceFactory(this.resource_context, this.texture_factory);
         this.media_capture.setCanvas(this.canvas, null);
         this.createUniformBuffers();
+        this.resources_initialized = true;
         return;
       } else if (this.external_gl) {
         this.gl = topojson.Context.configure(this.external_gl, this.webgl_context_scope);
@@ -31878,7 +31885,8 @@ var Scene = /*#__PURE__*/function () {
       if (!this.enable_uniform_buffers || !UniformBuffer.isSupported(this.gl) && !this.uniform_buffer_factory) {
         return;
       }
-      this.uniform_buffers.TangramView = new UniformBuffer(this.gl, {
+      var gl = this.portable_rendering ? null : this.gl;
+      this.uniform_buffers.TangramView = new UniformBuffer(gl, {
         name: 'TangramView',
         binding: 0,
         bufferFactory: this.uniform_buffer_factory,
@@ -31892,7 +31900,7 @@ var Scene = /*#__PURE__*/function () {
           u_view_panning: 'bool'
         }
       });
-      this.uniform_buffers.TangramCamera = new UniformBuffer(this.gl, {
+      this.uniform_buffers.TangramCamera = new UniformBuffer(gl, {
         name: 'TangramCamera',
         binding: 1,
         bufferFactory: this.uniform_buffer_factory,
@@ -31902,7 +31910,7 @@ var Scene = /*#__PURE__*/function () {
           u_vanishing_point: 'vec2'
         }
       });
-      this.uniform_buffers.TangramTile = new UniformBuffer(this.gl, {
+      this.uniform_buffers.TangramTile = new UniformBuffer(gl, {
         name: 'TangramTile',
         binding: 2,
         bufferFactory: this.uniform_buffer_factory,
@@ -32694,6 +32702,9 @@ var Scene = /*#__PURE__*/function () {
     value: function getFeatureAt(pixel) {
       var _ref10 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
         radius = _ref10.radius;
+      if (this.portable_rendering) {
+        return Promise.resolve();
+      }
       if (!this.initialized) {
         topojson.log('debug', 'Scene.getFeatureAt() called before scene was initialized');
         return Promise.resolve();
@@ -33085,9 +33096,9 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "loadTextures",
     value: function loadTextures() {
-      var _this13 = this;
-      return topojson.Texture.createFromObject(this.gl, this.config.textures).then(function () {
-        return topojson.Texture.createDefault(_this13.gl);
+      var resource_context = this.portable_rendering ? this.resource_context : this.gl;
+      return topojson.Texture.createFromObject(resource_context, this.config.textures).then(function () {
+        return topojson.Texture.createDefault(resource_context);
       }); // create a 'default' texture for placeholders
     }
 
@@ -33095,13 +33106,13 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "freePreviousTextures",
     value: function freePreviousTextures() {
-      var _this14 = this;
+      var _this13 = this;
       if (!this.prev_textures) {
         return;
       }
       this.prev_textures.forEach(function (t) {
         // free textures that aren't in the new scene, but are still in the global texture set
-        if (!_this14.config.textures[t] && topojson.Texture.textures[t]) {
+        if (!_this13.config.textures[t] && topojson.Texture.textures[t]) {
           topojson.Texture.textures[t].destroy();
         }
       });
@@ -33122,10 +33133,12 @@ var Scene = /*#__PURE__*/function () {
 
       // Optionally set GL context (used when initializing or re-initializing GL resources)
       for (var style in this.styles) {
-        this.styles[style].setGL(this.gl, this.uniform_buffers, {
+        this.styles[style].setGL(this.portable_rendering ? null : this.gl, this.uniform_buffers, {
+          resourceContext: this.portable_rendering ? this.resource_context : this.gl,
           shaderFactory: this.shader_factory,
           shaderLanguage: this.shader_language,
           meshBufferFactory: this.mesh_buffer_factory,
+          textureFactory: this.texture_factory,
           deferUniformBlocks: Boolean(this.mesh_renderer),
           deferTextureBindings: Boolean(this.mesh_renderer),
           deferUniformUpdates: Boolean(this.mesh_renderer),
@@ -33139,10 +33152,10 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "animated",
     get: function get() {
-      var _this15 = this;
+      var _this14 = this;
       // Disable animation is scene flag requests it, otherwise enable animation if any animated styles are in view
       return this.config.scene.animated === false ? false : this.style_manager.getActiveStyles().some(function (s) {
-        return _this15.styles[s].animated;
+        return _this14.styles[s].animated;
       });
     }
 
@@ -33230,14 +33243,14 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "setIntrospection",
     value: function setIntrospection(val) {
-      var _this16 = this;
+      var _this15 = this;
       if (val !== this.introspection) {
         this.introspection = val != null ? val : false;
         this.updating++;
         return this.updateConfig({
           normalize: false
         }).then(function () {
-          return _this16.updating--;
+          return _this15.updating--;
         });
       }
       return Promise.resolve();
@@ -33248,7 +33261,7 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "updateConfig",
     value: function updateConfig() {
-      var _this17 = this;
+      var _this16 = this;
       var _ref14 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
         _ref14$loading = _ref14.loading,
         loading = _ref14$loading === void 0 ? false : _ref14$loading,
@@ -33275,16 +33288,16 @@ var Scene = /*#__PURE__*/function () {
         config: this.config
       });
       this.withWebGLContext(function () {
-        _this17.style_manager.init();
-        _this17.view.reset();
-        _this17.createLights();
-        _this17.createDataSources(loading);
-        _this17.loadTextures();
-        _this17.setBackground();
-        topojson.FontManager.loadFonts(_this17.config.fonts);
+        _this16.style_manager.init();
+        _this16.view.reset();
+        _this16.createLights();
+        _this16.createDataSources(loading);
+        _this16.loadTextures();
+        _this16.setBackground();
+        topojson.FontManager.loadFonts(_this16.config.fonts);
 
         // TODO: detect changes to styles? already (currently) need to recompile anyway when camera or lights change
-        _this17.updateStyles();
+        _this16.updateStyles();
       });
 
       // Optionally rebuild geometry
@@ -33302,8 +33315,8 @@ var Scene = /*#__PURE__*/function () {
       this.view.updateBounds();
       this.requestRedraw();
       return done.then(function () {
-        _this17.last_render_count = 0; // force re-evaluation of selection map
-        _this17.requestRedraw();
+        _this16.last_render_count = 0; // force re-evaluation of selection map
+        _this16.requestRedraw();
       });
     }
 
@@ -33328,20 +33341,20 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "createListeners",
     value: function createListeners() {
-      var _this18 = this;
+      var _this17 = this;
       this.listeners = {};
       this.listeners.view = {
         move: function move() {
-          return _this18.trigger('move');
+          return _this17.trigger('move');
         }
       };
       this.view.subscribe(this.listeners.view);
       this.listeners.texture = {
         update: function update() {
-          return _this18.dirty = true;
+          return _this17.dirty = true;
         },
         warning: function warning(data) {
-          return _this18.trigger('warning', Object.assign({
+          return _this17.trigger('warning', Object.assign({
             type: 'textures'
           }, data));
         }
@@ -33349,7 +33362,7 @@ var Scene = /*#__PURE__*/function () {
       topojson.Texture.subscribe(this.listeners.texture);
       this.listeners.scene_loader = {
         error: function error(data) {
-          return _this18.trigger('error', Object.assign({
+          return _this17.trigger('error', Object.assign({
             type: 'scene'
           }, data));
         }
@@ -33376,9 +33389,12 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "resetFeatureSelection",
     value: function resetFeatureSelection() {
-      var _this19 = this;
+      var _this18 = this;
+      if (this.portable_rendering) {
+        return;
+      }
       this.selection = new topojson.FeatureSelection(this.gl, this.workers, function () {
-        return _this19.building;
+        return _this18.building;
       });
       this.last_render_count = 0; // force re-evaluation of selection map
     }
@@ -33395,11 +33411,11 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "getFeatureSelectionMapSize",
     value: function getFeatureSelectionMapSize() {
-      var _this20 = this;
+      var _this19 = this;
       // Only allow one fetch process to run at a time
       if (this.fetching_selection_map == null) {
         this.fetching_selection_map = topojson.WorkerBroker.postMessage(this.workers, 'self.getFeatureSelectionMapSize').then(function (sizes) {
-          _this20.fetching_selection_map = null;
+          _this19.fetching_selection_map = null;
           return sizes.reduce(function (a, b) {
             return a + b;
           });
@@ -36895,7 +36911,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = '49df0a8c6613863c2edbfcf913a5b41dbd565a7b';
+	Tangram.debug.SHA = 'bfea9c70b8badc513b653b40c1a7e5010b086b61';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

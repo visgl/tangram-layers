@@ -7138,6 +7138,7 @@ var Style = {
     }
     WorkerBroker$1.removeTarget(this.main_thread_target);
     this.gl = null;
+    this.resource_context = null;
     this.uniform_blocks = null;
     this.initialized = false;
   },
@@ -7428,10 +7429,12 @@ var Style = {
 
   setGL(gl, uniform_blocks = {}, options = {}) {
     this.gl = gl;
+    this.resource_context = options.resourceContext || gl;
     this.uniform_blocks = uniform_blocks;
     this.shader_language = options.shaderLanguage || 'glsl';
     this.shader_factory = options.shaderFactory;
     this.mesh_buffer_factory = options.meshBufferFactory;
+    this.texture_factory = options.textureFactory;
     this.defer_uniform_blocks = options.deferUniformBlocks === true;
     this.defer_texture_bindings = options.deferTextureBindings === true;
     this.defer_uniform_updates = options.deferUniformUpdates === true;
@@ -7446,7 +7449,7 @@ var Style = {
       // In wireframe debug mode, transform mesh into lines
       vertex_elements = makeWireframeForTriangleElementData(vertex_elements);
       return new VBOMesh(this.gl, vertex_data, vertex_elements, vertex_layout, _objectSpread$4(_objectSpread$4({}, options), {}, {
-        draw_mode: this.gl.LINES
+        draw_mode: gl$1.LINES
       }));
     }
     return new VBOMesh(this.gl, vertex_data, vertex_elements, vertex_layout, options);
@@ -7477,8 +7480,8 @@ var Style = {
     if (this.compile_setup) {
       return;
     }
-    if (!this.gl) {
-      throw new Error(`style.compile(): skipping for ${this.name} because no GL context`);
+    if (!this.gl && !this.shader_factory) {
+      throw new Error(`style.compile(): skipping for ${this.name} because no rendering backend is configured`);
     }
 
     // Build defines & for selection (need to create a new object since the first is stored as a reference by the program)
@@ -7720,7 +7723,7 @@ var Style = {
     await Promise.all(queue);
 
     // Create and load raster textures
-    await Texture.createFromObject(this.gl, configs);
+    await Texture.createFromObject(this.resource_context, configs);
     let textures = await Promise.all(Object.keys(configs).map(t => Texture.textures[t] && Texture.textures[t].load()).filter(x => x));
     textures.forEach(t => t.retain());
 
@@ -10831,7 +10834,7 @@ Object.assign(Lines, {
       const dash_texture = renderDashArray(dash, {
         scale: DASH_SCALE
       });
-      Texture.create(this.gl, dash_key, {
+      Texture.create(this.resource_context, dash_key, {
         data: dash_texture.pixels,
         height: dash_texture.length,
         width: 1,
@@ -12935,7 +12938,7 @@ class TextCanvas {
       this.context.restore();
     }
   }
-  rasterize(texts, textures, tile_id, texture_prefix, gl) {
+  rasterize(texts, textures, tile_id, texture_prefix, resource_context) {
     return Task.add({
       type: 'rasterizeLabels',
       run: this.processRasterizeTask.bind(this),
@@ -12947,7 +12950,7 @@ class TextCanvas {
       texts,
       textures,
       texture_prefix,
-      gl,
+      resource_context,
       tile_id,
       cursor: {
         styles: Object.keys(texts),
@@ -13085,7 +13088,7 @@ class TextCanvas {
 
       // Create GL texture (canvas element will be reused for next texture)
       let tname = task.texture_prefix + cursor.texture_idx;
-      Texture.create(task.gl, tname, {
+      Texture.create(task.resource_context, tname, {
         element: this.canvas,
         filtering: 'linear',
         UNPACK_PREMULTIPLY_ALPHA_WEBGL: true
@@ -13526,7 +13529,7 @@ const TextLabels = {
     let textures = canvas.setTextureTextPositions(texts, max_texture_size);
     let texture_prefix = ['labels', this.name, tile_key, tile_id, text_texture_id, ''].join('-');
     text_texture_id++;
-    textures = await canvas.rasterize(texts, textures, tile_id, texture_prefix, this.gl);
+    textures = await canvas.rasterize(texts, textures, tile_id, texture_prefix, this.resource_context);
     if (!textures) {
       return {};
     }
@@ -17606,11 +17609,11 @@ class StyleManager {
     ShaderProgram.defines.TANGRAM_ALPHA_TEST = 0.5;
   }
 
-  // Destroy all styles for a given GL context
-  destroy(gl) {
+  // Destroy all styles for a given rendering resource context
+  destroy(resource_context) {
     Object.keys(this.styles).forEach(_name => {
       let style = this.styles[_name];
-      if (style.gl === gl) {
+      if ((style.resource_context || style.gl) === resource_context) {
         log('trace', `StyleManager.destroy: destroying render style ${style.name}`);
         if (style.base) {
           this.remove(style.name);
@@ -29989,10 +29992,12 @@ class Scene {
     this.canvas = options.canvas || null;
     this.contextOptions = options.webGLContextOptions;
     this.external_gl = options.webGLContext || null;
+    this.gl = null;
     this.device = options.device || null;
     this.shader_language = options.shaderLanguage || 'glsl';
     this.portable_rendering = Boolean(this.device && this.shader_language !== 'glsl');
     this.resource_context = this.portable_rendering ? this.device : null;
+    this.resources_initialized = false;
     this.owns_gl = !this.external_gl && !this.portable_rendering;
     this.webgl_context_scope = options.webGLContextScope;
     this.redraw_callback = options.requestRedraw;
@@ -30131,10 +30136,11 @@ class Scene {
     }
     this.canvas = null;
     this.container = null;
-    if (this.gl) {
-      topojson.Texture.destroy(this.gl);
-      topojson.Texture.clearResourceFactory(this.gl);
-      this.style_manager.destroy(this.gl);
+    const resource_context = this.portable_rendering ? this.resource_context : this.gl;
+    if (resource_context) {
+      topojson.Texture.destroy(resource_context);
+      topojson.Texture.clearResourceFactory(resource_context);
+      this.style_manager.destroy(resource_context);
       this.styles = {};
       this.destroyUniformBuffers();
       topojson.ShaderProgram.reset();
@@ -30147,6 +30153,7 @@ class Scene {
       }
       this.gl = null;
     }
+    this.resources_initialized = false;
     this.sources = {};
     this.destroyWorkers();
     this.tile_manager.destroy();
@@ -30154,17 +30161,17 @@ class Scene {
     topojson.log.reset();
   }
   createCanvas() {
-    if (this.gl) {
+    if (this.gl || this.portable_rendering && this.resources_initialized) {
       return;
     }
     return this.withWebGLContext(() => this.createCanvasContext());
   }
   createCanvasContext() {
     if (this.portable_rendering) {
-      this.gl = this.resource_context;
-      topojson.Texture.setResourceFactory(this.gl, this.texture_factory);
+      topojson.Texture.setResourceFactory(this.resource_context, this.texture_factory);
       this.media_capture.setCanvas(this.canvas, null);
       this.createUniformBuffers();
+      this.resources_initialized = true;
       return;
     } else if (this.external_gl) {
       this.gl = topojson.Context.configure(this.external_gl, this.webgl_context_scope);
@@ -30204,7 +30211,8 @@ class Scene {
     if (!this.enable_uniform_buffers || !UniformBuffer.isSupported(this.gl) && !this.uniform_buffer_factory) {
       return;
     }
-    this.uniform_buffers.TangramView = new UniformBuffer(this.gl, {
+    const gl = this.portable_rendering ? null : this.gl;
+    this.uniform_buffers.TangramView = new UniformBuffer(gl, {
       name: 'TangramView',
       binding: 0,
       bufferFactory: this.uniform_buffer_factory,
@@ -30218,7 +30226,7 @@ class Scene {
         u_view_panning: 'bool'
       }
     });
-    this.uniform_buffers.TangramCamera = new UniformBuffer(this.gl, {
+    this.uniform_buffers.TangramCamera = new UniformBuffer(gl, {
       name: 'TangramCamera',
       binding: 1,
       bufferFactory: this.uniform_buffer_factory,
@@ -30228,7 +30236,7 @@ class Scene {
         u_vanishing_point: 'vec2'
       }
     });
-    this.uniform_buffers.TangramTile = new UniformBuffer(this.gl, {
+    this.uniform_buffers.TangramTile = new UniformBuffer(gl, {
       name: 'TangramTile',
       binding: 2,
       bufferFactory: this.uniform_buffer_factory,
@@ -30875,6 +30883,9 @@ class Scene {
   getFeatureAt(pixel, {
     radius
   } = {}) {
+    if (this.portable_rendering) {
+      return Promise.resolve();
+    }
     if (!this.initialized) {
       topojson.log('debug', 'Scene.getFeatureAt() called before scene was initialized');
       return Promise.resolve();
@@ -31227,7 +31238,8 @@ class Scene {
 
   // Load all textures in the scene definition
   loadTextures() {
-    return topojson.Texture.createFromObject(this.gl, this.config.textures).then(() => topojson.Texture.createDefault(this.gl)); // create a 'default' texture for placeholders
+    const resource_context = this.portable_rendering ? this.resource_context : this.gl;
+    return topojson.Texture.createFromObject(resource_context, this.config.textures).then(() => topojson.Texture.createDefault(resource_context)); // create a 'default' texture for placeholders
   }
 
   // Free textures from previously loaded scene
@@ -31256,10 +31268,12 @@ class Scene {
 
     // Optionally set GL context (used when initializing or re-initializing GL resources)
     for (let style in this.styles) {
-      this.styles[style].setGL(this.gl, this.uniform_buffers, {
+      this.styles[style].setGL(this.portable_rendering ? null : this.gl, this.uniform_buffers, {
+        resourceContext: this.portable_rendering ? this.resource_context : this.gl,
         shaderFactory: this.shader_factory,
         shaderLanguage: this.shader_language,
         meshBufferFactory: this.mesh_buffer_factory,
+        textureFactory: this.texture_factory,
         deferUniformBlocks: Boolean(this.mesh_renderer),
         deferTextureBindings: Boolean(this.mesh_renderer),
         deferUniformUpdates: Boolean(this.mesh_renderer),
@@ -31457,6 +31471,9 @@ class Scene {
     }
   }
   resetFeatureSelection() {
+    if (this.portable_rendering) {
+      return;
+    }
     this.selection = new topojson.FeatureSelection(this.gl, this.workers, () => this.building);
     this.last_render_count = 0; // force re-evaluation of selection map
   }
@@ -34824,7 +34841,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = '49df0a8c6613863c2edbfcf913a5b41dbd565a7b';
+	Tangram.debug.SHA = 'bfea9c70b8badc513b653b40c1a7e5010b086b61';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

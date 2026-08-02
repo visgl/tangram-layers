@@ -64,11 +64,11 @@ export class StyleManager {
         ShaderProgram.defines.TANGRAM_ALPHA_TEST = 0.5;
     }
 
-    // Destroy all styles for a given GL context
-    destroy (gl) {
+    // Destroy all styles for a given rendering resource context
+    destroy (resource_context) {
         Object.keys(this.styles).forEach((_name) => {
             let style = this.styles[_name];
-            if (style.gl === gl) {
+            if ((style.resource_context || style.gl) === resource_context) {
                 log('trace', `StyleManager.destroy: destroying render style ${style.name}`);
 
                 if (style.base) {

@@ -5,11 +5,6 @@ describe('ShaderProgram portable compilation', function () {
     it('creates WGSL resources without reading or linking a WebGL context', function () {
         const shader_options = [];
         const shader_resources = [];
-        const gl = new Proxy({}, {
-            get(target, property) {
-                throw new Error(`unexpected WebGL access '${String(property)}'`);
-            }
-        });
         const source = [
             '@vertex fn vertexMain() -> @builtin(position) vec4<f32> {',
             '    return vec4<f32>(0.0);',
@@ -18,7 +13,7 @@ describe('ShaderProgram portable compilation', function () {
             '    return vec4<f32>(1.0);',
             '}'
         ].join('\n');
-        const program = new ShaderProgram(gl, source, source, {
+        const program = new ShaderProgram(null, source, source, {
             name: 'portable',
             shaderLanguage: 'wgsl',
             deferUniformBlocks: true,

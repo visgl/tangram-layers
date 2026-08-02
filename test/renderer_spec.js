@@ -94,7 +94,7 @@ describe('Renderer', function () {
         assert.isTrue(renderer.device_renderer.destroy.calledOnce);
     });
 
-    it('initializes portable scene resources without constructing a WebGL context', function () {
+    it('initializes portable scene resources without constructing a WebGL context', async function () {
         const buffers = [];
         const device = {
             type: 'webgpu',
@@ -121,6 +121,7 @@ describe('Renderer', function () {
         const renderer = Renderer.create({}, { device, canvas });
 
         renderer.scene.createCanvas();
+        renderer.scene.createCanvas();
         renderer.scene.initialized = true;
         renderer.scene.setRenderState({
             depth_test: true,
@@ -132,8 +133,7 @@ describe('Renderer', function () {
         assert.isTrue(renderer.scene.portable_rendering);
         assert.strictEqual(renderer.scene.canvas, canvas);
         assert.strictEqual(renderer.scene.resource_context, device);
-        assert.strictEqual(renderer.scene.gl, renderer.scene.resource_context);
-        assert.notProperty(renderer.scene.gl, 'getExtension');
+        assert.isNull(renderer.scene.gl);
         assert.lengthOf(buffers, 3);
         assert.deepEqual(renderer.scene.mesh_render_state, {
             cullMode: 'none',
@@ -147,6 +147,10 @@ describe('Renderer', function () {
             blendAlphaSrcFactor: 'one',
             blendAlphaDstFactor: 'one-minus-src-alpha'
         });
+
+        renderer.scene.selection_feature_count = 1;
+        assert.isUndefined(await renderer.scene.getFeatureAt([0, 0]));
+        assert.isNull(renderer.scene.selection);
 
         renderer.destroy();
         assert.isTrue(buffers.every(buffer => buffer.destroyed));

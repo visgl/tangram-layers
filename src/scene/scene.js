@@ -92,10 +92,12 @@ export default class Scene {
         this.canvas = options.canvas || null;
         this.contextOptions = options.webGLContextOptions;
         this.external_gl = options.webGLContext || null;
+        this.gl = null;
         this.device = options.device || null;
         this.shader_language = options.shaderLanguage || 'glsl';
         this.portable_rendering = Boolean(this.device && this.shader_language !== 'glsl');
         this.resource_context = this.portable_rendering ? this.device : null;
+        this.resources_initialized = false;
         this.owns_gl = !this.external_gl && !this.portable_rendering;
         this.webgl_context_scope = options.webGLContextScope;
         this.redraw_callback = options.requestRedraw;
@@ -238,10 +240,11 @@ export default class Scene {
         this.canvas = null;
         this.container = null;
 
-        if (this.gl) {
-            Texture.destroy(this.gl);
-            Texture.clearResourceFactory(this.gl);
-            this.style_manager.destroy(this.gl);
+        const resource_context = this.portable_rendering ? this.resource_context : this.gl;
+        if (resource_context) {
+            Texture.destroy(resource_context);
+            Texture.clearResourceFactory(resource_context);
+            this.style_manager.destroy(resource_context);
             this.styles = {};
             this.destroyUniformBuffers();
 
@@ -257,6 +260,7 @@ export default class Scene {
 
             this.gl = null;
         }
+        this.resources_initialized = false;
 
         this.sources = {};
 
@@ -267,7 +271,7 @@ export default class Scene {
     }
 
     createCanvas() {
-        if (this.gl) {
+        if (this.gl || (this.portable_rendering && this.resources_initialized)) {
             return;
         }
 
@@ -276,10 +280,10 @@ export default class Scene {
 
     createCanvasContext() {
         if (this.portable_rendering) {
-            this.gl = this.resource_context;
-            Texture.setResourceFactory(this.gl, this.texture_factory);
+            Texture.setResourceFactory(this.resource_context, this.texture_factory);
             this.media_capture.setCanvas(this.canvas, null);
             this.createUniformBuffers();
+            this.resources_initialized = true;
             return;
         }
         else if (this.external_gl) {
@@ -329,7 +333,8 @@ export default class Scene {
             (!UniformBuffer.isSupported(this.gl) && !this.uniform_buffer_factory)) {
             return;
         }
-        this.uniform_buffers.TangramView = new UniformBuffer(this.gl, {
+        const gl = this.portable_rendering ? null : this.gl;
+        this.uniform_buffers.TangramView = new UniformBuffer(gl, {
             name: 'TangramView',
             binding: 0,
             bufferFactory: this.uniform_buffer_factory,
@@ -343,7 +348,7 @@ export default class Scene {
                 u_view_panning: 'bool'
             }
         });
-        this.uniform_buffers.TangramCamera = new UniformBuffer(this.gl, {
+        this.uniform_buffers.TangramCamera = new UniformBuffer(gl, {
             name: 'TangramCamera',
             binding: 1,
             bufferFactory: this.uniform_buffer_factory,
@@ -353,7 +358,7 @@ export default class Scene {
                 u_vanishing_point: 'vec2'
             }
         });
-        this.uniform_buffers.TangramTile = new UniformBuffer(this.gl, {
+        this.uniform_buffers.TangramTile = new UniformBuffer(gl, {
             name: 'TangramTile',
             binding: 2,
             bufferFactory: this.uniform_buffer_factory,
@@ -1001,6 +1006,9 @@ export default class Scene {
 
     // Request feature selection at given pixel. Runs async and returns results via a promise.
     getFeatureAt(pixel, { radius } = {}) {
+        if (this.portable_rendering) {
+            return Promise.resolve();
+        }
         if (!this.initialized) {
             log('debug', 'Scene.getFeatureAt() called before scene was initialized');
             return Promise.resolve();
@@ -1299,8 +1307,9 @@ export default class Scene {
 
     // Load all textures in the scene definition
     loadTextures() {
-        return Texture.createFromObject(this.gl, this.config.textures)
-            .then(() => Texture.createDefault(this.gl)); // create a 'default' texture for placeholders
+        const resource_context = this.portable_rendering ? this.resource_context : this.gl;
+        return Texture.createFromObject(resource_context, this.config.textures)
+            .then(() => Texture.createDefault(resource_context)); // create a 'default' texture for placeholders
     }
 
     // Free textures from previously loaded scene
@@ -1330,10 +1339,12 @@ export default class Scene {
 
         // Optionally set GL context (used when initializing or re-initializing GL resources)
         for (let style in this.styles) {
-            this.styles[style].setGL(this.gl, this.uniform_buffers, {
+            this.styles[style].setGL(this.portable_rendering ? null : this.gl, this.uniform_buffers, {
+                resourceContext: this.portable_rendering ? this.resource_context : this.gl,
                 shaderFactory: this.shader_factory,
                 shaderLanguage: this.shader_language,
                 meshBufferFactory: this.mesh_buffer_factory,
+                textureFactory: this.texture_factory,
                 deferUniformBlocks: Boolean(this.mesh_renderer),
                 deferTextureBindings: Boolean(this.mesh_renderer),
                 deferUniformUpdates: Boolean(this.mesh_renderer),
@@ -1526,6 +1537,9 @@ export default class Scene {
     }
 
     resetFeatureSelection() {
+        if (this.portable_rendering) {
+            return;
+        }
         this.selection = new FeatureSelection(this.gl, this.workers, () => this.building);
         this.last_render_count = 0; // force re-evaluation of selection map
     }

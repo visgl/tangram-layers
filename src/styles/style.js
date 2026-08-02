@@ -98,6 +98,7 @@ export var Style = {
 
         WorkerBroker.removeTarget(this.main_thread_target);
         this.gl = null;
+        this.resource_context = null;
         this.uniform_blocks = null;
         this.initialized = false;
     },
@@ -406,10 +407,12 @@ export var Style = {
 
     setGL (gl, uniform_blocks = {}, options = {}) {
         this.gl = gl;
+        this.resource_context = options.resourceContext || gl;
         this.uniform_blocks = uniform_blocks;
         this.shader_language = options.shaderLanguage || 'glsl';
         this.shader_factory = options.shaderFactory;
         this.mesh_buffer_factory = options.meshBufferFactory;
+        this.texture_factory = options.textureFactory;
         this.defer_uniform_blocks = options.deferUniformBlocks === true;
         this.defer_texture_bindings = options.deferTextureBindings === true;
         this.defer_uniform_updates = options.deferUniformUpdates === true;
@@ -424,7 +427,7 @@ export var Style = {
             // In wireframe debug mode, transform mesh into lines
             vertex_elements = makeWireframeForTriangleElementData(vertex_elements);
             return new VBOMesh(this.gl, vertex_data, vertex_elements, vertex_layout,
-                { ...options, draw_mode: this.gl.LINES });
+                { ...options, draw_mode: gl.LINES });
         }
 
         return new VBOMesh(this.gl, vertex_data, vertex_elements, vertex_layout, options);
@@ -463,8 +466,8 @@ export var Style = {
             return;
         }
 
-        if (!this.gl) {
-            throw(new Error(`style.compile(): skipping for ${this.name} because no GL context`));
+        if (!this.gl && !this.shader_factory) {
+            throw(new Error(`style.compile(): skipping for ${this.name} because no rendering backend is configured`));
         }
 
         // Build defines & for selection (need to create a new object since the first is stored as a reference by the program)
@@ -735,7 +738,7 @@ export var Style = {
         await Promise.all(queue);
 
         // Create and load raster textures
-        await Texture.createFromObject(this.gl, configs);
+        await Texture.createFromObject(this.resource_context, configs);
         let textures = await Promise.all(Object.keys(configs)
             .map(t => Texture.textures[t] && Texture.textures[t].load())
             .filter(x => x)
