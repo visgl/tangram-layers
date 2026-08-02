@@ -297,13 +297,17 @@ export default class Texture {
             this.height = source.height;
         }
 
+        const power_of_2 = Utils.isPowerOf2(this.width) && Utils.isPowerOf2(this.height);
+        const filtering = options.filtering === 'mipmap' && !power_of_2 ?
+            'linear' : (options.filtering || this.filtering || 'linear');
+
         const resource = this.texture_factory({
             id: this.name,
             width: this.width,
             height: this.height,
             data: source,
-            filtering: options.filtering || this.filtering || 'linear',
-            repeat: options.repeat === true,
+            filtering,
+            repeat: options.repeat === true && power_of_2,
             flipY: options.UNPACK_FLIP_Y_WEBGL !== false,
             premultipliedAlpha: options.UNPACK_PREMULTIPLY_ALPHA_WEBGL === true
         });
@@ -343,8 +347,9 @@ export default class Texture {
         options.filtering = options.filtering || 'linear';
 
         if (this.texture_resource) {
-            this.filtering = options.filtering;
             this.power_of_2 = Utils.isPowerOf2(this.width) && Utils.isPowerOf2(this.height);
+            this.filtering = options.filtering === 'mipmap' && !this.power_of_2 ?
+                'linear' : options.filtering;
             Texture.trigger('update', this);
             return;
         }

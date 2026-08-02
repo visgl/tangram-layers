@@ -5,6 +5,9 @@ const LUMA_BUFFER_COPY_DST = 0x0008;
 const LUMA_BUFFER_INDEX = 0x0010;
 const LUMA_BUFFER_VERTEX = 0x0020;
 const LUMA_BUFFER_UNIFORM = 0x0040;
+const LUMA_TEXTURE_COPY_DST = 0x0002;
+const LUMA_TEXTURE_SAMPLE = 0x0004;
+const LUMA_TEXTURE_RENDER = 0x0010;
 
 /**
  * Injects an API key into every Nextzen source in a Tangram scene.
@@ -122,6 +125,7 @@ export function createTangramLayerClass({ Layer, Scene }) {
             if (!device || device.type !== 'webgl' || !gl ||
                 typeof device.pushState !== 'function' || typeof device.popState !== 'function' ||
                 typeof device.createBuffer !== 'function' || typeof device.createShader !== 'function' ||
+                typeof device.createTexture !== 'function' ||
                 typeof device.createRenderPipeline !== 'function' ||
                 typeof device.createVertexArray !== 'function') {
                 this._raiseBridgeError(new Error('a deck.gl WebGLDevice is required'));
@@ -171,6 +175,8 @@ export function createTangramLayerClass({ Layer, Scene }) {
                     uniformBufferFactory: options => createDeviceUniformBuffer(device, options),
                     shaderFactory: options => createDeviceShader(device, options),
                     meshBufferFactory: options => createDeviceMeshBuffer(device, options),
+                    textureFactory: options => createDeviceTexture(device, options),
+                    maxTextureSize: device.limits && device.limits.maxTextureDimension2D,
                     meshRenderer: record.meshRenderer,
                     continuousZoom: true,
                     highDensityDisplay: true,
@@ -463,6 +469,54 @@ function createDeviceMeshBuffer(device, options) {
     return device.createBuffer(props);
 }
 
+function createDeviceTexture(device, options) {
+    const mipmapped = options.filtering === 'mipmap';
+    const filter = options.filtering === 'nearest' ? 'nearest' : 'linear';
+    const texture = device.createTexture({
+        id: `tangram-${options.id}`,
+        width: options.width,
+        height: options.height,
+        format: 'rgba8unorm',
+        usage: LUMA_TEXTURE_COPY_DST | LUMA_TEXTURE_SAMPLE | LUMA_TEXTURE_RENDER,
+        mipLevels: mipmapped ? Math.floor(Math.log2(Math.max(options.width, options.height))) + 1 : 1,
+        sampler: {
+            minFilter: filter,
+            magFilter: filter,
+            mipmapFilter: mipmapped ? 'linear' : 'none',
+            addressModeU: options.repeat ? 'repeat' : 'clamp-to-edge',
+            addressModeV: options.repeat ? 'repeat' : 'clamp-to-edge'
+        }
+    });
+
+    try {
+        if (options.data != null) {
+            if (ArrayBuffer.isView(options.data) || options.data instanceof ArrayBuffer) {
+                texture.writeData(options.data, {
+                    width: options.width,
+                    height: options.height
+                });
+            }
+            else {
+                texture.copyExternalImage({
+                    image: options.data,
+                    width: options.width,
+                    height: options.height,
+                    flipY: options.flipY,
+                    premultipliedAlpha: options.premultipliedAlpha
+                });
+            }
+            if (mipmapped) {
+                texture.generateMipmapsWebGL();
+            }
+        }
+        return texture;
+    }
+    catch (error) {
+        texture.destroy();
+        throw error;
+    }
+}
+
 function createDeviceMeshRenderer(device) {
     const pipeline_cache = new WeakMap();
     const vertex_array_cache = new WeakMap();
@@ -473,26 +527,24 @@ function createDeviceMeshRenderer(device) {
         drawMesh({ mesh, program, renderPass, visibleTime }) {
             if (!renderPass || !program || !program.vertex_shader_resource ||
                 !program.fragment_shader_resource) {
-                return null;
+                throw new Error('Tangram luma renderer requires an active render pass and shader resources');
             }
 
             const descriptor = mesh.getDrawDescriptor();
             const pipeline = getPipeline(program, mesh.vertex_layout, descriptor);
-            const uniform_bindings = program.getUniformBlockBindings();
-            if (!canUsePipeline(pipeline, uniform_bindings)) {
-                return null;
-            }
-            const vertex_array = getVertexArray(mesh, pipeline, descriptor);
 
             if (mesh.uniforms) {
                 program.saveUniforms(mesh.uniforms);
                 program.setUniforms(mesh.uniforms, false);
             }
-            program.uniform('1f', 'u_visible_time', visibleTime);
 
             try {
+                program.uniform('1f', 'u_visible_time', visibleTime);
+                const bindings = program.getBindings();
+                assertPipelineBindings(pipeline, bindings);
+                const vertex_array = getVertexArray(mesh, pipeline, descriptor);
                 renderPass.setPipeline(pipeline);
-                renderPass.setBindings(uniform_bindings);
+                renderPass.setBindings(bindings);
                 renderPass.setVertexArray(vertex_array);
                 const draw_succeeded = renderPass.draw({
                     vertexCount: descriptor.indexBuffer ? undefined : descriptor.vertexCount,
@@ -591,10 +643,15 @@ function createDeviceMeshRenderer(device) {
     }
 }
 
-function canUsePipeline(pipeline, uniform_bindings) {
-    return pipeline.shaderLayout.bindings.every(binding =>
-        binding.type === 'uniform' && uniform_bindings[binding.name]
-    );
+function assertPipelineBindings(pipeline, bindings) {
+    for (const binding of pipeline.shaderLayout.bindings) {
+        if (binding.type !== 'uniform' && binding.type !== 'texture') {
+            throw new Error(`Tangram luma renderer does not support '${binding.type}' bindings`);
+        }
+        if (!bindings[binding.name]) {
+            throw new Error(`Tangram luma renderer is missing '${binding.name}' binding`);
+        }
+    }
 }
 
 export default createTangramLayerClass;

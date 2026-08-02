@@ -118,6 +118,8 @@ describe('TangramLayer demo bridge', function () {
         assert.isFunction(scene.options.uniformBufferFactory);
         assert.isFunction(scene.options.shaderFactory);
         assert.isFunction(scene.options.meshBufferFactory);
+        assert.isFunction(scene.options.textureFactory);
+        assert.strictEqual(scene.options.maxTextureSize, 8192);
         assert.isObject(scene.options.meshRenderer);
         assert.isFunction(scene.options.meshRenderer.drawMesh);
         assert.isFunction(scene.options.webGLContextScope);
@@ -167,6 +169,36 @@ describe('TangramLayer demo bridge', function () {
             data: vertex_data
         });
 
+        const texture_data = new Uint8Array(16);
+        const texture = scene.options.textureFactory({
+            id: 'labels',
+            width: 2,
+            height: 2,
+            data: texture_data,
+            filtering: 'mipmap',
+            repeat: true,
+            flipY: false,
+            premultipliedAlpha: true
+        });
+        assert.strictEqual(texture, device.textures[0]);
+        assert.deepEqual(device.textureOptions, [{
+            id: 'tangram-labels',
+            width: 2,
+            height: 2,
+            format: 'rgba8unorm',
+            usage: 0x0016,
+            mipLevels: 2,
+            sampler: {
+                minFilter: 'linear',
+                magFilter: 'linear',
+                mipmapFilter: 'linear',
+                addressModeU: 'repeat',
+                addressModeV: 'repeat'
+            }
+        }]);
+        assert.deepEqual(texture.writeCalls, [[texture_data, { width: 2, height: 2 }]]);
+        assert.strictEqual(texture.mipmapCalls, 1);
+
         layer.draw();
         assert.lengthOf(scene.resizeCalls, 1, 'unchanged dimensions do not resize again');
     });
@@ -202,7 +234,7 @@ describe('TangramLayer demo bridge', function () {
             name: 'polygons',
             vertex_shader_resource: { id: 'vs' },
             fragment_shader_resource: { id: 'fs' },
-            getUniformBlockBindings: () => ({ TangramView: view_buffer }),
+            getBindings: () => ({ TangramView: view_buffer }),
             getUniformValues: () => Object.assign({}, uniform_values),
             uniform(method, name, value) {
                 uniform_values[name] = value;
@@ -258,13 +290,16 @@ describe('TangramLayer demo bridge', function () {
         assert.isTrue(device.vertexArrays[0].destroyed);
     });
 
-    it('falls back before creating a vertex array for texture bindings', function () {
+    it('binds luma texture resources without falling back to raw WebGL drawing', function () {
         const { device } = createLayer();
         const scene = FakeScene.instances[0];
+        const texture = { id: 'texture' };
         device.pipelineShaderLayout = {
             attributes: [],
             bindings: [{ type: 'texture', name: 'u_texture' }]
         };
+        const uniform_values = {};
+        const render_pass = createFakeRenderPass();
         const result = scene.options.meshRenderer.drawMesh({
             mesh: {
                 id: 1,
@@ -282,16 +317,60 @@ describe('TangramLayer demo bridge', function () {
             },
             program: {
                 id: 1,
+                name: 'textured',
                 vertex_shader_resource: {},
                 fragment_shader_resource: {},
-                getUniformBlockBindings: () => ({})
+                getBindings: () => ({ u_texture: texture }),
+                getUniformValues: () => uniform_values,
+                uniform(method, name, value) {
+                    uniform_values[name] = value;
+                }
             },
-            renderPass: createFakeRenderPass(),
+            renderPass: render_pass,
             visibleTime: 0
         });
 
-        assert.isNull(result);
+        assert.isFalse(result);
         assert.lengthOf(device.pipelines, 1);
+        assert.lengthOf(device.vertexArrays, 1);
+        assert.deepEqual(render_pass.calls[1], ['bindings', { u_texture: texture }]);
+    });
+
+    it('rejects missing pipeline bindings instead of falling back to raw WebGL drawing', function () {
+        const { device } = createLayer();
+        const scene = FakeScene.instances[0];
+        device.pipelineShaderLayout = {
+            attributes: [],
+            bindings: [{ type: 'texture', name: 'u_texture' }]
+        };
+
+        assert.throws(() => scene.options.meshRenderer.drawMesh({
+            mesh: {
+                id: 1,
+                vertex_layout: {},
+                uniforms: null,
+                getDrawDescriptor: () => ({
+                    topology: 'triangle-list',
+                    vertexBuffer: {},
+                    indexBuffer: null,
+                    vertexCount: 3,
+                    indexCount: 0,
+                    bufferLayout: { name: 'vertices', attributes: [] },
+                    staticAttributes: []
+                })
+            },
+            program: {
+                id: 1,
+                name: 'missing-texture',
+                vertex_shader_resource: {},
+                fragment_shader_resource: {},
+                getBindings: () => ({}),
+                getUniformValues: () => ({}),
+                uniform() {}
+            },
+            renderPass: createFakeRenderPass(),
+            visibleTime: 0
+        }), /missing 'u_texture' binding/);
         assert.lengthOf(device.vertexArrays, 0);
     });
 
@@ -498,10 +577,13 @@ describe('TangramLayer demo bridge', function () {
         const device = {
             type: 'webgl',
             handle: gl,
+            limits: { maxTextureDimension2D: 8192 },
             bufferOptions: [],
             buffers: [],
             shaderOptions: [],
             shaders: [],
+            textureOptions: [],
+            textures: [],
             pipelineOptions: [],
             pipelines: [],
             vertexArrayOptions: [],
@@ -541,6 +623,30 @@ describe('TangramLayer demo bridge', function () {
                 };
                 this.shaders.push(shader);
                 return shader;
+            },
+            createTexture(options) {
+                this.textureOptions.push(options);
+                const texture = {
+                    handle: {},
+                    writeCalls: [],
+                    externalImageCalls: [],
+                    mipmapCalls: 0,
+                    destroyed: false,
+                    writeData(...args) {
+                        this.writeCalls.push(args);
+                    },
+                    copyExternalImage(options) {
+                        this.externalImageCalls.push(options);
+                    },
+                    generateMipmapsWebGL() {
+                        this.mipmapCalls++;
+                    },
+                    destroy() {
+                        this.destroyed = true;
+                    }
+                };
+                this.textures.push(texture);
+                return texture;
             },
             createRenderPipeline(options) {
                 this.pipelineOptions.push(options);
