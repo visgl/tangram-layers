@@ -2858,6 +2858,12 @@ var ShaderProgram = /*#__PURE__*/function () {
         var resource = texture && texture.getResource && texture.getResource();
         if (resource) {
           bindings[uniform_name] = resource;
+          // WebGL reflects a sampler array through its base uniform name,
+          // while Tangram assigns each texture through an indexed name.
+          // Preserve the first element as the base binding expected by luma.
+          if (uniform_name.endsWith('[0]')) {
+            bindings[uniform_name.slice(0, -3)] = resource;
+          }
         }
       }
       return bindings;
@@ -2881,6 +2887,11 @@ var ShaderProgram = /*#__PURE__*/function () {
           uniform = _Object$entries3$_i[1];
         if (uniform.value !== undefined) {
           values[name] = uniform.value;
+          // A one-element uniform array is reflected through its base
+          // name in WebGL, even though Tangram assigns its first index.
+          if (name.endsWith('[0]')) {
+            values[name.slice(0, -3)] = uniform.value;
+          }
         }
       }
       return values;
@@ -5139,6 +5150,7 @@ var VBOMesh = /*#__PURE__*/function () {
           mesh: this,
           program: program,
           renderPass: options.renderPass,
+          renderState: options.renderState,
           visibleTime: visible_time
         });
         if (needs_redraw !== null) {
@@ -6328,7 +6340,9 @@ var DirectionalLight = /*#__PURE__*/function (_Light2) {
     key: "setupProgram",
     value: function setupProgram(_program) {
       _superPropGet$5(DirectionalLight, "setupProgram", this)([_program]);
-      _program.uniform('3fv', "u_".concat(this.name, ".direction"), this.direction);
+      var camera = this.view.camera;
+      var direction = camera && typeof camera.transformVector === 'function' ? camera.transformVector(this.direction) : this.direction;
+      _program.uniform('3fv', "u_".concat(this.name, ".direction"), direction);
     }
   }], [{
     key: "inject",
@@ -15087,6 +15101,16 @@ var ExternalCamera = /*#__PURE__*/function (_Camera) {
         program.uniform('2fv', 'u_vanishing_point', this.vanishing_point);
       }
     }
+  }, {
+    key: "transformVector",
+    value: function transformVector(vector) {
+      var matrix = this.view_matrix;
+      var transformed = [matrix[0] * vector[0] + matrix[4] * vector[1] + matrix[8] * vector[2], matrix[1] * vector[0] + matrix[5] * vector[1] + matrix[9] * vector[2], matrix[2] * vector[0] + matrix[6] * vector[1] + matrix[10] * vector[2]];
+      var length = Math.hypot.apply(Math, transformed);
+      return length === 0 ? transformed : transformed.map(function (value) {
+        return value / length;
+      });
+    }
   }]);
 }(Camera);
 function matrixEquals(left, right) {
@@ -23545,14 +23569,14 @@ var TYPES = {
   },
   vec3: {
     alignment: 16,
-    size: 16,
+    size: 12,
     components: 3,
     kind: 'float',
     wgsl: 'vec3<f32>'
   },
   ivec3: {
     alignment: 16,
-    size: 16,
+    size: 12,
     components: 3,
     kind: 'int',
     wgsl: 'vec3<i32>'
@@ -23665,10 +23689,7 @@ var UniformBuffer = /*#__PURE__*/function () {
         variableName = _ref2.variableName;
       variableName = variableName || lowerFirst(this.name);
       var declarations = Object.values(this.layout.uniforms).map(function (uniform) {
-        // WGSL vec3 values have a natural size of 12 bytes. Preserve Tangram's
-        // std140-compatible 16-byte slot so the same packed data works in both APIs.
-        var size = uniform.type === 'vec3' || uniform.type === 'ivec3' ? '@size(16) ' : '';
-        return "    ".concat(size).concat(uniform.name, ": ").concat(uniform.wgsl, ",");
+        return "    ".concat(uniform.name, ": ").concat(uniform.wgsl, ",");
       }).join('\n');
       return ["struct ".concat(this.name, " {"), declarations, '};', "@group(".concat(group, ") @binding(").concat(this.binding, ") var<uniform> ").concat(variableName, ": ").concat(this.name, ";")].join('\n');
     }
@@ -31811,12 +31832,7 @@ var Scene = /*#__PURE__*/function () {
 
       // Update and render the scene
       this.update();
-
-      // Pending background tasks
-      topojson.Task.setState({
-        user_moving_view: this.view.user_input_active
-      });
-      topojson.Task.processAll();
+      this.processTasks();
 
       // Request the next frame if not scheduled to stop
       if (!this.render_loop_stop) {
@@ -31825,6 +31841,18 @@ var Scene = /*#__PURE__*/function () {
         this.render_loop_stop = false;
         this.render_loop_active = false;
       }
+    }
+
+    // Advance background work normally serviced by Tangram's animation loop.
+    // Host-driven renderers must call this once per frame so tile labels and
+    // other incremental work can complete without a standalone render loop.
+  }, {
+    key: "processTasks",
+    value: function processTasks() {
+      topojson.Task.setState({
+        user_moving_view: this.view.user_input_active
+      });
+      topojson.Task.processAll();
     }
 
     // Setup the render loop
@@ -32176,7 +32204,8 @@ var Scene = /*#__PURE__*/function () {
                   // Render this mesh variant
                   if (style.render(mesh, {
                     renderPass: renderPass,
-                    meshRenderer: _this10.mesh_renderer
+                    meshRenderer: _this10.mesh_renderer,
+                    renderState: _this10.mesh_render_state
                   })) {
                     _this10.requestRedraw();
                   }
@@ -32267,6 +32296,12 @@ var Scene = /*#__PURE__*/function () {
       depth_write = depth_write === false ? false : render_states.defaults.depth_write; // default true
       cull_face = cull_face === false ? false : render_states.defaults.culling; // default true
       blend = blend != null ? blend : render_states.defaults.blending; // default false
+      this.mesh_render_state = getMeshRenderState({
+        depth_test: depth_test,
+        depth_write: depth_write,
+        cull_face: cull_face,
+        blend: blend
+      });
 
       // Reset frame state
       var gl = this.gl;
@@ -33119,6 +33154,47 @@ var Scene = /*#__PURE__*/function () {
     }
   }]);
 }();
+function getMeshRenderState(_ref16) {
+  var depth_test = _ref16.depth_test,
+    depth_write = _ref16.depth_write,
+    cull_face = _ref16.cull_face,
+    blend = _ref16.blend;
+  var parameters = {
+    cullMode: cull_face ? 'back' : 'none',
+    depthCompare: depth_test ? 'less' : 'always',
+    depthWriteEnabled: depth_write,
+    blend: Boolean(blend && blend !== 'opaque')
+  };
+  if (blend === 'overlay' || blend === 'inlay' || blend === 'translucent') {
+    Object.assign(parameters, {
+      blendColorOperation: 'add',
+      blendColorSrcFactor: 'src-alpha',
+      blendColorDstFactor: 'one-minus-src-alpha',
+      blendAlphaOperation: 'add',
+      blendAlphaSrcFactor: 'one',
+      blendAlphaDstFactor: 'one-minus-src-alpha'
+    });
+  } else if (blend === 'add') {
+    Object.assign(parameters, {
+      blendColorOperation: 'add',
+      blendColorSrcFactor: 'one',
+      blendColorDstFactor: 'one',
+      blendAlphaOperation: 'add',
+      blendAlphaSrcFactor: 'one',
+      blendAlphaDstFactor: 'one'
+    });
+  } else if (blend === 'multiply') {
+    Object.assign(parameters, {
+      blendColorOperation: 'add',
+      blendColorSrcFactor: 'zero',
+      blendColorDstFactor: 'src',
+      blendAlphaOperation: 'add',
+      blendAlphaSrcFactor: 'one',
+      blendAlphaDstFactor: 'one-minus-src-alpha'
+    });
+  }
+  return parameters;
+}
 Scene.id = 0; // unique id for a scene instance
 Scene.generation = 0; // id that is incremented each time a scene config is re-parsed
 
@@ -33737,9 +33813,11 @@ var Renderer = /*#__PURE__*/function () {
       if (force) {
         this.scene.dirty = true;
       }
-      return this.scene.updateScene({
+      var rendered = this.scene.updateScene({
         renderPass: renderPass
       });
+      this.scene.processTasks();
+      return rendered;
     }
   }, {
     key: "destroy",
@@ -33805,7 +33883,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = '082e9dd8a8de69c374c12ce024f597f2a8445aa6';
+	Tangram.debug.SHA = 'ce84ff384b0b778ef7a5d02b99e08ab61bedcf9f';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

@@ -2572,6 +2572,12 @@ class ShaderProgram {
       const resource = texture && texture.getResource && texture.getResource();
       if (resource) {
         bindings[uniform_name] = resource;
+        // WebGL reflects a sampler array through its base uniform name,
+        // while Tangram assigns each texture through an indexed name.
+        // Preserve the first element as the base binding expected by luma.
+        if (uniform_name.endsWith('[0]')) {
+          bindings[uniform_name.slice(0, -3)] = resource;
+        }
       }
     }
     return bindings;
@@ -2588,6 +2594,11 @@ class ShaderProgram {
     for (const [name, uniform] of Object.entries(this.uniforms)) {
       if (uniform.value !== undefined) {
         values[name] = uniform.value;
+        // A one-element uniform array is reflected through its base
+        // name in WebGL, even though Tangram assigns its first index.
+        if (name.endsWith('[0]')) {
+          values[name.slice(0, -3)] = uniform.value;
+        }
       }
     }
     return values;
@@ -4703,6 +4714,7 @@ class VBOMesh {
         mesh: this,
         program,
         renderPass: options.renderPass,
+        renderState: options.renderState,
         visibleTime: visible_time
       });
       if (needs_redraw !== null) {
@@ -5834,7 +5846,9 @@ class DirectionalLight extends Light {
   }
   setupProgram(_program) {
     super.setupProgram(_program);
-    _program.uniform('3fv', `u_${this.name}.direction`, this.direction);
+    const camera = this.view.camera;
+    const direction = camera && typeof camera.transformVector === 'function' ? camera.transformVector(this.direction) : this.direction;
+    _program.uniform('3fv', `u_${this.name}.direction`, direction);
   }
 }
 Light.types['directional'] = DirectionalLight;
@@ -13968,6 +13982,12 @@ class ExternalCamera extends Camera {
       program.uniform('2fv', 'u_vanishing_point', this.vanishing_point);
     }
   }
+  transformVector(vector) {
+    const matrix = this.view_matrix;
+    const transformed = [matrix[0] * vector[0] + matrix[4] * vector[1] + matrix[8] * vector[2], matrix[1] * vector[0] + matrix[5] * vector[1] + matrix[9] * vector[2], matrix[2] * vector[0] + matrix[6] * vector[1] + matrix[10] * vector[2]];
+    const length = Math.hypot(...transformed);
+    return length === 0 ? transformed : transformed.map(value => value / length);
+  }
 }
 function matrixEquals(left, right) {
   for (let index = 0; index < 16; index++) {
@@ -21887,14 +21907,14 @@ const TYPES = {
   },
   vec3: {
     alignment: 16,
-    size: 16,
+    size: 12,
     components: 3,
     kind: 'float',
     wgsl: 'vec3<f32>'
   },
   ivec3: {
     alignment: 16,
-    size: 16,
+    size: 12,
     components: 3,
     kind: 'int',
     wgsl: 'vec3<i32>'
@@ -22016,12 +22036,7 @@ class UniformBuffer {
     variableName
   } = {}) {
     variableName = variableName || lowerFirst(this.name);
-    const declarations = Object.values(this.layout.uniforms).map(uniform => {
-      // WGSL vec3 values have a natural size of 12 bytes. Preserve Tangram's
-      // std140-compatible 16-byte slot so the same packed data works in both APIs.
-      const size = uniform.type === 'vec3' || uniform.type === 'ivec3' ? '@size(16) ' : '';
-      return `    ${size}${uniform.name}: ${uniform.wgsl},`;
-    }).join('\n');
+    const declarations = Object.values(this.layout.uniforms).map(uniform => `    ${uniform.name}: ${uniform.wgsl},`).join('\n');
     return [`struct ${this.name} {`, declarations, '};', `@group(${group}) @binding(${this.binding}) var<uniform> ${variableName}: ${this.name};`].join('\n');
   }
   getBindingLayout({
@@ -29707,12 +29722,7 @@ class Scene {
 
     // Update and render the scene
     this.update();
-
-    // Pending background tasks
-    topojson.Task.setState({
-      user_moving_view: this.view.user_input_active
-    });
-    topojson.Task.processAll();
+    this.processTasks();
 
     // Request the next frame if not scheduled to stop
     if (!this.render_loop_stop) {
@@ -29721,6 +29731,16 @@ class Scene {
       this.render_loop_stop = false;
       this.render_loop_active = false;
     }
+  }
+
+  // Advance background work normally serviced by Tangram's animation loop.
+  // Host-driven renderers must call this once per frame so tile labels and
+  // other incremental work can complete without a standalone render loop.
+  processTasks() {
+    topojson.Task.setState({
+      user_moving_view: this.view.user_input_active
+    });
+    topojson.Task.processAll();
   }
 
   // Setup the render loop
@@ -30009,7 +30029,8 @@ class Scene {
           // Render this mesh variant
           if (style.render(mesh, {
             renderPass,
-            meshRenderer: this.mesh_renderer
+            meshRenderer: this.mesh_renderer,
+            renderState: this.mesh_render_state
           })) {
             this.requestRedraw();
           }
@@ -30078,6 +30099,12 @@ class Scene {
     depth_write = depth_write === false ? false : render_states.defaults.depth_write; // default true
     cull_face = cull_face === false ? false : render_states.defaults.culling; // default true
     blend = blend != null ? blend : render_states.defaults.blending; // default false
+    this.mesh_render_state = getMeshRenderState({
+      depth_test,
+      depth_write,
+      cull_face,
+      blend
+    });
 
     // Reset frame state
     let gl = this.gl;
@@ -30793,6 +30820,48 @@ class Scene {
     }
   }
 }
+function getMeshRenderState({
+  depth_test,
+  depth_write,
+  cull_face,
+  blend
+}) {
+  const parameters = {
+    cullMode: cull_face ? 'back' : 'none',
+    depthCompare: depth_test ? 'less' : 'always',
+    depthWriteEnabled: depth_write,
+    blend: Boolean(blend && blend !== 'opaque')
+  };
+  if (blend === 'overlay' || blend === 'inlay' || blend === 'translucent') {
+    Object.assign(parameters, {
+      blendColorOperation: 'add',
+      blendColorSrcFactor: 'src-alpha',
+      blendColorDstFactor: 'one-minus-src-alpha',
+      blendAlphaOperation: 'add',
+      blendAlphaSrcFactor: 'one',
+      blendAlphaDstFactor: 'one-minus-src-alpha'
+    });
+  } else if (blend === 'add') {
+    Object.assign(parameters, {
+      blendColorOperation: 'add',
+      blendColorSrcFactor: 'one',
+      blendColorDstFactor: 'one',
+      blendAlphaOperation: 'add',
+      blendAlphaSrcFactor: 'one',
+      blendAlphaDstFactor: 'one'
+    });
+  } else if (blend === 'multiply') {
+    Object.assign(parameters, {
+      blendColorOperation: 'add',
+      blendColorSrcFactor: 'zero',
+      blendColorDstFactor: 'src',
+      blendAlphaOperation: 'add',
+      blendAlphaSrcFactor: 'one',
+      blendAlphaDstFactor: 'one-minus-src-alpha'
+    });
+  }
+  return parameters;
+}
 Scene.id = 0; // unique id for a scene instance
 Scene.generation = 0; // id that is incremented each time a scene config is re-parsed
 
@@ -31392,9 +31461,11 @@ class Renderer {
     if (force) {
       this.scene.dirty = true;
     }
-    return this.scene.updateScene({
+    const rendered = this.scene.updateScene({
       renderPass
     });
+    this.scene.processTasks();
+    return rendered;
   }
   destroy() {
     return this.scene.destroy();
@@ -31451,7 +31522,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = '082e9dd8a8de69c374c12ce024f597f2a8445aa6';
+	Tangram.debug.SHA = 'ce84ff384b0b778ef7a5d02b99e08ab61bedcf9f';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}
