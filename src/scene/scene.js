@@ -1484,7 +1484,8 @@ export default class Scene {
         return WorkerBroker.postMessage(this.workers, 'self.updateConfig', {
             config: config_serialized,
             generation: this.generation,
-            introspection: this.introspection
+            introspection: this.introspection,
+            shader_language: this.shader_language
         }, debugSettings);
     }
 

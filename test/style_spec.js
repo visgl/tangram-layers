@@ -51,6 +51,23 @@ describe('Styles:', () => {
             assert.equal(style_manager.styles.rainbow.base, 'polygons');
         });
 
+        it('uses the renderer shader language for worker-built vertex layouts', () => {
+            style_manager.build({});
+            style_manager.initStyles({ shader_language: 'wgsl' });
+            const points = style_manager.styles.points;
+            const layout = points.vertexLayoutForMeshVariant({
+                key: 'portable-points',
+                selection: 1,
+                shader_point: true
+            });
+
+            assert.strictEqual(points.shader_language, 'wgsl');
+            assert.property(layout.index, 'a_point_type');
+            const dynamic_attributes = layout.dynamic_attribs.map(attribute => attribute.name);
+            assert.include(dynamic_attributes, 'a_texcoord');
+            assert.include(dynamic_attributes, 'a_outline_color');
+        });
+
         describe('builds custom styles w/dependencies from stylesheet', () => {
 
             beforeEach(() => {

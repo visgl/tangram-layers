@@ -7756,10 +7756,13 @@ var Style = {
       styles = _ref.styles,
       _ref$sources = _ref.sources,
       sources = _ref$sources === void 0 ? {} : _ref$sources,
-      introspection = _ref.introspection;
+      introspection = _ref.introspection,
+      _ref$shader_language = _ref.shader_language,
+      shader_language = _ref$shader_language === void 0 ? 'glsl' : _ref$shader_language;
     this.setGeneration(generation);
     this.styles = styles; // styles for scene
     this.sources = sources; // data sources for scene
+    this.shader_language = shader_language; // keeps worker-built vertex layouts aligned with the renderer
     this.defines = Object.prototype.hasOwnProperty.call(this, 'defines') && this.defines || {}; // #defines to be injected into the shaders
     this.shaders = Object.prototype.hasOwnProperty.call(this, 'shaders') && this.shaders || {}; // shader customization (uniforms, defines, blocks, etc.)
     this.introspection = introspection || false;
@@ -11140,8 +11143,9 @@ function buildLinesWGSL() {
   var color_location = animated ? 3 : 2;
   var animated_varying = animated ? '\n    @location(1) texcoord: vec2<f32>,' : '';
   var animated_vertex = animated ? '\n    output.texcoord = attributes.a_texcoord;' : '';
-  var animated_fragment = animated ? "\n    let direction = select(-1.0, 1.0, input.texcoord.x < 0.5);\n    let stream_phase = fract(\n        input.texcoord.y - TangramView.u_time * 0.7 * direction\n    );\n    let along_distance = abs(stream_phase - 0.5);\n    let car_length = 1.0 - smoothstep(0.04, 0.11, along_distance);\n    let lane_center = select(0.72, 0.28, direction > 0.0);\n    let lane_distance = abs(input.texcoord.x - lane_center);\n    let lane_mask = 1.0 - smoothstep(0.12, 0.25, lane_distance);\n    let car = car_length * lane_mask;\n    let car_color = vec3<f32>(0.08, 1.0, 0.94);\n    let animated_color = mix(\n        input.color.rgb,\n        car_color,\n        car * 0.95\n    );\n    return vec4<f32>(animated_color, input.color.a);\n" : '    return input.color;\n';
-  return "\nstruct LineAttributes {\n    @location(0) a_position: vec4<i32>,\n    @location(1) a_extrude: vec2<i32>,".concat(animated_attribute, "\n    @location(").concat(color_location, ") a_color: vec4<f32>,\n};\n\nstruct LineVaryings {\n    @builtin(position) position: vec4<f32>,\n    @location(0) color: vec4<f32>,").concat(animated_varying, "\n};\n\n@vertex\nfn vertexMain(attributes: LineAttributes) -> LineVaryings {\n    var output: LineVaryings;\n    var extrusion = vec2<f32>(attributes.a_extrude);\n\n    var zoom_delta = clamp(\n        TangramView.u_map_position.z - TangramTile.u_tile_origin.z,\n        0.0,\n        4.0\n    );\n    zoom_delta += step(1.0, zoom_delta) * (1.0 - zoom_delta) +\n        mix(0.0, 2.0, clamp((zoom_delta - 2.0) / 2.0, 0.0, 1.0));\n\n    let midpoint_zoom_delta = (zoom_delta - 0.5) * 2.0;\n    let width_scale = f32(attributes.a_position.z) / ").concat(ATTRIBUTE_SCALE, ".0;\n    extrusion -= extrusion * width_scale * midpoint_zoom_delta;\n    extrusion *= exp2(\n        -zoom_delta - (TangramTile.u_tile_origin.z - TangramTile.u_tile_origin.w)\n    );\n\n    let local_position = vec4<f32>(\n        vec2<f32>(attributes.a_position.xy) + extrusion,\n        0.0,\n        1.0\n    );\n    var clip_position = TangramCamera.u_projection *\n        (TangramTile.u_modelView * local_position);\n    let layer = f32(attributes.a_position.w) +\n        TangramTile.u_tile_proxy_order_offset + 1.0;\n    clip_position.z -= layer * ").concat(LAYER_DELTA, " * clip_position.w;\n\n    output.position = clip_position;\n    output.color = attributes.a_color;\n").concat(animated_vertex, "\n    return output;\n}\n\n@fragment\nfn fragmentMain(input: LineVaryings) -> @location(0) vec4<f32> {\n").concat(animated_fragment, "\n}\n");
+  var animated_global = animated ? "\n    fn traffic_random(value: f32) -> f32 {\n        return fract(sin(value * 12.9898) * 43758.5453);\n    }\n\n" : '';
+  var animated_fragment = animated ? "\n\n    let direction = select(-1.0, 1.0, input.texcoord.x < 0.5);\n    let traffic_coordinate = input.texcoord.y * 64.0 -\n        TangramView.u_time * 7.0 * direction;\n    let traffic_cell = floor(traffic_coordinate);\n    let cell_position = fract(traffic_coordinate);\n    let lane_seed = floor(input.texcoord.x * 5.0);\n    let has_car = step(0.48, traffic_random(traffic_cell + lane_seed * 19.19));\n    let car_front = smoothstep(0.04, 0.12, cell_position);\n    let car_back = 1.0 - smoothstep(0.40, 0.52, cell_position);\n    let car_length = car_front * car_back * has_car;\n    let lane_center = select(0.72, 0.28, direction > 0.0);\n    let lane_distance = abs(input.texcoord.x - lane_center);\n    let lane_mask = 1.0 - smoothstep(0.06, 0.16, lane_distance);\n    let car = car_length * lane_mask;\n    let car_color = vec3<f32>(0.15, 1.0, 0.96);\n    let animated_color = mix(\n        input.color.rgb,\n        car_color,\n        car * 0.98\n    );\n    return vec4<f32>(animated_color, input.color.a);\n" : '    return input.color;\n';
+  return "\n".concat(animated_global, "\nstruct LineAttributes {\n    @location(0) a_position: vec4<i32>,\n    @location(1) a_extrude: vec2<i32>,").concat(animated_attribute, "\n    @location(").concat(color_location, ") a_color: vec4<f32>,\n};\n\nstruct LineVaryings {\n    @builtin(position) position: vec4<f32>,\n    @location(0) color: vec4<f32>,").concat(animated_varying, "\n};\n\n@vertex\nfn vertexMain(attributes: LineAttributes) -> LineVaryings {\n    var output: LineVaryings;\n    var extrusion = vec2<f32>(attributes.a_extrude);\n\n    var zoom_delta = clamp(\n        TangramView.u_map_position.z - TangramTile.u_tile_origin.z,\n        0.0,\n        4.0\n    );\n    zoom_delta += step(1.0, zoom_delta) * (1.0 - zoom_delta) +\n        mix(0.0, 2.0, clamp((zoom_delta - 2.0) / 2.0, 0.0, 1.0));\n\n    let midpoint_zoom_delta = (zoom_delta - 0.5) * 2.0;\n    let width_scale = f32(attributes.a_position.z) / ").concat(ATTRIBUTE_SCALE, ".0;\n    extrusion -= extrusion * width_scale * midpoint_zoom_delta;\n    extrusion *= exp2(\n        -zoom_delta - (TangramTile.u_tile_origin.z - TangramTile.u_tile_origin.w)\n    );\n\n    let local_position = vec4<f32>(\n        vec2<f32>(attributes.a_position.xy) + extrusion,\n        0.0,\n        1.0\n    );\n    var clip_position = TangramCamera.u_projection *\n        (TangramTile.u_modelView * local_position);\n    let layer = f32(attributes.a_position.w) +\n        TangramTile.u_tile_proxy_order_offset + 1.0;\n    clip_position.z -= layer * ").concat(LAYER_DELTA, " * clip_position.w;\n\n    output.position = clip_position;\n    output.color = attributes.a_color;\n").concat(animated_vertex, "\n    return output;\n}\n\n@fragment\nfn fragmentMain(input: LineVaryings) -> @location(0) vec4<f32> {\n").concat(animated_fragment, "\n}\n");
 }
 
 // Line rendering style
@@ -16236,6 +16240,19 @@ void main (void) {
 }
 `;
 
+/**
+ * Build the portable point shader used by the luma.gl WebGPU renderer.
+ *
+ * One buffered point-type attribute selects sprite, attached-label, or shader
+ * circle rendering without scalar WebGL uniforms. All point variants share an
+ * all-buffered vertex layout so WebGPU never depends on constant attributes.
+ *
+ * @returns {string} Complete WGSL source for Tangram's point style.
+ */
+function buildPointsWGSL() {
+  return "\n@group(0) @binding(3) var u_texture: texture_2d<f32>;\n@group(0) @binding(4) var u_textureSampler: sampler;\n\nstruct PointAttributes {\n    @location(0) a_position: vec4<i32>,\n    @location(1) a_shape: vec4<i32>,\n    @location(2) a_texcoord: vec2<f32>,\n    @location(3) a_offset: vec2<i32>,\n    @location(4) a_color: vec4<f32>,\n    @location(6) a_outline_color: vec4<f32>,\n    @location(7) a_outline_edge: f32,\n    @location(8) a_point_type: f32,\n};\n\nstruct PointVaryings {\n    @builtin(position) position: vec4<f32>,\n    @location(0) texcoord: vec2<f32>,\n    @location(1) color: vec4<f32>,\n    @location(2) outline_color: vec4<f32>,\n    @location(3) outline_edge: f32,\n    @location(4) aa_offset: f32,\n    @location(5) @interpolate(flat) point_type: u32,\n};\n\nfn rotate2D(point: vec2<f32>, angle: f32) -> vec2<f32> {\n    let cosine = cos(angle);\n    let sine = sin(angle);\n    return vec2<f32>(\n        cosine * point.x - sine * point.y,\n        sine * point.x + cosine * point.y\n    );\n}\n\nfn antialiasCircle(distance: f32, radius: f32, offset: f32) -> f32 {\n    return 1.0 - smoothstep(radius - offset, radius + offset, distance);\n}\n\n@vertex\nfn vertexMain(attributes: PointAttributes) -> PointVaryings {\n    var output: PointVaryings;\n    output.color = attributes.a_color;\n    output.outline_color = attributes.a_outline_color;\n    output.outline_edge = attributes.a_outline_edge;\n    output.point_type = u32(round(attributes.a_point_type));\n    output.aa_offset = 0.0;\n    output.texcoord = vec2<f32>(\n        attributes.a_texcoord.x,\n        1.0 - attributes.a_texcoord.y\n    );\n\n    if (attributes.a_shape.w == 0) {\n        output.position = vec4<f32>(2.0, 2.0, 2.0, 1.0);\n        return output;\n    }\n\n    var shape = vec2<f32>(attributes.a_shape.xy) / 256.0;\n    let offset = vec2<f32>(\n        f32(attributes.a_offset.x),\n        -f32(attributes.a_offset.y)\n    );\n    let theta = f32(attributes.a_shape.z) / 4096.0;\n\n    if (output.point_type == 3u) {\n        let point_size = max(abs(f32(attributes.a_shape.x)) / 128.0, 1.0);\n        output.texcoord = sign(vec2<f32>(attributes.a_shape.xy)) *\n            ((point_size + 1.0) / point_size);\n        output.aa_offset = 2.0 / (point_size + 2.0);\n    }\n\n    shape = rotate2D(shape + offset, theta);\n    let local_position = vec4<f32>(\n        f32(attributes.a_position.x),\n        f32(attributes.a_position.y),\n        f32(attributes.a_position.z),\n        1.0\n    );\n    var clip_position = TangramCamera.u_projection *\n        (TangramTile.u_modelView * local_position);\n    let screen_offset = shape * clip_position.w * 2.0 *\n        TangramView.u_device_pixel_ratio / TangramView.u_resolution;\n    clip_position = vec4<f32>(\n        clip_position.xy + screen_offset,\n        clip_position.zw\n    );\n\n    if (output.point_type == 3u) {\n        let antialias_offset = sign(shape) * clip_position.w *\n            TangramView.u_device_pixel_ratio / TangramView.u_resolution;\n        clip_position = vec4<f32>(\n            clip_position.xy + antialias_offset,\n            clip_position.zw\n        );\n    }\n\n    output.position = clip_position;\n    return output;\n}\n\n@fragment\nfn fragmentMain(input: PointVaryings) -> @location(0) vec4<f32> {\n    var color = input.color;\n\n    if (input.point_type == 1u) {\n        color *= textureSampleLevel(\n            u_texture,\n            u_textureSampler,\n            input.texcoord,\n            0.0\n        );\n    }\n    else if (input.point_type == 2u) {\n        let atlas_color = textureSampleLevel(\n            u_texture,\n            u_textureSampler,\n            input.texcoord,\n            0.0\n        );\n        color = vec4<f32>(\n            atlas_color.rgb / max(atlas_color.a, 0.001),\n            atlas_color.a\n        );\n    }\n    else {\n        let distance = length(input.texcoord);\n        let outer_alpha = antialiasCircle(distance, 1.0, input.aa_offset);\n        let fill_alpha = antialiasCircle(\n            distance,\n            1.0 - input.outline_edge * 0.5,\n            input.aa_offset\n        ) * color.a;\n        let stroke_alpha = max(\n            outer_alpha - antialiasCircle(\n                distance,\n                1.0 - input.outline_edge,\n                input.aa_offset\n            ),\n            0.0\n        ) * input.outline_color.a;\n        let composed_alpha = stroke_alpha + fill_alpha * (1.0 - stroke_alpha);\n        let composed_rgb = mix(\n            color.rgb * fill_alpha,\n            input.outline_color.rgb,\n            stroke_alpha\n        ) / max(composed_alpha, 0.001);\n        color = vec4<f32>(composed_rgb, composed_alpha);\n    }\n\n    if (color.a < 0.001) {\n        discard;\n    }\n    return color;\n}\n";
+}
+
 var PLACEMENT = LabelPoint.PLACEMENT;
 var Points = Object.create(Style);
 var SHADER_POINT_VARIANT = '__shader_point';
@@ -16261,6 +16278,9 @@ Object.assign(Points, {
   // style includes a collision pass
   blend: 'overlay',
   // overlays drawn on top of all other styles, with blending
+  getWGSLShaderSource: function getWGSLShaderSource() {
+    return buildPointsWGSL();
+  },
   init: function init() {
     var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     Style.init.call(this, options);
@@ -16807,6 +16827,7 @@ Object.assign(Points, {
    */
   makeVertexTemplate: function makeVertexTemplate(style, mesh) {
     var add_custom_attribs = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
+    var portable = mesh.vertex_data.vertex_layout.index.a_point_type != null;
     var i = 0;
 
     // a_position.xyz - vertex position
@@ -16825,7 +16846,7 @@ Object.assign(Points, {
     this.vertex_template[i++] = style.label.layout.collide ? 0 : 1; // set initial label hide/show state
 
     // a_texcoord.xy - texture coords
-    if (!mesh.variant.shader_point) {
+    if (!mesh.variant.shader_point || portable) {
       this.vertex_template[i++] = 0;
       this.vertex_template[i++] = 0;
     }
@@ -16850,7 +16871,7 @@ Object.assign(Points, {
     }
 
     // point outline
-    if (mesh.variant.shader_point) {
+    if (mesh.variant.shader_point || portable) {
       // a_outline_color.rgba - outline color
       var outline_color = style.outline_color || StyleParser.defaults.outline.color;
       this.vertex_template[i++] = outline_color[0] * 255;
@@ -16860,6 +16881,9 @@ Object.assign(Points, {
 
       // a_outline_edge - point outline edge (as % of point size where outline begins)
       this.vertex_template[i++] = style.outline_edge_pct || StyleParser.defaults.outline.width;
+    }
+    if (portable) {
+      this.vertex_template[i++] = mesh.variant.point_type;
     }
     if (add_custom_attribs) {
       this.addCustomAttributesToVertexTemplate(style, i);
@@ -17081,6 +17105,58 @@ Object.assign(Points, {
   // Override
   // Create or return desired vertex layout permutation based on flags
   vertexLayoutForMeshVariant: function vertexLayoutForMeshVariant(variant) {
+    if (this.shader_language === 'wgsl') {
+      if (this.vertex_layouts.portable == null) {
+        this.vertex_layouts.portable = new VertexLayout([{
+          name: 'a_position',
+          size: 4,
+          type: gl$1.SHORT,
+          normalized: false
+        }, {
+          name: 'a_shape',
+          size: 4,
+          type: gl$1.SHORT,
+          normalized: false
+        }, {
+          name: 'a_texcoord',
+          size: 2,
+          type: gl$1.UNSIGNED_SHORT,
+          normalized: true
+        }, {
+          name: 'a_offset',
+          size: 2,
+          type: gl$1.SHORT,
+          normalized: false
+        }, {
+          name: 'a_color',
+          size: 4,
+          type: gl$1.UNSIGNED_BYTE,
+          normalized: true
+        }, {
+          name: 'a_selection_color',
+          size: 4,
+          type: gl$1.UNSIGNED_BYTE,
+          normalized: true
+        }, {
+          name: 'a_outline_color',
+          size: 4,
+          type: gl$1.UNSIGNED_BYTE,
+          normalized: true
+        }, {
+          name: 'a_outline_edge',
+          size: 1,
+          type: gl$1.FLOAT,
+          normalized: false
+        }, {
+          name: 'a_point_type',
+          size: 1,
+          type: gl$1.FLOAT,
+          normalized: false
+        }]);
+      }
+      return this.vertex_layouts.portable;
+    }
+
     // Vertex layout only depends on shader point flag, so using it as layout key to avoid duplicate layouts
     if (this.vertex_layouts[variant.shader_point] == null) {
       // Attributes for this mesh variant
@@ -17148,6 +17224,7 @@ Object.assign(Points, {
         // TODO: make this vary by draw params
         shader_point: texture === SHADER_POINT_VARIANT,
         // is shader point
+        point_type: draw.label_texture ? TANGRAM_POINT_TYPE_LABEL : draw.texture ? TANGRAM_POINT_TYPE_TEXTURE : TANGRAM_POINT_TYPE_SHADER,
         blend_order: draw.blend_order,
         mesh_order: draw.label_texture ? 1 : 0 // put text on top of points (e.g. for highway shields, etc.)
       };
@@ -23382,7 +23459,9 @@ var SceneWorker = Object.assign(self, {
   updateConfig: function updateConfig(_ref, debug) {
     var config = _ref.config,
       generation = _ref.generation,
-      introspection = _ref.introspection;
+      introspection = _ref.introspection,
+      _ref$shader_language = _ref.shader_language,
+      shader_language = _ref$shader_language === void 0 ? 'glsl' : _ref$shader_language;
     config = JSON.parse(config);
     topojson.mergeDebugSettings(debug);
     this.generation = generation;
@@ -23401,7 +23480,8 @@ var SceneWorker = Object.assign(self, {
       generation: this.generation,
       styles: this.styles,
       sources: this.sources,
-      introspection: this.introspection
+      introspection: this.introspection,
+      shader_language: shader_language
     });
 
     // Parse each top-level layer as a separate tree
@@ -33230,7 +33310,8 @@ var Scene = /*#__PURE__*/function () {
       return topojson.WorkerBroker.postMessage(this.workers, 'self.updateConfig', {
         config: config_serialized,
         generation: this.generation,
-        introspection: this.introspection
+        introspection: this.introspection,
+        shader_language: this.shader_language
       }, topojson.debugSettings);
     }
 
@@ -36805,7 +36886,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = 'a1a7de42577e0c92d6490c9115d35b494b02a31c';
+	Tangram.debug.SHA = 'c3e6f24ea316db3b001e821597b18d3a893f094e';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

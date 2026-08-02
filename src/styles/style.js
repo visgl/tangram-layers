@@ -22,10 +22,11 @@ import rasters_source from './raster/raster_globals.glsl';
 // Base class
 
 export var Style = {
-    init ({ generation, styles, sources = {}, introspection } = {}) {
+    init ({ generation, styles, sources = {}, introspection, shader_language = 'glsl' } = {}) {
         this.setGeneration(generation);
         this.styles = styles;                       // styles for scene
         this.sources = sources;                     // data sources for scene
+        this.shader_language = shader_language;     // keeps worker-built vertex layouts aligned with the renderer
         this.defines = (Object.prototype.hasOwnProperty.call(this, 'defines') && this.defines) || {}; // #defines to be injected into the shaders
         this.shaders = (Object.prototype.hasOwnProperty.call(this, 'shaders') && this.shaders) || {}; // shader customization (uniforms, defines, blocks, etc.)
         this.introspection = introspection || false;

@@ -1,4 +1,4 @@
-import Tangram from '../../dist/tangram.debug.mjs?bridge=webgpu-highway-traffic';
+import Tangram from '../../dist/tangram.debug.mjs?bridge=webgpu-points-layout-3';
 import createTangramLayerClass from './tangram-layer.js?bridge=std140-fix';
 import {webgpuAdapter} from 'https://esm.sh/@luma.gl/webgpu@9.4.0-alpha.1?bundle&deps=@luma.gl/core@9.4.0-alpha.1';
 
@@ -11,6 +11,7 @@ const deviceType = requestedBackend ||
 const useWebGPU = deviceType === 'webgpu';
 const enablePortableText = !useWebGPU || searchParams.get('portable_text') !== '0';
 const enablePortableTraffic = !useWebGPU || searchParams.get('traffic') !== '0';
+const pointProbe = useWebGPU ? searchParams.get('points') : null;
 let apiKey = searchParams.get('api_key') ||
     window.sessionStorage.getItem('tangram-nextzen-api-key');
 if (searchParams.has('api_key')) {
@@ -40,7 +41,8 @@ const BASEMAPS = {
         scene: createTronCartoScene({
             portable: useWebGPU,
             labels: enablePortableText,
-            animateTraffic: enablePortableTraffic
+            animateTraffic: enablePortableTraffic,
+            pointProbe
         }),
         deviceTypes: ['webgl', 'webgpu'],
         webgpuStatus: enablePortableTraffic ?
@@ -448,7 +450,12 @@ function createTronNextzenScene(runtimeApiKey) {
     };
 }
 
-function createTronCartoScene({ portable = false, labels = true, animateTraffic = true } = {}) {
+function createTronCartoScene({
+    portable = false,
+    labels = true,
+    animateTraffic = true,
+    pointProbe = false
+} = {}) {
     const scene = {
         import: ['https://www.nextzen.org/carto/tron-style/6/tron-style.zip'],
         fonts: {
@@ -617,6 +624,32 @@ function createTronCartoScene({ portable = false, labels = true, animateTraffic 
     };
     if (!labels) {
         delete scene.layers['tron-carto-places'];
+    }
+    else if (pointProbe) {
+        scene.layers['tron-carto-places'].draw.points = {
+            order: 11,
+            color: '#ff4fd8',
+            size: '12px',
+            outline: { color: '#ffffff', width: '2px' },
+            text: {
+                anchor: 'top',
+                text_source: 'name',
+                font: {
+                    family: 'Montserrat',
+                    size: '9px',
+                    fill: '#ff9bea',
+                    stroke: { color: '#08111f', width: 2 }
+                }
+            }
+        };
+        if (pointProbe === 'sprite') {
+            scene.textures = {
+                'point-probe': { url: '../images/wheel.png' }
+            };
+            scene.layers['tron-carto-places'].draw.points.texture = 'point-probe';
+            scene.layers['tron-carto-places'].draw.points.color = '#ffffff';
+            delete scene.layers['tron-carto-places'].draw.points.outline;
+        }
     }
     return scene;
 }
