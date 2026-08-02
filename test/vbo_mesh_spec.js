@@ -123,6 +123,35 @@ describe('VBOMesh render backend', function () {
         assert.isTrue(resources[0].destroyed);
     });
 
+    it('uploads retained collision changes through the portable vertex buffer', function () {
+        const writes = [];
+        const vertex_data = new Float32Array([0, 1, 2, 3]);
+        const mesh = new VBOMesh(null, vertex_data, null, {
+            stride: 8,
+            getBufferLayout() {
+                return { name: 'vertices', attributes: [] };
+            },
+            getStaticAttributes() {
+                return [];
+            }
+        }, {
+            retain: true,
+            bufferFactory() {
+                return {
+                    write(data) { writes.push(data); },
+                    destroy() {}
+                };
+            }
+        });
+
+        vertex_data[0] = 42;
+        mesh.upload();
+
+        assert.deepEqual(writes, [vertex_data]);
+        assert.strictEqual(writes[0][0], 42);
+        mesh.destroy();
+    });
+
     it('delegates a mesh draw with the active render pass before issuing raw WebGL calls', function () {
         const render_pass = {};
         const render_state = { blend: true, depthWriteEnabled: false };

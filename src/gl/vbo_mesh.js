@@ -167,6 +167,13 @@ export default class VBOMesh  {
 
     // Upload buffer data to GPU
     upload() {
+        if (this.vertex_buffer_resource) {
+            if (typeof this.vertex_buffer_resource.write !== 'function') {
+                throw new Error('VBOMesh: portable vertex buffers must support write');
+            }
+            this.vertex_buffer_resource.write(this.vertex_data);
+            return;
+        }
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertex_buffer);
         this.gl.bufferData(this.gl.ARRAY_BUFFER, this.vertex_data, this.data_usage);
     }
