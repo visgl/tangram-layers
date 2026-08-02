@@ -79,6 +79,50 @@ describe('UniformBuffer', function () {
         assert.lengthOf(gl.uniform_block_bindings, 1, 'program binding is configured once');
     });
 
+    it('can delegate allocation, uploads, and destruction to an injected GPU buffer resource', function () {
+        const gl = createFakeWebGL2Context();
+        const handle = {};
+        const writes = [];
+        let destroyed = false;
+        let factory_options;
+        const buffer_resource = {
+            handle,
+            write(data) {
+                writes.push(Array.from(data));
+            },
+            destroy() {
+                destroyed = true;
+            }
+        };
+        const uniform_buffer = new UniformBuffer(gl, {
+            name: 'TangramView',
+            binding: 3,
+            bufferFactory(options) {
+                factory_options = options;
+                return buffer_resource;
+            },
+            uniforms: { time: 'float' }
+        });
+
+        assert.deepEqual(factory_options, {
+            id: 'TangramView',
+            byteLength: 16,
+            usage: 'uniform'
+        });
+        assert.strictEqual(uniform_buffer.buffer, handle);
+        assert.lengthOf(gl.allocations, 0, 'Tangram does not allocate raw WebGL storage');
+
+        uniform_buffer.setUniform('time', 0.5);
+        assert.isTrue(uniform_buffer.bind({}));
+        assert.lengthOf(writes, 1);
+        assert.strictEqual(new Float32Array(new Uint8Array(writes[0]).buffer)[0], 0.5);
+        assert.deepEqual(gl.buffer_base_bindings, [[gl.UNIFORM_BUFFER, 3, handle]]);
+
+        uniform_buffer.destroy();
+        assert.isTrue(destroyed);
+        assert.lengthOf(gl.deleted_buffers, 0, 'Tangram does not delete the resource handle directly');
+    });
+
     it('rejects unsupported contexts, types, and values', function () {
         assert.isFalse(UniformBuffer.isSupported({}));
         assert.throws(() => new UniformBuffer({}, { name: 'Test' }), /WebGL2/);
@@ -308,6 +352,8 @@ function createFakeWebGL2Context() {
         DYNAMIC_DRAW: 0x88E8,
         INVALID_INDEX: 0xFFFFFFFF,
         current_buffer: null,
+        allocations: [],
+        deleted_buffers: [],
         uploads: [],
         uniform_block_queries: [],
         uniform_block_bindings: [],
@@ -315,14 +361,18 @@ function createFakeWebGL2Context() {
         createBuffer() {
             return {};
         },
-        deleteBuffer() {},
+        deleteBuffer(buffer) {
+            this.deleted_buffers.push(buffer);
+        },
         getParameter(parameter) {
             return parameter === this.UNIFORM_BUFFER_BINDING ? this.current_buffer : null;
         },
         bindBuffer(target, buffer) {
             this.current_buffer = buffer;
         },
-        bufferData() {},
+        bufferData(target, byte_length, usage) {
+            this.allocations.push([target, byte_length, usage]);
+        },
         bufferSubData(target, offset, data) {
             this.uploads.push([target, offset, Array.from(data)]);
         },

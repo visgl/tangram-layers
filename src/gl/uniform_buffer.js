@@ -63,17 +63,30 @@ export default class UniformBuffer {
         this.layout = UniformBuffer.createLayout(options.uniforms || {});
         this.data = new ArrayBuffer(this.layout.byte_length);
         this.data_view = new DataView(this.data);
-        this.buffer = gl.createBuffer();
+        const has_buffer_factory = typeof options.bufferFactory === 'function';
+        this.buffer_resource = has_buffer_factory && options.bufferFactory({
+            id: this.name,
+            byteLength: this.layout.byte_length,
+            usage: 'uniform'
+        });
+        this.buffer = has_buffer_factory ? this.buffer_resource && this.buffer_resource.handle : gl.createBuffer();
         this.program_indices = new WeakMap();
         this.dirty = false;
 
         if (!this.buffer) {
             throw new Error(`UniformBuffer: could not create buffer '${this.name}'`);
         }
-
-        this.withBufferBinding(() => {
-            gl.bufferData(gl.UNIFORM_BUFFER, this.layout.byte_length, this.usage);
-        });
+        if (this.buffer_resource) {
+            if (typeof this.buffer_resource.write !== 'function' ||
+                typeof this.buffer_resource.destroy !== 'function') {
+                throw new Error('UniformBuffer: bufferFactory must return a resource with handle, write, and destroy');
+            }
+        }
+        else {
+            this.withBufferBinding(() => {
+                gl.bufferData(gl.UNIFORM_BUFFER, this.layout.byte_length, this.usage);
+            });
+        }
     }
 
     get byteLength() {
@@ -135,9 +148,15 @@ export default class UniformBuffer {
             return false;
         }
 
-        this.withBufferBinding(() => {
-            this.gl.bufferSubData(this.gl.UNIFORM_BUFFER, 0, new Uint8Array(this.data));
-        });
+        const data = new Uint8Array(this.data);
+        if (this.buffer_resource) {
+            this.buffer_resource.write(data);
+        }
+        else {
+            this.withBufferBinding(() => {
+                this.gl.bufferSubData(this.gl.UNIFORM_BUFFER, 0, data);
+            });
+        }
         this.dirty = false;
         return true;
     }
@@ -176,9 +195,15 @@ export default class UniformBuffer {
 
     destroy() {
         if (this.buffer) {
-            this.gl.deleteBuffer(this.buffer);
+            if (this.buffer_resource) {
+                this.buffer_resource.destroy();
+            }
+            else {
+                this.gl.deleteBuffer(this.buffer);
+            }
             this.buffer = null;
         }
+        this.buffer_resource = null;
         this.gl = null;
         this.data = null;
         this.data_view = null;

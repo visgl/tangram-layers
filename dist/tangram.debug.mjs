@@ -21504,15 +21504,27 @@ class UniformBuffer {
     this.layout = UniformBuffer.createLayout(options.uniforms || {});
     this.data = new ArrayBuffer(this.layout.byte_length);
     this.data_view = new DataView(this.data);
-    this.buffer = gl.createBuffer();
+    const has_buffer_factory = typeof options.bufferFactory === 'function';
+    this.buffer_resource = has_buffer_factory && options.bufferFactory({
+      id: this.name,
+      byteLength: this.layout.byte_length,
+      usage: 'uniform'
+    });
+    this.buffer = has_buffer_factory ? this.buffer_resource && this.buffer_resource.handle : gl.createBuffer();
     this.program_indices = new WeakMap();
     this.dirty = false;
     if (!this.buffer) {
       throw new Error(`UniformBuffer: could not create buffer '${this.name}'`);
     }
-    this.withBufferBinding(() => {
-      gl.bufferData(gl.UNIFORM_BUFFER, this.layout.byte_length, this.usage);
-    });
+    if (this.buffer_resource) {
+      if (typeof this.buffer_resource.write !== 'function' || typeof this.buffer_resource.destroy !== 'function') {
+        throw new Error('UniformBuffer: bufferFactory must return a resource with handle, write, and destroy');
+      }
+    } else {
+      this.withBufferBinding(() => {
+        gl.bufferData(gl.UNIFORM_BUFFER, this.layout.byte_length, this.usage);
+      });
+    }
   }
   get byteLength() {
     return this.layout.byte_length;
@@ -21561,9 +21573,14 @@ class UniformBuffer {
     if (!this.buffer || !this.dirty) {
       return false;
     }
-    this.withBufferBinding(() => {
-      this.gl.bufferSubData(this.gl.UNIFORM_BUFFER, 0, new Uint8Array(this.data));
-    });
+    const data = new Uint8Array(this.data);
+    if (this.buffer_resource) {
+      this.buffer_resource.write(data);
+    } else {
+      this.withBufferBinding(() => {
+        this.gl.bufferSubData(this.gl.UNIFORM_BUFFER, 0, data);
+      });
+    }
     this.dirty = false;
     return true;
   }
@@ -21598,9 +21615,14 @@ class UniformBuffer {
   }
   destroy() {
     if (this.buffer) {
-      this.gl.deleteBuffer(this.buffer);
+      if (this.buffer_resource) {
+        this.buffer_resource.destroy();
+      } else {
+        this.gl.deleteBuffer(this.buffer);
+      }
       this.buffer = null;
     }
+    this.buffer_resource = null;
     this.gl = null;
     this.data = null;
     this.data_view = null;
@@ -28799,6 +28821,7 @@ class Scene {
     this.webgl_context_scope = options.webGLContextScope;
     this.redraw_callback = options.requestRedraw;
     this.enable_uniform_buffers = options.enableUniformBuffers === true;
+    this.uniform_buffer_factory = options.uniformBufferFactory;
     this.uniform_buffers = {};
     this.lights = null;
     this.background = null;
@@ -28990,6 +29013,7 @@ class Scene {
     this.uniform_buffers.TangramView = new UniformBuffer(this.gl, {
       name: 'TangramView',
       binding: 0,
+      bufferFactory: this.uniform_buffer_factory,
       uniforms: {
         u_resolution: 'vec2',
         u_time: 'float',
@@ -29003,6 +29027,7 @@ class Scene {
     this.uniform_buffers.TangramCamera = new UniformBuffer(this.gl, {
       name: 'TangramCamera',
       binding: 1,
+      bufferFactory: this.uniform_buffer_factory,
       uniforms: {
         u_projection: 'mat4',
         u_eye: 'vec3',
@@ -29012,6 +29037,7 @@ class Scene {
     this.uniform_buffers.TangramTile = new UniformBuffer(this.gl, {
       name: 'TangramTile',
       binding: 2,
+      bufferFactory: this.uniform_buffer_factory,
       uniforms: {
         u_tile_origin: 'vec4',
         u_tile_proxy_order_offset: 'float',
@@ -30815,7 +30841,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = 'f95f6671424cc931de08f0a78b506ff430c916c3';
+	Tangram.debug.SHA = '8133d71f8ba36186960e2058104c59db32ff2e4d';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

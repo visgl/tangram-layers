@@ -96,6 +96,7 @@ export default class Scene {
         this.webgl_context_scope = options.webGLContextScope;
         this.redraw_callback = options.requestRedraw;
         this.enable_uniform_buffers = options.enableUniformBuffers === true;
+        this.uniform_buffer_factory = options.uniformBufferFactory;
         this.uniform_buffers = {};
 
         this.lights = null;
@@ -307,6 +308,7 @@ export default class Scene {
         this.uniform_buffers.TangramView = new UniformBuffer(this.gl, {
             name: 'TangramView',
             binding: 0,
+            bufferFactory: this.uniform_buffer_factory,
             uniforms: {
                 u_resolution: 'vec2',
                 u_time: 'float',
@@ -320,6 +322,7 @@ export default class Scene {
         this.uniform_buffers.TangramCamera = new UniformBuffer(this.gl, {
             name: 'TangramCamera',
             binding: 1,
+            bufferFactory: this.uniform_buffer_factory,
             uniforms: {
                 u_projection: 'mat4',
                 u_eye: 'vec3',
@@ -329,6 +332,7 @@ export default class Scene {
         this.uniform_buffers.TangramTile = new UniformBuffer(this.gl, {
             name: 'TangramTile',
             binding: 2,
+            bufferFactory: this.uniform_buffer_factory,
             uniforms: {
                 u_tile_origin: 'vec4',
                 u_tile_proxy_order_offset: 'float',
