@@ -6,7 +6,7 @@ import builtins from 'rollup-plugin-node-builtins';
 import json from '@rollup/plugin-json';
 import { importAsString } from 'rollup-plugin-string-import';
 
-export default {
+export default function (config) {
 
     config.set({
         basePath: '',
