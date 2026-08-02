@@ -167,6 +167,28 @@ describe('UniformBuffer', function () {
         assert.lengthOf(gl.deleted_buffers, 0, 'Tangram does not delete the resource handle directly');
     });
 
+    it('uses a handle-free portable buffer without accessing WebGL', function () {
+        const writes = [];
+        const resource = {
+            write(data) { writes.push(Array.from(data)); },
+            destroy() { this.destroyed = true; }
+        };
+        const uniform_buffer = new UniformBuffer(null, {
+            name: 'TangramView',
+            bufferFactory: () => resource,
+            uniforms: { time: 'float' }
+        });
+
+        assert.strictEqual(uniform_buffer.buffer, resource);
+        uniform_buffer.setUniform('time', 2);
+        assert.isTrue(uniform_buffer.upload());
+        assert.strictEqual(new Float32Array(new Uint8Array(writes[0]).buffer)[0], 2);
+        assert.isFalse(uniform_buffer.bind({}));
+
+        uniform_buffer.destroy();
+        assert.isTrue(resource.destroyed);
+    });
+
     it('rejects unsupported contexts, types, and values', function () {
         assert.isFalse(UniformBuffer.isSupported({}));
         assert.throws(() => new UniformBuffer({}, { name: 'Test' }), /WebGL2/);

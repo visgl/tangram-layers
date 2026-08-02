@@ -49,7 +49,8 @@ export default class UniformBuffer {
     }
 
     constructor(gl, options = {}) {
-        if (!UniformBuffer.isSupported(gl)) {
+        const has_buffer_factory = typeof options.bufferFactory === 'function';
+        if (!UniformBuffer.isSupported(gl) && !has_buffer_factory) {
             throw new Error('UniformBuffer requires a WebGL2 context');
         }
         if (!options.name) {
@@ -59,17 +60,17 @@ export default class UniformBuffer {
         this.gl = gl;
         this.name = options.name;
         this.binding = options.binding || 0;
-        this.usage = options.usage || gl.DYNAMIC_DRAW;
+        this.usage = options.usage || (has_buffer_factory ? null : gl.DYNAMIC_DRAW);
         this.layout = UniformBuffer.createLayout(options.uniforms || {});
         this.data = new ArrayBuffer(this.layout.byte_length);
         this.data_view = new DataView(this.data);
-        const has_buffer_factory = typeof options.bufferFactory === 'function';
         this.buffer_resource = has_buffer_factory && options.bufferFactory({
             id: this.name,
             byteLength: this.layout.byte_length,
             usage: 'uniform'
         });
-        this.buffer = has_buffer_factory ? this.buffer_resource && this.buffer_resource.handle : gl.createBuffer();
+        this.buffer = has_buffer_factory ?
+            this.buffer_resource && (this.buffer_resource.handle || this.buffer_resource) : gl.createBuffer();
         this.program_indices = new WeakMap();
         this.dirty = false;
 
@@ -192,7 +193,7 @@ export default class UniformBuffer {
     }
 
     bind(program) {
-        if (!this.buffer || !program) {
+        if (!this.buffer || !program || !UniformBuffer.isSupported(this.gl)) {
             return false;
         }
 

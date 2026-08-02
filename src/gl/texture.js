@@ -311,13 +311,13 @@ export default class Texture {
             flipY: options.UNPACK_FLIP_Y_WEBGL !== false,
             premultipliedAlpha: options.UNPACK_PREMULTIPLY_ALPHA_WEBGL === true
         });
-        if (!resource || !resource.handle || typeof resource.destroy !== 'function') {
+        if (!resource || typeof resource.destroy !== 'function') {
             throw new Error(`Texture '${this.name}': texture factory must return a GPU resource`);
         }
 
         const previous_resource = this.texture_resource;
         this.texture_resource = resource;
-        this.texture = resource.handle;
+        this.texture = resource.handle || resource;
         if (previous_resource) {
             previous_resource.destroy();
         }

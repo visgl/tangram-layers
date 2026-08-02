@@ -21,10 +21,10 @@ export default class VBOMesh  {
             data: this.vertex_data
         });
         this.vertex_buffer = this.vertex_buffer_resource ?
-            this.vertex_buffer_resource.handle : this.gl.createBuffer();
+            (this.vertex_buffer_resource.handle || this.vertex_buffer_resource) : this.gl.createBuffer();
         this.buffer_size = this.vertex_data.byteLength;
-        this.draw_mode = options.draw_mode || this.gl.TRIANGLES;
-        this.data_usage = options.data_usage || this.gl.STATIC_DRAW;
+        this.draw_mode = options.draw_mode || 0x0004;
+        this.data_usage = options.data_usage || (this.vertex_buffer_resource ? null : this.gl.STATIC_DRAW);
         this.vertices_per_geometry = 3; // TODO: support lines, strip, fan, etc.
         this.uniforms = options.uniforms;
         this.textures = options.textures; // any textures owned by this mesh
@@ -41,7 +41,7 @@ export default class VBOMesh  {
             this.toggle_element_array = true;
             this.element_count = this.element_data.length;
             this.geometry_count = this.element_count / this.vertices_per_geometry;
-            this.element_type = (this.element_data.constructor === Uint16Array) ? this.gl.UNSIGNED_SHORT: this.gl.UNSIGNED_INT;
+            this.element_type = (this.element_data.constructor === Uint16Array) ? 0x1403 : 0x1405;
             try {
                 this.element_buffer_resource = createBufferResource(this.buffer_factory, {
                     id: `mesh-${this.id}-indices`,
@@ -58,7 +58,7 @@ export default class VBOMesh  {
                 throw error;
             }
             this.element_buffer = this.element_buffer_resource ?
-                this.element_buffer_resource.handle : this.gl.createBuffer();
+                (this.element_buffer_resource.handle || this.element_buffer_resource) : this.gl.createBuffer();
             this.buffer_size += this.element_data.byteLength;
             if (!this.element_buffer_resource) {
                 this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.element_buffer);
@@ -220,8 +220,8 @@ function createBufferResource(buffer_factory, options) {
         return null;
     }
     const resource = buffer_factory(options);
-    if (!resource || !resource.handle || typeof resource.destroy !== 'function') {
-        throw new Error('VBOMesh: bufferFactory must return a resource with handle and destroy');
+    if (!resource || typeof resource.destroy !== 'function') {
+        throw new Error('VBOMesh: bufferFactory must return a GPU resource with destroy');
     }
     return resource;
 }

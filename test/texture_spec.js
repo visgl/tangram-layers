@@ -49,4 +49,28 @@ describe('Texture resource backend', function () {
         assert.isNull(texture.texture);
         Texture.clearResourceFactory(gl);
     });
+
+    it('owns handle-free portable texture resources without a WebGL context', function () {
+        const resources = [];
+        const texture = Texture.create(null, '__portable_texture_test', {
+            width: 1,
+            height: 1,
+            data: new Uint8Array(4),
+            textureFactory() {
+                const resource = {
+                    destroy() { this.destroyed = true; }
+                };
+                resources.push(resource);
+                return resource;
+            }
+        });
+
+        assert.lengthOf(resources, 2);
+        assert.isTrue(resources[0].destroyed);
+        assert.strictEqual(texture.texture, resources[1]);
+        assert.strictEqual(texture.getResource(), resources[1]);
+
+        texture.destroy({ force: true });
+        assert.isTrue(resources[1].destroyed);
+    });
 });

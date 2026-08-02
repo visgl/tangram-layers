@@ -97,6 +97,32 @@ describe('VBOMesh render backend', function () {
         mesh.destroy();
     });
 
+    it('owns handle-free portable buffers without reading a WebGL context', function () {
+        const resources = [];
+        const mesh = new VBOMesh(null, new Float32Array([0, 1, 2, 3]), null, {
+            stride: 8,
+            getBufferLayout() {
+                return { name: 'vertices', attributes: [] };
+            },
+            getStaticAttributes() {
+                return [];
+            }
+        }, {
+            bufferFactory() {
+                const resource = {
+                    destroy() { this.destroyed = true; }
+                };
+                resources.push(resource);
+                return resource;
+            }
+        });
+
+        assert.strictEqual(mesh.vertex_buffer, resources[0]);
+        assert.strictEqual(mesh.getDrawDescriptor().topology, 'triangle-list');
+        mesh.destroy();
+        assert.isTrue(resources[0].destroyed);
+    });
+
     it('delegates a mesh draw with the active render pass before issuing raw WebGL calls', function () {
         const render_pass = {};
         const render_state = { blend: true, depthWriteEnabled: false };
