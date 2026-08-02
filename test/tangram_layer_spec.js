@@ -115,6 +115,7 @@ describe('TangramLayer demo bridge', function () {
         assert.strictEqual(scene.options.webGLContext, device.handle);
         assert.isTrue(scene.options.disableRenderLoop);
         assert.isTrue(scene.options.enableUniformBuffers);
+        assert.isFunction(scene.options.uniformBufferFactory);
         assert.isFunction(scene.options.webGLContextScope);
         assert.isFunction(scene.options.requestRedraw);
         assert.deepEqual(scene.resizeCalls, [[800, 600]]);
@@ -122,6 +123,18 @@ describe('TangramLayer demo bridge', function () {
             lng: -74.009764,
             lat: 40.705319,
             zoom: 16.25
+        }]);
+
+        const uniform_buffer = scene.options.uniformBufferFactory({
+            id: 'TangramView',
+            byteLength: 64,
+            usage: 'uniform'
+        });
+        assert.strictEqual(uniform_buffer, device.buffers[0]);
+        assert.deepEqual(device.bufferOptions, [{
+            id: 'tangram-TangramView',
+            byteLength: 64,
+            usage: 0x0048
         }]);
 
         layer.draw();
@@ -330,7 +343,25 @@ describe('TangramLayer demo bridge', function () {
         const device = {
             type: 'webgl',
             handle: gl,
+            bufferOptions: [],
+            buffers: [],
             stateCalls: [],
+            createBuffer(options) {
+                this.bufferOptions.push(options);
+                const buffer = {
+                    handle: {},
+                    writes: [],
+                    destroyed: false,
+                    write(data) {
+                        this.writes.push(data);
+                    },
+                    destroy() {
+                        this.destroyed = true;
+                    }
+                };
+                this.buffers.push(buffer);
+                return buffer;
+            },
             pushState() {
                 this.stateCalls.push('push');
             },

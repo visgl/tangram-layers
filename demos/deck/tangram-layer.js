@@ -1,5 +1,8 @@
 const DECK_TO_TANGRAM_ZOOM_OFFSET = 1;
 const VIEW_EPSILON = 1e-7;
+// luma.gl Buffer usage flags. Kept local so the demo does not add a package dependency.
+const LUMA_BUFFER_COPY_DST = 0x0008;
+const LUMA_BUFFER_UNIFORM = 0x0040;
 
 /**
  * Injects an API key into every Nextzen source in a Tangram scene.
@@ -110,7 +113,8 @@ export function createTangramLayerClass({ Layer, Scene }) {
                 return null;
             }
             if (!device || device.type !== 'webgl' || !gl ||
-                typeof device.pushState !== 'function' || typeof device.popState !== 'function') {
+                typeof device.pushState !== 'function' || typeof device.popState !== 'function' ||
+                typeof device.createBuffer !== 'function') {
                 this._raiseBridgeError(new Error('a deck.gl WebGLDevice is required'));
                 return null;
             }
@@ -154,6 +158,7 @@ export function createTangramLayerClass({ Layer, Scene }) {
                     },
                     disableRenderLoop: true,
                     enableUniformBuffers: true,
+                    uniformBufferFactory: options => createDeviceUniformBuffer(device, options),
                     continuousZoom: true,
                     highDensityDisplay: true,
                     logLevel: 'warn'
@@ -404,6 +409,17 @@ function normalizeError(value) {
         return new Error(value.message);
     }
     return new Error(String(value));
+}
+
+function createDeviceUniformBuffer(device, options) {
+    if (options.usage !== 'uniform') {
+        throw new Error(`unsupported Tangram buffer usage '${options.usage}'`);
+    }
+    return device.createBuffer({
+        id: `tangram-${options.id}`,
+        byteLength: options.byteLength,
+        usage: LUMA_BUFFER_UNIFORM | LUMA_BUFFER_COPY_DST
+    });
 }
 
 export default createTangramLayerClass;
