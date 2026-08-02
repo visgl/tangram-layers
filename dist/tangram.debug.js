@@ -33663,6 +33663,98 @@ function extendLeaflet(options) {
   }
 }
 
+/**
+ * Embeddable Tangram renderer driven by a host-provided frame.
+ *
+ * Unlike the standalone Scene path, Renderer does not create an animation loop
+ * or derive camera matrices. The host owns frame scheduling and supplies an
+ * active render pass together with geographic view and camera state.
+ */
+var Renderer = /*#__PURE__*/function () {
+  function Renderer(config) {
+    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    topojson._classCallCheck(this, Renderer);
+    this.scene = Scene.create(config, Object.assign({}, options, {
+      disableRenderLoop: true,
+      externalCamera: true
+    }));
+  }
+  return topojson._createClass(Renderer, [{
+    key: "subscribe",
+    value: function subscribe(listeners) {
+      return this.scene.subscribe(listeners);
+    }
+  }, {
+    key: "load",
+    value: function load(config) {
+      var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+      return this.scene.load(config, options);
+    }
+
+    /**
+     * Applies host-owned viewport, geographic, and camera state.
+     */
+  }, {
+    key: "setFrame",
+    value: function setFrame() {
+      var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        viewport = _ref.viewport,
+        view = _ref.view,
+        camera = _ref.camera,
+        _ref$tileBuffer = _ref.tileBuffer,
+        tileBuffer = _ref$tileBuffer === void 0 ? 0 : _ref$tileBuffer;
+      if (viewport && (this.scene.view.size.css.width !== viewport.width || this.scene.view.size.css.height !== viewport.height)) {
+        this.scene.resizeMap(viewport.width, viewport.height);
+      }
+      if (view) {
+        this.scene.view.setView({
+          lng: view.longitude,
+          lat: view.latitude,
+          zoom: view.zoom
+        });
+      }
+      if (camera) {
+        this.scene.setCameraMatrices(camera);
+      }
+      this.scene.view.buffer = tileBuffer;
+    }
+
+    /**
+     * Updates and draws Tangram into a host-owned render pass.
+     */
+  }, {
+    key: "render",
+    value: function render() {
+      var _ref2 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        frame = _ref2.frame,
+        _ref2$renderPass = _ref2.renderPass,
+        renderPass = _ref2$renderPass === void 0 ? null : _ref2$renderPass,
+        _ref2$force = _ref2.force,
+        force = _ref2$force === void 0 ? false : _ref2$force;
+      if (frame) {
+        this.setFrame(frame);
+      }
+      if (force) {
+        this.scene.dirty = true;
+      }
+      return this.scene.updateScene({
+        renderPass: renderPass
+      });
+    }
+  }, {
+    key: "destroy",
+    value: function destroy() {
+      return this.scene.destroy();
+    }
+  }], [{
+    key: "create",
+    value: function create(config) {
+      var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+      return new Renderer(config, options);
+    }
+  }]);
+}();
+
 /*jshint worker: true*/
 
 
@@ -33682,6 +33774,7 @@ var debug = {
   Material: topojson.Material,
   Light: topojson.Light,
   Scene: Scene,
+  Renderer: Renderer,
   WorkerBroker: topojson.WorkerBroker,
   Task: topojson.Task,
   StyleManager: topojson.StyleManager,
@@ -33712,7 +33805,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = 'c857fb0c9fe53362fcf0c79d03c6a92f321e5f5a';
+	Tangram.debug.SHA = '082e9dd8a8de69c374c12ce024f597f2a8445aa6';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}
