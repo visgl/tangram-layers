@@ -1,20 +1,30 @@
 # TangramLayer bridge spike
 
-Serve `/Users/ibgreen/code` as the web root so the demo can load both the
-Tangram checkout and the sibling deck.gl bundle:
+The public spike is deployed from `ib/deck-layer` to:
+
+```text
+https://ibgreen.github.io/tangram/demos/deck/
+```
+
+The page opts out of search indexing and the published site includes a
+`robots.txt` that disallows crawling. It is an experimental fork demo, not an
+official Tangram site.
+
+To run it locally, serve the Tangram checkout as the web root:
 
 ```sh
-python3 -m http.server 8000 --directory /Users/ibgreen/code
+python3 -m http.server 8000 --directory /Users/ibgreen/code/tangram
 ```
 
 Then open:
 
 ```text
-http://localhost:8000/tangram/demos/deck/
+http://localhost:8000/demos/deck/
 ```
 
 The demo can switch between CARTO Streets vector tiles, styled locally by
 Tangram, and CARTO Positron raster tiles. Neither option requires an API key.
+It loads the pinned deck.gl browser bundle from unpkg.
 The prototype supports one Web Mercator view. deck.gl remains authoritative for
 longitude, latitude, zoom, bearing, and pitch; Tangram receives the deck camera
 matrices so vector and raster basemaps remain aligned with deck layers while the
