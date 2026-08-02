@@ -2558,6 +2558,7 @@ class ShaderProgram {
     const bindings = {};
     for (const [name, uniform_buffer] of Object.entries(this.uniform_blocks)) {
       if (uniform_buffer.buffer_resource) {
+        uniform_buffer.upload();
         bindings[name] = uniform_buffer.buffer_resource;
       }
     }
@@ -31286,7 +31287,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = '6b88b2b073b39de2d4c2fb23c4419ba5bd668481';
+	Tangram.debug.SHA = 'ad7e77e5409a2bd632cb77b8db0b0c0e1731bddc';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}
