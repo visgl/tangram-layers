@@ -15,6 +15,7 @@ import hashString from '../../utils/hash';
 
 import polygons_vs from '../polygons/polygons_vertex.glsl';
 import polygons_fs from '../polygons/polygons_fragment.glsl';
+import {buildLinesWGSL} from './lines_wgsl';
 
 export const Lines = Object.create(Style);
 
@@ -26,6 +27,10 @@ Object.assign(Lines, {
     vertex_shader_src: polygons_vs,
     fragment_shader_src: polygons_fs,
     selection: true, // enable feature selection
+
+    getWGSLShaderSource() {
+        return buildLinesWGSL();
+    },
 
     init() {
         Style.init.apply(this, arguments);

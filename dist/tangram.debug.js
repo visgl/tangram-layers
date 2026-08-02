@@ -10264,7 +10264,7 @@ void main (void) {
 }
 `;
 
-var LAYER_DELTA = 1 / (1 << 14);
+var LAYER_DELTA$1 = 1 / (1 << 14);
 
 /**
  * Build the portable polygon shader used by the luma.gl WebGPU renderer.
@@ -10279,7 +10279,7 @@ function buildPolygonsWGSL() {
     raster = _ref$raster === void 0 ? false : _ref$raster;
   var raster_declarations = raster ? "\n@group(0) @binding(3) var u_rasters: texture_2d<f32>;\n@group(0) @binding(4) var u_rastersSampler: sampler;\n" : '';
   var raster_fragment = raster ? "\n    // Tangram's raster images are uploaded without a WebGL Y flip on WebGPU,\n    // so use top-left texture coordinates for the tile-local geometry.\n    let raster_color = textureSample(u_rasters, u_rastersSampler, input.raster_uv);\n    return input.color * raster_color;\n" : '    return input.color;\n';
-  return "\n".concat(raster_declarations, "\nstruct PolygonAttributes {\n    @location(0) a_position: vec4<i32>,\n    @location(1) a_color: vec4<f32>,\n};\n\nstruct PolygonVaryings {\n    @builtin(position) position: vec4<f32>,\n    @location(0) color: vec4<f32>,\n    @location(1) raster_uv: vec2<f32>,\n};\n\n@vertex\nfn vertexMain(attributes: PolygonAttributes) -> PolygonVaryings {\n    var output: PolygonVaryings;\n    let local_position = vec4<f32>(\n        f32(attributes.a_position.x),\n        f32(attributes.a_position.y),\n        f32(attributes.a_position.z) / ").concat(Geo$1.height_scale, ".0,\n        1.0\n    );\n    var clip_position = TangramCamera.u_projection *\n        (TangramTile.u_modelView * local_position);\n    let layer = f32(attributes.a_position.w) +\n        TangramTile.u_tile_proxy_order_offset + 1.0;\n    clip_position.z -= layer * ").concat(LAYER_DELTA, " * clip_position.w;\n\n    output.position = clip_position;\n    output.color = attributes.a_color;\n    output.raster_uv = vec2<f32>(\n        f32(attributes.a_position.x) / ").concat(Geo$1.tile_scale, ".0,\n        -f32(attributes.a_position.y) / ").concat(Geo$1.tile_scale, ".0\n    );\n    return output;\n}\n\n@fragment\nfn fragmentMain(input: PolygonVaryings) -> @location(0) vec4<f32> {\n").concat(raster_fragment, "}\n");
+  return "\n".concat(raster_declarations, "\nstruct PolygonAttributes {\n    @location(0) a_position: vec4<i32>,\n    @location(1) a_color: vec4<f32>,\n};\n\nstruct PolygonVaryings {\n    @builtin(position) position: vec4<f32>,\n    @location(0) color: vec4<f32>,\n    @location(1) raster_uv: vec2<f32>,\n};\n\n@vertex\nfn vertexMain(attributes: PolygonAttributes) -> PolygonVaryings {\n    var output: PolygonVaryings;\n    let local_position = vec4<f32>(\n        f32(attributes.a_position.x),\n        f32(attributes.a_position.y),\n        f32(attributes.a_position.z) / ").concat(Geo$1.height_scale, ".0,\n        1.0\n    );\n    var clip_position = TangramCamera.u_projection *\n        (TangramTile.u_modelView * local_position);\n    let layer = f32(attributes.a_position.w) +\n        TangramTile.u_tile_proxy_order_offset + 1.0;\n    clip_position.z -= layer * ").concat(LAYER_DELTA$1, " * clip_position.w;\n\n    output.position = clip_position;\n    output.color = attributes.a_color;\n    output.raster_uv = vec2<f32>(\n        f32(attributes.a_position.x) / ").concat(Geo$1.tile_scale, ".0,\n        -f32(attributes.a_position.y) / ").concat(Geo$1.tile_scale, ".0\n    );\n    return output;\n}\n\n@fragment\nfn fragmentMain(input: PolygonVaryings) -> @location(0) vec4<f32> {\n").concat(raster_fragment, "}\n");
 }
 
 // Polygon rendering style
@@ -11108,6 +11108,22 @@ function renderDashArray(pattern) {
   };
 }
 
+var LAYER_DELTA = 1 / (1 << 14);
+var ATTRIBUTE_SCALE = 1024;
+
+/**
+ * Build the portable base-line shader used by the luma.gl WebGPU renderer.
+ *
+ * Tangram's line builder emits expanded triangle geometry. The extrusion
+ * vector and its fractional-zoom scaling are therefore applied before the
+ * host-provided tile and camera matrices. Custom GLSL style blocks, offsets,
+ * heights, textures, and selection are intentionally separate follow-up
+ * tranches.
+ */
+function buildLinesWGSL() {
+  return "\nstruct LineAttributes {\n    @location(0) a_position: vec4<i32>,\n    @location(1) a_extrude: vec2<i32>,\n    @location(2) a_color: vec4<f32>,\n};\n\nstruct LineVaryings {\n    @builtin(position) position: vec4<f32>,\n    @location(0) color: vec4<f32>,\n};\n\n@vertex\nfn vertexMain(attributes: LineAttributes) -> LineVaryings {\n    var output: LineVaryings;\n    var extrusion = vec2<f32>(attributes.a_extrude);\n\n    var zoom_delta = clamp(\n        TangramView.u_map_position.z - TangramTile.u_tile_origin.z,\n        0.0,\n        4.0\n    );\n    zoom_delta += step(1.0, zoom_delta) * (1.0 - zoom_delta) +\n        mix(0.0, 2.0, clamp((zoom_delta - 2.0) / 2.0, 0.0, 1.0));\n\n    let midpoint_zoom_delta = (zoom_delta - 0.5) * 2.0;\n    let width_scale = f32(attributes.a_position.z) / ".concat(ATTRIBUTE_SCALE, ".0;\n    extrusion -= extrusion * width_scale * midpoint_zoom_delta;\n    extrusion *= exp2(\n        -zoom_delta - (TangramTile.u_tile_origin.z - TangramTile.u_tile_origin.w)\n    );\n\n    let local_position = vec4<f32>(\n        vec2<f32>(attributes.a_position.xy) + extrusion,\n        0.0,\n        1.0\n    );\n    var clip_position = TangramCamera.u_projection *\n        (TangramTile.u_modelView * local_position);\n    let layer = f32(attributes.a_position.w) +\n        TangramTile.u_tile_proxy_order_offset + 1.0;\n    clip_position.z -= layer * ").concat(LAYER_DELTA, " * clip_position.w;\n\n    output.position = clip_position;\n    output.color = attributes.a_color;\n    return output;\n}\n\n@fragment\nfn fragmentMain(input: LineVaryings) -> @location(0) vec4<f32> {\n    return input.color;\n}\n");
+}
+
 // Line rendering style
 
 var Lines = Object.create(Style);
@@ -11120,6 +11136,9 @@ Object.assign(Lines, {
   fragment_shader_src: polygons_fs,
   selection: true,
   // enable feature selection
+  getWGSLShaderSource: function getWGSLShaderSource() {
+    return buildLinesWGSL();
+  },
   init: function init() {
     Style.init.apply(this, arguments);
 
@@ -36672,6 +36691,9 @@ var Renderer = /*#__PURE__*/function () {
         renderPass: renderPass
       });
       this.scene.processTasks();
+      if (rendered && this.scene.animated) {
+        this.scene.requestRedraw();
+      }
       return rendered;
     }
   }, {
@@ -36743,7 +36765,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = 'a636e335698171d62c9da63c6399b6aaa8de2ad7';
+	Tangram.debug.SHA = '7a95921e0a1d7289ec20e1e43790a8f6a364c5ca';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

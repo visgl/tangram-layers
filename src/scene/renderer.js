@@ -65,6 +65,9 @@ export default class Renderer {
         }
         const rendered = this.scene.updateScene({ renderPass });
         this.scene.processTasks();
+        if (rendered && this.scene.config && this.scene.animated) {
+            this.scene.requestRedraw();
+        }
         return rendered;
     }
 

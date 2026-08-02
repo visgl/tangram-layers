@@ -49,6 +49,21 @@ describe('Renderer', function () {
         assert.isTrue(renderer.scene.processTasks.calledOnce);
     });
 
+    it('requests another host frame while an active style is animated', function () {
+        const request_redraw = sinon.spy();
+        const renderer = Renderer.create({}, { requestRedraw: request_redraw });
+        sinon.stub(renderer.scene, 'updateScene').returns(true);
+        renderer.scene.config = { scene: {} };
+        Object.defineProperty(renderer.scene, 'animated', {
+            configurable: true,
+            value: true
+        });
+
+        renderer.render();
+
+        assert.isTrue(request_redraw.calledOnce);
+    });
+
     it('owns the luma device backend and installs its scene resource factories', function () {
         const device = {
             type: 'webgpu',
