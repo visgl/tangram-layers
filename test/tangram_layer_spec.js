@@ -118,6 +118,8 @@ describe('TangramLayer demo bridge', function () {
         assert.isFunction(scene.options.uniformBufferFactory);
         assert.isFunction(scene.options.shaderFactory);
         assert.isFunction(scene.options.meshBufferFactory);
+        assert.isObject(scene.options.meshRenderer);
+        assert.isFunction(scene.options.meshRenderer.drawMesh);
         assert.isFunction(scene.options.webGLContextScope);
         assert.isFunction(scene.options.requestRedraw);
         assert.deepEqual(scene.resizeCalls, [[800, 600]]);
@@ -167,6 +169,130 @@ describe('TangramLayer demo bridge', function () {
 
         layer.draw();
         assert.lengthOf(scene.resizeCalls, 1, 'unchanged dimensions do not resize again');
+    });
+
+    it('builds and caches luma render pipelines and vertex arrays for Tangram meshes', async function () {
+        const { layer, device } = createLayer();
+        const scene = FakeScene.instances[0];
+        await flushPromises();
+        scene.deferred.resolve();
+        await flushPromises();
+
+        const vertex_buffer = { id: 'vertices' };
+        const index_buffer = { id: 'indices' };
+        const view_buffer = { id: 'view' };
+        const vertex_layout = {};
+        const descriptor = {
+            topology: 'triangle-list',
+            vertexCount: 4,
+            indexCount: 6,
+            indexType: 'uint16',
+            vertexBuffer: vertex_buffer,
+            indexBuffer: index_buffer,
+            bufferLayout: {
+                name: 'vertices',
+                byteStride: 12,
+                attributes: [{ attribute: 'a_position', format: 'float32x2', byteOffset: 0 }]
+            },
+            staticAttributes: [{ attribute: 'a_color', value: [1, 0, 0, 1] }]
+        };
+        const uniform_values = { u_scale: 2 };
+        const program = {
+            id: 4,
+            name: 'polygons',
+            vertex_shader_resource: { id: 'vs' },
+            fragment_shader_resource: { id: 'fs' },
+            getUniformBlockBindings: () => ({ TangramView: view_buffer }),
+            getUniformValues: () => Object.assign({}, uniform_values),
+            uniform(method, name, value) {
+                uniform_values[name] = value;
+            }
+        };
+        const mesh = {
+            id: 9,
+            vertex_layout,
+            uniforms: null,
+            getDrawDescriptor: () => descriptor
+        };
+        const render_pass = createFakeRenderPass();
+
+        const needs_redraw = scene.options.meshRenderer.drawMesh({
+            mesh,
+            program,
+            renderPass: render_pass,
+            visibleTime: 0.25
+        });
+        scene.options.meshRenderer.drawMesh({
+            mesh,
+            program,
+            renderPass: render_pass,
+            visibleTime: 0.5
+        });
+
+        assert.isFalse(needs_redraw);
+        assert.lengthOf(device.pipelines, 1, 'pipeline is cached by program, layout, and topology');
+        assert.lengthOf(device.vertexArrays, 1, 'vertex array is cached by mesh and pipeline');
+        assert.deepEqual(device.pipelineOptions[0], {
+            id: 'tangram-polygons-triangle-list',
+            vs: program.vertex_shader_resource,
+            fs: program.fragment_shader_resource,
+            bufferLayout: [descriptor.bufferLayout],
+            topology: 'triangle-list',
+            disableWarnings: true
+        });
+        assert.deepEqual(device.vertexArrays[0].bufferCalls, [[0, vertex_buffer]]);
+        assert.strictEqual(device.vertexArrays[0].constantCalls[0][0], 1);
+        assert.deepEqual(Array.from(device.vertexArrays[0].constantCalls[0][1]), [1, 0, 0, 1]);
+        assert.deepEqual(device.vertexArrays[0].indexCalls, [index_buffer]);
+        assert.strictEqual(render_pass.calls[0][0], 'pipeline');
+        assert.deepEqual(render_pass.calls[1], ['bindings', { TangramView: view_buffer }]);
+        assert.strictEqual(render_pass.calls[2][0], 'vertexArray');
+        assert.deepEqual(render_pass.calls[3], ['draw', {
+            vertexCount: undefined,
+            indexCount: 6,
+            uniforms: { u_scale: 2, u_visible_time: 0.25 }
+        }]);
+
+        layer.finalizeState();
+        assert.isTrue(device.pipelines[0].destroyed);
+        assert.isTrue(device.vertexArrays[0].destroyed);
+    });
+
+    it('falls back before creating a vertex array for texture bindings', function () {
+        const { device } = createLayer();
+        const scene = FakeScene.instances[0];
+        device.pipelineShaderLayout = {
+            attributes: [],
+            bindings: [{ type: 'texture', name: 'u_texture' }]
+        };
+        const result = scene.options.meshRenderer.drawMesh({
+            mesh: {
+                id: 1,
+                vertex_layout: {},
+                uniforms: null,
+                getDrawDescriptor: () => ({
+                    topology: 'triangle-list',
+                    vertexBuffer: {},
+                    indexBuffer: null,
+                    vertexCount: 3,
+                    indexCount: 0,
+                    bufferLayout: { name: 'vertices', attributes: [] },
+                    staticAttributes: []
+                })
+            },
+            program: {
+                id: 1,
+                vertex_shader_resource: {},
+                fragment_shader_resource: {},
+                getUniformBlockBindings: () => ({})
+            },
+            renderPass: createFakeRenderPass(),
+            visibleTime: 0
+        });
+
+        assert.isNull(result);
+        assert.lengthOf(device.pipelines, 1);
+        assert.lengthOf(device.vertexArrays, 0);
     });
 
     it('injects the runtime API key and reports a successful load', async function () {
@@ -376,6 +502,17 @@ describe('TangramLayer demo bridge', function () {
             buffers: [],
             shaderOptions: [],
             shaders: [],
+            pipelineOptions: [],
+            pipelines: [],
+            vertexArrayOptions: [],
+            vertexArrays: [],
+            pipelineShaderLayout: {
+                attributes: [
+                    { name: 'a_position', location: 0 },
+                    { name: 'a_color', location: 1 }
+                ],
+                bindings: [{ type: 'uniform', name: 'TangramView' }]
+            },
             stateCalls: [],
             createBuffer(options) {
                 this.bufferOptions.push(options);
@@ -405,6 +542,44 @@ describe('TangramLayer demo bridge', function () {
                 this.shaders.push(shader);
                 return shader;
             },
+            createRenderPipeline(options) {
+                this.pipelineOptions.push(options);
+                const pipeline = {
+                    id: options.id,
+                    shaderLayout: this.pipelineShaderLayout,
+                    bufferLayout: options.bufferLayout,
+                    isPending: false,
+                    destroyed: false,
+                    destroy() {
+                        this.destroyed = true;
+                    }
+                };
+                this.pipelines.push(pipeline);
+                return pipeline;
+            },
+            createVertexArray(options) {
+                this.vertexArrayOptions.push(options);
+                const vertex_array = {
+                    bufferCalls: [],
+                    constantCalls: [],
+                    indexCalls: [],
+                    destroyed: false,
+                    setBuffer(...args) {
+                        this.bufferCalls.push(args);
+                    },
+                    setConstantWebGL(...args) {
+                        this.constantCalls.push(args);
+                    },
+                    setIndexBuffer(buffer) {
+                        this.indexCalls.push(buffer);
+                    },
+                    destroy() {
+                        this.destroyed = true;
+                    }
+                };
+                this.vertexArrays.push(vertex_array);
+                return vertex_array;
+            },
             pushState() {
                 this.stateCalls.push('push');
             },
@@ -431,6 +606,25 @@ describe('TangramLayer demo bridge', function () {
         return { layer, deck, deckCanvas, device, gl, parentElement };
     }
 });
+
+function createFakeRenderPass() {
+    return {
+        calls: [],
+        setPipeline(pipeline) {
+            this.calls.push(['pipeline', pipeline]);
+        },
+        setBindings(bindings) {
+            this.calls.push(['bindings', bindings]);
+        },
+        setVertexArray(vertex_array) {
+            this.calls.push(['vertexArray', vertex_array]);
+        },
+        draw(options) {
+            this.calls.push(['draw', options]);
+            return true;
+        }
+    };
+}
 
 function createFakeWebGLContext(canvas) {
     const gl = {

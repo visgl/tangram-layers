@@ -223,6 +223,20 @@ describe('UniformBuffer', function () {
         assert.deepEqual(uniform_buffer.calls, [program.program]);
     });
 
+    it('exposes cached scalar uniform values to an injected renderer', function () {
+        const program = new ShaderProgram(createFakeWebGL2Context(), '', '');
+        program.uniforms = {
+            u_time: { value: 0.5 },
+            u_color: { value: [1, 0, 0, 1] },
+            inactive: {}
+        };
+
+        assert.deepEqual(program.getUniformValues(), {
+            u_time: 0.5,
+            u_color: [1, 0, 0, 1]
+        });
+    });
+
     it('upgrades legacy Tangram shader syntax and compiles a real WebGL2 uniform block', function () {
         const gl = document.createElement('canvas').getContext('webgl2');
         if (!gl) {

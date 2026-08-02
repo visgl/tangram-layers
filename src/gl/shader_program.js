@@ -466,6 +466,17 @@ export default class ShaderProgram {
         return bindings;
     }
 
+    // Return the current scalar uniform values for renderers that own the draw call.
+    getUniformValues() {
+        const values = {};
+        for (const [name, uniform] of Object.entries(this.uniforms)) {
+            if (uniform.value !== undefined) {
+                values[name] = uniform.value;
+            }
+        }
+        return values;
+    }
+
     // Cache some or all uniform values so they can be restored
     saveUniforms(subset) {
         let uniforms = subset || this.uniforms;

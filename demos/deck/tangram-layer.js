@@ -121,7 +121,9 @@ export function createTangramLayerClass({ Layer, Scene }) {
             }
             if (!device || device.type !== 'webgl' || !gl ||
                 typeof device.pushState !== 'function' || typeof device.popState !== 'function' ||
-                typeof device.createBuffer !== 'function' || typeof device.createShader !== 'function') {
+                typeof device.createBuffer !== 'function' || typeof device.createShader !== 'function' ||
+                typeof device.createRenderPipeline !== 'function' ||
+                typeof device.createVertexArray !== 'function') {
                 this._raiseBridgeError(new Error('a deck.gl WebGLDevice is required'));
                 return null;
             }
@@ -150,7 +152,8 @@ export function createTangramLayerClass({ Layer, Scene }) {
                 lastViewportError: null,
                 reportedViewportError: null,
                 loadPromise: null,
-                webglScopeDepth: 0
+                webglScopeDepth: 0,
+                meshRenderer: createDeviceMeshRenderer(device)
             };
 
             let scene;
@@ -168,12 +171,14 @@ export function createTangramLayerClass({ Layer, Scene }) {
                     uniformBufferFactory: options => createDeviceUniformBuffer(device, options),
                     shaderFactory: options => createDeviceShader(device, options),
                     meshBufferFactory: options => createDeviceMeshBuffer(device, options),
+                    meshRenderer: record.meshRenderer,
                     continuousZoom: true,
                     highDensityDisplay: true,
                     logLevel: 'warn'
                 });
             }
             catch (error) {
+                record.meshRenderer.destroy();
                 this._raiseBridgeError(normalizeError(error));
                 return null;
             }
@@ -292,6 +297,7 @@ export function createTangramLayerClass({ Layer, Scene }) {
         _destroyTangramRecord(record) {
             if (!record.destroyed) {
                 record.destroyed = true;
+                record.meshRenderer.destroy();
                 record.scene.destroy();
             }
         }
@@ -455,6 +461,140 @@ function createDeviceMeshBuffer(device, options) {
         props.indexType = options.indexType;
     }
     return device.createBuffer(props);
+}
+
+function createDeviceMeshRenderer(device) {
+    const pipeline_cache = new WeakMap();
+    const vertex_array_cache = new WeakMap();
+    const pipelines = new Set();
+    const vertex_arrays = new Set();
+
+    return {
+        drawMesh({ mesh, program, renderPass, visibleTime }) {
+            if (!renderPass || !program || !program.vertex_shader_resource ||
+                !program.fragment_shader_resource) {
+                return null;
+            }
+
+            const descriptor = mesh.getDrawDescriptor();
+            const pipeline = getPipeline(program, mesh.vertex_layout, descriptor);
+            const uniform_bindings = program.getUniformBlockBindings();
+            if (!canUsePipeline(pipeline, uniform_bindings)) {
+                return null;
+            }
+            const vertex_array = getVertexArray(mesh, pipeline, descriptor);
+
+            if (mesh.uniforms) {
+                program.saveUniforms(mesh.uniforms);
+                program.setUniforms(mesh.uniforms, false);
+            }
+            program.uniform('1f', 'u_visible_time', visibleTime);
+
+            try {
+                renderPass.setPipeline(pipeline);
+                renderPass.setBindings(uniform_bindings);
+                renderPass.setVertexArray(vertex_array);
+                const draw_succeeded = renderPass.draw({
+                    vertexCount: descriptor.indexBuffer ? undefined : descriptor.vertexCount,
+                    indexCount: descriptor.indexBuffer ? descriptor.indexCount : undefined,
+                    uniforms: program.getUniformValues()
+                });
+                return draw_succeeded === false && pipeline.isPending === true;
+            }
+            finally {
+                if (mesh.uniforms) {
+                    program.restoreUniforms(mesh.uniforms);
+                }
+            }
+        },
+
+        destroy() {
+            for (const vertex_array of vertex_arrays) {
+                vertex_array.destroy();
+            }
+            for (const pipeline of pipelines) {
+                pipeline.destroy();
+            }
+            vertex_arrays.clear();
+            pipelines.clear();
+        }
+    };
+
+    function getPipeline(program, vertex_layout, descriptor) {
+        let layouts = pipeline_cache.get(program);
+        if (!layouts) {
+            layouts = new WeakMap();
+            pipeline_cache.set(program, layouts);
+        }
+        let topologies = layouts.get(vertex_layout);
+        if (!topologies) {
+            topologies = new Map();
+            layouts.set(vertex_layout, topologies);
+        }
+        let pipeline = topologies.get(descriptor.topology);
+        if (!pipeline) {
+            pipeline = device.createRenderPipeline({
+                id: `tangram-${program.name || program.id}-${descriptor.topology}`,
+                vs: program.vertex_shader_resource,
+                fs: program.fragment_shader_resource,
+                bufferLayout: [descriptor.bufferLayout],
+                topology: descriptor.topology,
+                disableWarnings: true
+            });
+            topologies.set(descriptor.topology, pipeline);
+            pipelines.add(pipeline);
+        }
+        return pipeline;
+    }
+
+    function getVertexArray(mesh, pipeline, descriptor) {
+        let pipelines_for_mesh = vertex_array_cache.get(mesh);
+        if (!pipelines_for_mesh) {
+            pipelines_for_mesh = new WeakMap();
+            vertex_array_cache.set(mesh, pipelines_for_mesh);
+        }
+        let vertex_array = pipelines_for_mesh.get(pipeline);
+        if (vertex_array) {
+            return vertex_array;
+        }
+
+        vertex_array = device.createVertexArray({
+            id: `tangram-mesh-${mesh.id}-${pipeline.id}`,
+            shaderLayout: pipeline.shaderLayout,
+            bufferLayout: pipeline.bufferLayout
+        });
+        const attributes = new Map(
+            pipeline.shaderLayout.attributes.map(attribute => [attribute.name, attribute])
+        );
+        for (const attribute of descriptor.bufferLayout.attributes) {
+            const shader_attribute = attributes.get(attribute.attribute);
+            if (shader_attribute) {
+                vertex_array.setBuffer(shader_attribute.location, descriptor.vertexBuffer);
+            }
+        }
+        for (const attribute of descriptor.staticAttributes) {
+            const shader_attribute = attributes.get(attribute.attribute);
+            if (shader_attribute) {
+                vertex_array.setConstantWebGL(
+                    shader_attribute.location,
+                    new Float32Array(attribute.value)
+                );
+            }
+        }
+        if (descriptor.indexBuffer) {
+            vertex_array.setIndexBuffer(descriptor.indexBuffer);
+        }
+
+        pipelines_for_mesh.set(pipeline, vertex_array);
+        vertex_arrays.add(vertex_array);
+        return vertex_array;
+    }
+}
+
+function canUsePipeline(pipeline, uniform_bindings) {
+    return pipeline.shaderLayout.bindings.every(binding =>
+        binding.type === 'uniform' && uniform_bindings[binding.name]
+    );
 }
 
 export default createTangramLayerClass;
