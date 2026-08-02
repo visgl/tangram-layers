@@ -55,9 +55,12 @@ describe('UniformBuffer', function () {
             binding: 3,
             uniforms: { eye: 'vec3', panning: 'bool' }
         });
+        assert.strictEqual(padded_uniform_buffer.layout.uniforms.eye.offset, 0);
+        assert.strictEqual(padded_uniform_buffer.layout.uniforms.panning.offset, 12);
+        assert.strictEqual(padded_uniform_buffer.byteLength, 16);
         assert.strictEqual(padded_uniform_buffer.getDeclaration({ language: 'wgsl' }), [
             'struct TangramCamera {',
-            '    @size(16) eye: vec3<f32>,',
+            '    eye: vec3<f32>,',
             '    panning: u32,',
             '};',
             '@group(0) @binding(3) var<uniform> tangramCamera: TangramCamera;'
@@ -95,10 +98,10 @@ describe('UniformBuffer', function () {
         const floats = new Float32Array(uniform_buffer.data);
         assert.deepEqual(Array.from(floats.slice(0, 2)), [800, 600]);
         assert.deepEqual(Array.from(floats.slice(4, 7)), [-74, 40, 16.25]);
-        assert.strictEqual(new Int32Array(uniform_buffer.data)[8], 1);
-        assert.deepEqual(Array.from(floats.slice(12, 15)), [1, 2, 3]);
-        assert.deepEqual(Array.from(floats.slice(16, 19)), [4, 5, 6]);
-        assert.deepEqual(Array.from(floats.slice(20, 23)), [7, 8, 9]);
+        assert.strictEqual(new Int32Array(uniform_buffer.data)[7], 1);
+        assert.deepEqual(Array.from(floats.slice(8, 11)), [1, 2, 3]);
+        assert.deepEqual(Array.from(floats.slice(12, 15)), [4, 5, 6]);
+        assert.deepEqual(Array.from(floats.slice(16, 19)), [7, 8, 9]);
 
         uniform_buffer.setUniform('panning', false);
         assert.isTrue(uniform_buffer.bind(program));

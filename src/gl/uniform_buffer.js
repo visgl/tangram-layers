@@ -9,8 +9,8 @@ const TYPES = {
     bool: { alignment: 4, size: 4, components: 1, kind: 'int', wgsl: 'u32' },
     vec2: { alignment: 8, size: 8, components: 2, kind: 'float', wgsl: 'vec2<f32>' },
     ivec2: { alignment: 8, size: 8, components: 2, kind: 'int', wgsl: 'vec2<i32>' },
-    vec3: { alignment: 16, size: 16, components: 3, kind: 'float', wgsl: 'vec3<f32>' },
-    ivec3: { alignment: 16, size: 16, components: 3, kind: 'int', wgsl: 'vec3<i32>' },
+    vec3: { alignment: 16, size: 12, components: 3, kind: 'float', wgsl: 'vec3<f32>' },
+    ivec3: { alignment: 16, size: 12, components: 3, kind: 'int', wgsl: 'vec3<i32>' },
     vec4: { alignment: 16, size: 16, components: 4, kind: 'float', wgsl: 'vec4<f32>' },
     ivec4: { alignment: 16, size: 16, components: 4, kind: 'int', wgsl: 'vec4<i32>' },
     mat3: { alignment: 16, size: 48, columns: 3, rows: 3, kind: 'float', wgsl: 'mat3x3<f32>' },
@@ -109,12 +109,7 @@ export default class UniformBuffer {
     getWGSLDeclaration({ group = 0, variableName } = {}) {
         variableName = variableName || lowerFirst(this.name);
         const declarations = Object.values(this.layout.uniforms)
-            .map(uniform => {
-                // WGSL vec3 values have a natural size of 12 bytes. Preserve Tangram's
-                // std140-compatible 16-byte slot so the same packed data works in both APIs.
-                const size = (uniform.type === 'vec3' || uniform.type === 'ivec3') ? '@size(16) ' : '';
-                return `    ${size}${uniform.name}: ${uniform.wgsl},`;
-            })
+            .map(uniform => `    ${uniform.name}: ${uniform.wgsl},`)
             .join('\n');
         return [
             `struct ${this.name} {`,
