@@ -14948,9 +14948,9 @@ var mat4 = {
   copy: mat4_copy
 };
 
+function _superPropGet$2(t, o, e, r) { var p = _get(_getPrototypeOf(t.prototype ), o, e); return "function" == typeof p ? function (t) { return p.apply(e, t); } : p; }
 function _callSuper$5(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct$5() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
 function _isNativeReflectConstruct$5() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct$5 = function _isNativeReflectConstruct() { return !!t; })(); }
-function _superPropGet$2(t, o, e, r) { var p = _get(_getPrototypeOf(t.prototype ), o, e); return "function" == typeof p ? function (t) { return p.apply(e, t); } : p; }
 
 // Abstract base class
 var Camera = /*#__PURE__*/function () {
@@ -15021,6 +15021,8 @@ var Camera = /*#__PURE__*/function () {
     key: "create",
     value: function create(name, view, config) {
       switch (config.type) {
+        case 'external':
+          return new ExternalCamera(name, view, config);
         case 'isometric':
           return new IsometricCamera(name, view, config);
         case 'flat':
@@ -15033,44 +15035,127 @@ var Camera = /*#__PURE__*/function () {
     }
   }]);
 }();
-var PerspectiveCamera = /*#__PURE__*/function (_Camera) {
-  function PerspectiveCamera(name, view) {
+var ExternalCamera = /*#__PURE__*/function (_Camera) {
+  function ExternalCamera(name, view) {
     var _this;
     var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-    _classCallCheck(this, PerspectiveCamera);
-    _this = _callSuper$5(this, PerspectiveCamera, [name, view, options]);
-    _this.type = 'perspective';
-
-    // a single scalar, or pairs of stops mapping zoom levels, e.g. [zoom, focal length]
-    _this.focal_length = options.focal_length;
-    _this.fov = options.fov;
-    if (!_this.focal_length && !_this.fov) {
-      // Default focal length ranges by zoom
-      _this.focal_length = [[16, 2], [17, 2.5], [18, 3], [19, 4], [20, 6]];
-    }
-    _this.vanishing_point = options.vanishing_point || [0, 0]; // [x, y]
-    _this.vanishing_point = _this.vanishing_point.map(parseFloat); // we implicitly only support px units here
-    _this.vanishing_point_skew = [];
-    _this.position_meters = null;
+    _classCallCheck(this, ExternalCamera);
+    _this = _callSuper$5(this, ExternalCamera, [name, view, options]);
+    _this.type = 'external';
+    _this.position_meters = [0, 0, 0];
+    _this.vanishing_point = [0, 0];
     _this.view_matrix = new Float64Array(16);
     _this.projection_matrix = new Float32Array(16);
+    mat4.identity(_this.view_matrix);
+    mat4.identity(_this.projection_matrix);
+    ShaderProgram.replaceBlock('camera', "\n            uniform mat4 u_projection;\n            uniform vec3 u_eye;\n            uniform vec2 u_vanishing_point;\n\n            void cameraProjection (inout vec4 position) {\n                position = u_projection * position;\n            }");
+    return _this;
+  }
+  _inherits(ExternalCamera, _Camera);
+  return _createClass(ExternalCamera, [{
+    key: "setMatrices",
+    value: function setMatrices(_ref) {
+      var view = _ref.view,
+        projection = _ref.projection,
+        _ref$position = _ref.position,
+        position = _ref$position === void 0 ? [0, 0, 0] : _ref$position;
+      if (!view || view.length !== 16 || !projection || projection.length !== 16) {
+        throw new Error('ExternalCamera requires 4x4 view and projection matrices');
+      }
+      var changed = !matrixEquals(this.view_matrix, view) || !matrixEquals(this.projection_matrix, projection) || !vectorEquals(this.position_meters, position);
+      if (!changed) {
+        return false;
+      }
+      this.view_matrix.set(view);
+      this.projection_matrix.set(projection);
+      this.position_meters = Array.from(position);
+      this.view.scene.requestRedraw();
+      return true;
+    }
+  }, {
+    key: "setupProgram",
+    value: function setupProgram(program, uniform_buffer) {
+      if (uniform_buffer) {
+        uniform_buffer.setUniforms({
+          u_projection: this.projection_matrix,
+          u_eye: this.position_meters,
+          u_vanishing_point: this.vanishing_point
+        });
+      } else {
+        program.uniform('Matrix4fv', 'u_projection', this.projection_matrix);
+        program.uniform('3fv', 'u_eye', this.position_meters);
+        program.uniform('2fv', 'u_vanishing_point', this.vanishing_point);
+      }
+    }
+  }]);
+}(Camera);
+function matrixEquals(left, right) {
+  for (var index = 0; index < 16; index++) {
+    if (left[index] !== right[index]) {
+      return false;
+    }
+  }
+  return true;
+}
+function vectorEquals(left, right) {
+  return left.length === right.length && left.every(function (value, index) {
+    return value === right[index];
+  });
+}
+
+/**
+    Perspective matrix projection
+
+    This is a specialized perspective camera that, given a desired camera focal length (which can also vary by zoom level),
+    constrains the camera height above the ground plane such that the displayed ground area of the map matches that of
+    a traditional web mercator map. This means you can set the camera location by [lat, lng, zoom] as you would a typical
+    web mercator map, then adjust the focal length as needed.
+
+    Vanishing point can also be adjusted to achieve different "viewing angles", e.g. instead of looking straight down into
+    the center of the viewport, the camera appears to be tilted at an angle. For example:
+
+    [0, 0] = looking towards center of viewport
+    [-250, -250] = looking 250 pixels from the viewport center to the lower-left corner
+    [400, 0] = looking 400 pixels to the right of the viewport center
+*/
+var PerspectiveCamera = /*#__PURE__*/function (_Camera2) {
+  function PerspectiveCamera(name, view) {
+    var _this2;
+    var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    _classCallCheck(this, PerspectiveCamera);
+    _this2 = _callSuper$5(this, PerspectiveCamera, [name, view, options]);
+    _this2.type = 'perspective';
+
+    // a single scalar, or pairs of stops mapping zoom levels, e.g. [zoom, focal length]
+    _this2.focal_length = options.focal_length;
+    _this2.fov = options.fov;
+    if (!_this2.focal_length && !_this2.fov) {
+      // Default focal length ranges by zoom
+      _this2.focal_length = [[16, 2], [17, 2.5], [18, 3], [19, 4], [20, 6]];
+    }
+    _this2.vanishing_point = options.vanishing_point || [0, 0]; // [x, y]
+    _this2.vanishing_point = _this2.vanishing_point.map(parseFloat); // we implicitly only support px units here
+    _this2.vanishing_point_skew = [];
+    _this2.position_meters = null;
+    _this2.view_matrix = new Float64Array(16);
+    _this2.projection_matrix = new Float32Array(16);
 
     // 'camera' is the name of the shader block, e.g. determines where in the shader this code is injected
     ShaderProgram.replaceBlock('camera', "\n            uniform mat4 u_projection;\n            uniform vec3 u_eye;\n            uniform vec2 u_vanishing_point;\n\n            void cameraProjection (inout vec4 position) {\n                position = u_projection * position;\n            }");
-    return _this;
+    return _this2;
   }
 
   // Constrains the camera so that the viewable area matches given the viewport height
   // (in world space, e.g. meters), given either a camera focal length or field-of-view
   // (focal length is used if both are passed).
-  _inherits(PerspectiveCamera, _Camera);
+  _inherits(PerspectiveCamera, _Camera2);
   return _createClass(PerspectiveCamera, [{
     key: "constrainCamera",
-    value: function constrainCamera(_ref) {
-      var view_height = _ref.view_height,
-        height = _ref.height,
-        focal_length = _ref.focal_length,
-        fov = _ref.fov;
+    value: function constrainCamera(_ref2) {
+      var view_height = _ref2.view_height,
+        height = _ref2.height,
+        focal_length = _ref2.focal_length,
+        fov = _ref2.fov;
       // Solve for camera height
       if (!height) {
         // We have focal length, calculate FOV
@@ -15173,33 +15258,33 @@ var PerspectiveCamera = /*#__PURE__*/function (_Camera) {
 // An isometric projection is a specific subset of axonometric projections.
 // 'axis' determines the xy skew applied to a vertex based on its z coordinate, e.g. [0, 1] axis causes buildings to be drawn
 // straight upwards on screen at their true height, [0, .5] would draw them up at half-height, [1, 0] would be sideways, etc.
-var IsometricCamera = /*#__PURE__*/function (_Camera2) {
+var IsometricCamera = /*#__PURE__*/function (_Camera3) {
   function IsometricCamera(name, view) {
-    var _this2;
+    var _this3;
     var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
     _classCallCheck(this, IsometricCamera);
-    _this2 = _callSuper$5(this, IsometricCamera, [name, view, options]);
-    _this2.type = 'isometric';
-    _this2.axis = options.axis || {
+    _this3 = _callSuper$5(this, IsometricCamera, [name, view, options]);
+    _this3.type = 'isometric';
+    _this3.axis = options.axis || {
       x: 0,
       y: 1
     };
-    if (_this2.axis.length === 2) {
-      _this2.axis = {
-        x: _this2.axis[0],
-        y: _this2.axis[1]
+    if (_this3.axis.length === 2) {
+      _this3.axis = {
+        x: _this3.axis[0],
+        y: _this3.axis[1]
       }; // allow axis to also be passed as 2-elem array
     }
-    _this2.position_meters = null;
-    _this2.viewport_height = null;
-    _this2.view_matrix = new Float64Array(16);
-    _this2.projection_matrix = new Float32Array(16);
+    _this3.position_meters = null;
+    _this3.viewport_height = null;
+    _this3.view_matrix = new Float64Array(16);
+    _this3.projection_matrix = new Float32Array(16);
 
     // 'camera' is the name of the shader block, e.g. determines where in the shader this code is injected
     ShaderProgram.replaceBlock('camera', "\n            uniform mat4 u_projection;\n            uniform vec3 u_eye;\n            uniform vec2 u_vanishing_point;\n\n            void cameraProjection (inout vec4 position) {\n                position = u_projection * position;\n                // position.xy += position.z * u_isometric_axis;\n\n                // Reverse z for depth buffer so up is negative,\n                // and scale down values so objects higher than one screen height will not get clipped\n                // pull forward slightly to avoid going past far clipping plane\n                position.z = -position.z / 100. + 1. - 0.001;\n            }");
-    return _this2;
+    return _this3;
   }
-  _inherits(IsometricCamera, _Camera2);
+  _inherits(IsometricCamera, _Camera3);
   return _createClass(IsometricCamera, [{
     key: "update",
     value: function update() {
@@ -15242,12 +15327,12 @@ var IsometricCamera = /*#__PURE__*/function (_Camera2) {
 }(Camera); // Flat projection (e.g. just top-down, no perspective) - a degenerate isometric camera
 var FlatCamera = /*#__PURE__*/function (_IsometricCamera) {
   function FlatCamera(name, view) {
-    var _this3;
+    var _this4;
     var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
     _classCallCheck(this, FlatCamera);
-    _this3 = _callSuper$5(this, FlatCamera, [name, view, options]);
-    _this3.type = 'flat';
-    return _this3;
+    _this4 = _callSuper$5(this, FlatCamera, [name, view, options]);
+    _this4.type = 'flat';
+    return _this4;
   }
   _inherits(FlatCamera, _IsometricCamera);
   return _createClass(FlatCamera, [{
@@ -15288,6 +15373,7 @@ var View = /*#__PURE__*/function () {
     };
     this.aspect = null;
     this.buffer = 0;
+    this.external_camera = options.externalCamera === true;
     this.continuous_zoom = typeof options.continuousZoom === 'boolean' ? options.continuousZoom : true;
     this.wrap = options.wrapView === false ? false : true;
     this.preserve_tiles_within_zoom = 1;
@@ -15305,11 +15391,27 @@ var View = /*#__PURE__*/function () {
   }, {
     key: "createCamera",
     value: function createCamera() {
+      if (this.external_camera) {
+        this.camera = Camera.create('external', this, {
+          type: 'external'
+        });
+        return;
+      }
       var active_camera = this.getActiveCamera();
       if (active_camera) {
         this.camera = Camera.create(active_camera, this, this.scene.config.cameras[active_camera]);
         this.camera.updateView();
       }
+    }
+
+    // Supply camera matrices from an embedding renderer
+  }, {
+    key: "setCameraMatrices",
+    value: function setCameraMatrices(matrices) {
+      if (!this.camera || this.camera.type !== 'external') {
+        throw new Error('View must be constructed with externalCamera to accept camera matrices');
+      }
+      this.camera.setMatrices(matrices);
     }
 
     // Get active camera - for public API
@@ -31274,13 +31376,20 @@ var Scene = /*#__PURE__*/function () {
     topojson.log.reset();
   }
   return topojson._createClass(Scene, [{
-    key: "load",
+    key: "setCameraMatrices",
     value:
+    // Supply camera matrices from an embedding renderer
+    function setCameraMatrices(matrices) {
+      this.view.setCameraMatrices(matrices);
+    }
+
     // Load scene (or reload existing scene if no new source specified)
     // Options:
     //   `base_path`: base URL against which scene resources should be resolved (useful for Play) (default nulll)
     //   `blocking`: should rendering block on scene load completion (default true)
-    function load() {
+  }, {
+    key: "load",
+    value: function load() {
       var _this = this;
       var config_source = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
@@ -33603,7 +33712,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = 'ad7e77e5409a2bd632cb77b8db0b0c0e1731bddc';
+	Tangram.debug.SHA = 'c857fb0c9fe53362fcf0c79d03c6a92f321e5f5a';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

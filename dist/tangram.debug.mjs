@@ -13852,6 +13852,8 @@ class Camera {
   // Create a camera by type name, factory-style
   static create(name, view, config) {
     switch (config.type) {
+      case 'external':
+        return new ExternalCamera(name, view, config);
       case 'isometric':
         return new IsometricCamera(name, view, config);
       case 'flat':
@@ -13908,6 +13910,75 @@ class Camera {
       program.uniform('Matrix3fv', 'u_inverseNormalMatrix', matrices.inverse_normal32);
     }
   }
+}
+
+/**
+    Camera whose view and projection matrices are supplied by an embedding renderer.
+
+    This lets hosts such as deck.gl remain authoritative for camera projection while
+    Tangram continues to manage scene loading, tile selection, and drawing.
+*/
+class ExternalCamera extends Camera {
+  constructor(name, view, options = {}) {
+    super(name, view, options);
+    this.type = 'external';
+    this.position_meters = [0, 0, 0];
+    this.vanishing_point = [0, 0];
+    this.view_matrix = new Float64Array(16);
+    this.projection_matrix = new Float32Array(16);
+    mat4.identity(this.view_matrix);
+    mat4.identity(this.projection_matrix);
+    ShaderProgram.replaceBlock('camera', `
+            uniform mat4 u_projection;
+            uniform vec3 u_eye;
+            uniform vec2 u_vanishing_point;
+
+            void cameraProjection (inout vec4 position) {
+                position = u_projection * position;
+            }`);
+  }
+  setMatrices({
+    view,
+    projection,
+    position = [0, 0, 0]
+  }) {
+    if (!view || view.length !== 16 || !projection || projection.length !== 16) {
+      throw new Error('ExternalCamera requires 4x4 view and projection matrices');
+    }
+    const changed = !matrixEquals(this.view_matrix, view) || !matrixEquals(this.projection_matrix, projection) || !vectorEquals(this.position_meters, position);
+    if (!changed) {
+      return false;
+    }
+    this.view_matrix.set(view);
+    this.projection_matrix.set(projection);
+    this.position_meters = Array.from(position);
+    this.view.scene.requestRedraw();
+    return true;
+  }
+  setupProgram(program, uniform_buffer) {
+    if (uniform_buffer) {
+      uniform_buffer.setUniforms({
+        u_projection: this.projection_matrix,
+        u_eye: this.position_meters,
+        u_vanishing_point: this.vanishing_point
+      });
+    } else {
+      program.uniform('Matrix4fv', 'u_projection', this.projection_matrix);
+      program.uniform('3fv', 'u_eye', this.position_meters);
+      program.uniform('2fv', 'u_vanishing_point', this.vanishing_point);
+    }
+  }
+}
+function matrixEquals(left, right) {
+  for (let index = 0; index < 16; index++) {
+    if (left[index] !== right[index]) {
+      return false;
+    }
+  }
+  return true;
+}
+function vectorEquals(left, right) {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
 /**
@@ -14173,6 +14244,7 @@ class View {
     };
     this.aspect = null;
     this.buffer = 0;
+    this.external_camera = options.externalCamera === true;
     this.continuous_zoom = typeof options.continuousZoom === 'boolean' ? options.continuousZoom : true;
     this.wrap = options.wrapView === false ? false : true;
     this.preserve_tiles_within_zoom = 1;
@@ -14186,11 +14258,25 @@ class View {
 
   // Create camera
   createCamera() {
+    if (this.external_camera) {
+      this.camera = Camera.create('external', this, {
+        type: 'external'
+      });
+      return;
+    }
     let active_camera = this.getActiveCamera();
     if (active_camera) {
       this.camera = Camera.create(active_camera, this, this.scene.config.cameras[active_camera]);
       this.camera.updateView();
     }
+  }
+
+  // Supply camera matrices from an embedding renderer
+  setCameraMatrices(matrices) {
+    if (!this.camera || this.camera.type !== 'external') {
+      throw new Error('View must be constructed with externalCamera to accept camera matrices');
+    }
+    this.camera.setMatrices(matrices);
   }
 
   // Get active camera - for public API
@@ -29262,6 +29348,11 @@ class Scene {
     return new Scene(config, options);
   }
 
+  // Supply camera matrices from an embedding renderer
+  setCameraMatrices(matrices) {
+    this.view.setCameraMatrices(matrices);
+  }
+
   // Load scene (or reload existing scene if no new source specified)
   // Options:
   //   `base_path`: base URL against which scene resources should be resolved (useful for Play) (default nulll)
@@ -31287,7 +31378,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = 'ad7e77e5409a2bd632cb77b8db0b0c0e1731bddc';
+	Tangram.debug.SHA = 'c857fb0c9fe53362fcf0c79d03c6a92f321e5f5a';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}
