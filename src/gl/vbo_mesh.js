@@ -94,6 +94,7 @@ export default class VBOMesh  {
                 mesh: this,
                 program,
                 renderPass: options.renderPass,
+                renderState: options.renderState,
                 visibleTime: visible_time
             });
             if (needs_redraw !== null) {

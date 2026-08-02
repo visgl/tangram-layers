@@ -192,6 +192,20 @@ describe('ExternalCamera', function () {
         assert.deepEqual(uniforms.u_eye, [0, 0, 0]);
         assert.deepEqual(uniforms.u_vanishing_point, [0, 0]);
         assert.strictEqual(redraw_count, 1, 'unchanged matrices do not schedule another frame');
+
+        const tilted_view = IDENTITY_MATRIX.slice();
+        tilted_view[5] = 0;
+        tilted_view[6] = 1;
+        tilted_view[9] = -1;
+        tilted_view[10] = 0;
+        camera.setMatrices({
+            view: tilted_view,
+            projection: projection_matrix
+        });
+        const transformed_light = camera.transformVector([0, 0, -1]);
+        assert.closeTo(transformed_light[0], 0, 1e-15);
+        assert.closeTo(transformed_light[1], 1, 1e-15);
+        assert.closeTo(transformed_light[2], 0, 1e-15);
     });
 });
 
@@ -367,17 +381,31 @@ describe('TangramLayer demo bridge', function () {
             getDrawDescriptor: () => descriptor
         };
         const render_pass = createFakeRenderPass();
+        const render_state = {
+            cullMode: 'back',
+            depthCompare: 'always',
+            depthWriteEnabled: false,
+            blend: true,
+            blendColorOperation: 'add',
+            blendColorSrcFactor: 'src-alpha',
+            blendColorDstFactor: 'one-minus-src-alpha',
+            blendAlphaOperation: 'add',
+            blendAlphaSrcFactor: 'one',
+            blendAlphaDstFactor: 'one-minus-src-alpha'
+        };
 
         const needs_redraw = scene.options.meshRenderer.drawMesh({
             mesh,
             program,
             renderPass: render_pass,
+            renderState: render_state,
             visibleTime: 0.25
         });
         scene.options.meshRenderer.drawMesh({
             mesh,
             program,
             renderPass: render_pass,
+            renderState: render_state,
             visibleTime: 0.5
         });
 
@@ -385,12 +413,13 @@ describe('TangramLayer demo bridge', function () {
         assert.lengthOf(device.pipelines, 1, 'pipeline is cached by program, layout, and topology');
         assert.lengthOf(device.vertexArrays, 1, 'vertex array is cached by mesh and pipeline');
         assert.deepEqual(device.pipelineOptions[0], {
-            id: 'tangram-polygons-triangle-list',
+            id: 'tangram-polygons-triangle-list-0',
             vs: program.vertex_shader_resource,
             fs: program.fragment_shader_resource,
             bufferLayout: [descriptor.bufferLayout],
             topology: 'triangle-list',
-            disableWarnings: true
+            disableWarnings: true,
+            parameters: render_state
         });
         assert.deepEqual(device.vertexArrays[0].bufferCalls, [[0, vertex_buffer]]);
         assert.strictEqual(device.vertexArrays[0].constantCalls[0][0], 1);
@@ -405,9 +434,21 @@ describe('TangramLayer demo bridge', function () {
             uniforms: { u_scale: 2, u_visible_time: 0.25 }
         }]);
 
+        scene.options.meshRenderer.drawMesh({
+            mesh,
+            program,
+            renderPass: render_pass,
+            renderState: Object.assign({}, render_state, { blend: false }),
+            visibleTime: 0.75
+        });
+        assert.lengthOf(device.pipelines, 2, 'render state selects a distinct pipeline');
+        assert.lengthOf(device.vertexArrays, 2, 'vertex arrays match their render pipeline');
+
         layer.finalizeState();
         assert.isTrue(device.pipelines[0].destroyed);
+        assert.isTrue(device.pipelines[1].destroyed);
         assert.isTrue(device.vertexArrays[0].destroyed);
+        assert.isTrue(device.vertexArrays[1].destroyed);
     });
 
     it('binds luma texture resources without falling back to raw WebGL drawing', function () {

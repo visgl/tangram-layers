@@ -134,6 +134,17 @@ class ExternalCamera extends Camera {
         }
     }
 
+    transformVector(vector) {
+        const matrix = this.view_matrix;
+        const transformed = [
+            matrix[0] * vector[0] + matrix[4] * vector[1] + matrix[8] * vector[2],
+            matrix[1] * vector[0] + matrix[5] * vector[1] + matrix[9] * vector[2],
+            matrix[2] * vector[0] + matrix[6] * vector[1] + matrix[10] * vector[2]
+        ];
+        const length = Math.hypot(...transformed);
+        return length === 0 ? transformed : transformed.map(value => value / length);
+    }
+
 }
 
 function matrixEquals(left, right) {

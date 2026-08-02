@@ -543,14 +543,14 @@ function createDeviceMeshRenderer(device) {
     const vertex_arrays = new Set();
 
     return {
-        drawMesh({ mesh, program, renderPass, visibleTime }) {
+        drawMesh({ mesh, program, renderPass, renderState, visibleTime }) {
             if (!renderPass || !program || !program.vertex_shader_resource ||
                 !program.fragment_shader_resource) {
                 throw new Error('Tangram luma renderer requires an active render pass and shader resources');
             }
 
             const descriptor = mesh.getDrawDescriptor();
-            const pipeline = getPipeline(program, mesh.vertex_layout, descriptor);
+            const pipeline = getPipeline(program, mesh.vertex_layout, descriptor, renderState);
 
             if (mesh.uniforms) {
                 program.saveUniforms(mesh.uniforms);
@@ -591,7 +591,7 @@ function createDeviceMeshRenderer(device) {
         }
     };
 
-    function getPipeline(program, vertex_layout, descriptor) {
+    function getPipeline(program, vertex_layout, descriptor, render_state) {
         let layouts = pipeline_cache.get(program);
         if (!layouts) {
             layouts = new WeakMap();
@@ -602,17 +602,27 @@ function createDeviceMeshRenderer(device) {
             topologies = new Map();
             layouts.set(vertex_layout, topologies);
         }
-        let pipeline = topologies.get(descriptor.topology);
+        let states = topologies.get(descriptor.topology);
+        if (!states) {
+            states = new Map();
+            topologies.set(descriptor.topology, states);
+        }
+        const state_key = JSON.stringify(render_state || {});
+        let pipeline = states.get(state_key);
         if (!pipeline) {
-            pipeline = device.createRenderPipeline({
-                id: `tangram-${program.name || program.id}-${descriptor.topology}`,
+            const pipeline_options = {
+                id: `tangram-${program.name || program.id}-${descriptor.topology}-${states.size}`,
                 vs: program.vertex_shader_resource,
                 fs: program.fragment_shader_resource,
                 bufferLayout: [descriptor.bufferLayout],
                 topology: descriptor.topology,
                 disableWarnings: true
-            });
-            topologies.set(descriptor.topology, pipeline);
+            };
+            if (render_state) {
+                pipeline_options.parameters = render_state;
+            }
+            pipeline = device.createRenderPipeline(pipeline_options);
+            states.set(state_key, pipeline);
             pipelines.add(pipeline);
         }
         return pipeline;

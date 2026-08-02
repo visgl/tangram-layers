@@ -99,6 +99,7 @@ describe('VBOMesh render backend', function () {
 
     it('delegates a mesh draw with the active render pass before issuing raw WebGL calls', function () {
         const render_pass = {};
+        const render_state = { blend: true, depthWriteEnabled: false };
         const program = {
             use_calls: 0,
             use() {
@@ -121,11 +122,13 @@ describe('VBOMesh render backend', function () {
         assert.isTrue(mesh.render({
             program,
             renderPass: render_pass,
+            renderState: render_state,
             meshRenderer: mesh_renderer
         }));
         assert.strictEqual(draw_options.mesh, mesh);
         assert.strictEqual(draw_options.program, program);
         assert.strictEqual(draw_options.renderPass, render_pass);
+        assert.strictEqual(draw_options.renderState, render_state);
         assert.isNumber(draw_options.visibleTime);
         assert.strictEqual(program.use_calls, 0);
     });
@@ -181,6 +184,7 @@ describe('VBOMesh render backend', function () {
         let render_options;
         const scene = {
             mesh_renderer,
+            mesh_render_state: { blend: true, depthWriteEnabled: false },
             styles: {
                 polygons: {
                     render(rendered_mesh, options) {
@@ -216,7 +220,8 @@ describe('VBOMesh render backend', function () {
         assert.strictEqual(count, 2);
         assert.deepEqual(render_options, {
             renderPass: render_pass,
-            meshRenderer: mesh_renderer
+            meshRenderer: mesh_renderer,
+            renderState: scene.mesh_render_state
         });
     });
 });
