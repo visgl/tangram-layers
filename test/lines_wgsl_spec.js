@@ -23,9 +23,13 @@ describe('Line WGSL', function () {
         assert.include(source, '@location(3) a_color: vec4<f32>');
         assert.include(source, 'TangramView.u_time');
         assert.include(source, 'input.texcoord.y * 512.0');
-        assert.include(source, 'traffic_coordinate / 5.0');
+        assert.include(source, 'traffic_coordinate / 6.0');
         assert.include(source, 'vehicle_position');
-        assert.include(source, 'vehicle_length');
+        assert.include(source, 'longitudinal_derivative = max(fwidth(vehicle_position)');
+        assert.include(source, 'vehicle_half_length = max(0.022');
+        assert.include(source, 'vehicle_body');
+        assert.include(source, 'vehicle_halo');
+        assert.include(source, 'lane_derivative = max(fwidth(input.texcoord.x)');
         assert.include(source, 'lane_mask');
         assert.include(source, 'vehicle_color');
         assert.include(source, 'direction');

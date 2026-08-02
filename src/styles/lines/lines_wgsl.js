@@ -25,20 +25,38 @@ export function buildLinesWGSL({ animated = false } = {}) {
     const animated_fragment = animated ? `
 
     let direction = select(-1.0, 1.0, input.texcoord.x < 0.5);
-    let lane_phase = select(0.0, 2.25, direction > 0.0);
-    // A deterministic spatial window translates smoothly. Randomizing the
-    // time-shifted cell made complete road segments pop between frames.
+    let lane_phase = select(0.0, 2.75, direction > 0.0);
+    // Keep the pattern continuous along the buffered road distance. The
+    // derivative-aware body below remains a few pixels long at every zoom
+    // instead of collapsing to a sub-pixel flash or stretching into a trail.
     let traffic_coordinate = input.texcoord.y * 512.0 -
-        TangramView.u_time * 4.0 * direction + lane_phase;
-    let vehicle_position = fract(traffic_coordinate / 5.0);
-    let vehicle_front = smoothstep(0.003, 0.010, vehicle_position);
-    let vehicle_back = 1.0 - smoothstep(0.032, 0.043, vehicle_position);
-    let vehicle_length = vehicle_front * vehicle_back;
+        TangramView.u_time * 1.8 * direction + lane_phase;
+    let vehicle_position = fract(traffic_coordinate / 6.0);
+    let longitudinal_distance = abs(vehicle_position - 0.5);
+    let longitudinal_derivative = max(fwidth(vehicle_position), 0.001);
+    let vehicle_half_length = max(0.022, longitudinal_derivative * 1.35);
+    let vehicle_body = 1.0 - smoothstep(
+        vehicle_half_length,
+        vehicle_half_length + longitudinal_derivative,
+        longitudinal_distance
+    );
+    let vehicle_halo = 1.0 - smoothstep(
+        vehicle_half_length + longitudinal_derivative,
+        vehicle_half_length + longitudinal_derivative * 2.5,
+        longitudinal_distance
+    );
     let lane_center = select(0.72, 0.28, direction > 0.0);
     let lane_distance = abs(input.texcoord.x - lane_center);
-    let lane_mask = 1.0 - smoothstep(0.08, 0.20, lane_distance);
-    let vehicle = vehicle_length * lane_mask;
-    let vehicle_color = vec3<f32>(0.35, 1.0, 0.98);
+    let lane_derivative = max(fwidth(input.texcoord.x), 0.01);
+    let lane_half_width = clamp(lane_derivative * 0.45, 0.10, 0.22);
+    let lane_edge = clamp(lane_derivative * 0.35, 0.02, 0.18);
+    let lane_mask = 1.0 - smoothstep(
+        lane_half_width,
+        lane_half_width + lane_edge,
+        lane_distance
+    );
+    let vehicle = max(vehicle_body, vehicle_halo * 0.35) * lane_mask;
+    let vehicle_color = vec3<f32>(0.62, 1.0, 0.98);
     let animated_color = mix(
         input.color.rgb,
         vehicle_color,

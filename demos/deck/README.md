@@ -64,7 +64,10 @@ Standalone labels retain Tangram's collision and canvas-atlas pipeline and
 render through a portable text-quad WGSL shader. Generic shader points and
 textured icons also use buffered portable attributes.
 For diagnostics, `?portable_text=0` disables WebGPU labels and `?traffic=0`
-pauses the portable vehicle pulses without changing the selected basemap.
+pauses the portable vehicle pulses without changing the selected basemap. The
+portable traffic shader uses fragment derivatives to keep each vehicle a
+stable, compact screen-space mark while it moves continuously in both highway
+directions.
 
 ## Uniform-buffer migration
 
