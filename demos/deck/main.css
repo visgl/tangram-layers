@@ -67,6 +67,21 @@ body {
     padding: 4px 6px;
 }
 
+.key-input-row {
+    display: flex;
+    gap: 6px;
+}
+
+.key-input-row input {
+    min-width: 0;
+    flex: 1;
+    padding: 4px 6px;
+}
+
+.key-input-row button {
+    padding: 4px 10px;
+}
+
 .checkbox-control {
     display: flex;
     align-items: center;
@@ -103,4 +118,51 @@ body {
 
 #attribution a {
     color: inherit;
+}
+
+@media (max-width: 600px) {
+    #controls {
+        top: 8px;
+        right: 8px;
+        left: 8px;
+        max-width: none;
+        padding: 8px 10px;
+    }
+
+    #controls h1 {
+        margin-bottom: 4px;
+        font-size: 15px;
+    }
+
+    #status {
+        min-height: 0;
+        margin-bottom: 4px;
+        font-size: 12px;
+        line-height: 1.2;
+    }
+
+    .control {
+        margin-top: 4px;
+    }
+
+    .control span {
+        margin-bottom: 2px;
+        font-size: 11px;
+    }
+
+    .control select,
+    .key-input-row input,
+    .key-input-row button {
+        padding: 2px 4px;
+        font-size: 12px;
+    }
+
+    .checkbox-control {
+        font-size: 12px;
+    }
+
+    .hint,
+    .source-link {
+        display: none;
+    }
 }

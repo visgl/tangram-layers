@@ -1,4 +1,4 @@
-import Tangram from '../../dist/tangram.debug.mjs?bridge=webgpu-basemap-state-12';
+import Tangram from '../../dist/tangram.debug.mjs?bridge=webgpu-lines-animation';
 import createTangramLayerClass from './tangram-layer.js?bridge=std140-fix';
 import {webgpuAdapter} from 'https://esm.sh/@luma.gl/webgpu@9.4.0-alpha.1?bundle&deps=@luma.gl/core@9.4.0-alpha.1';
 
@@ -7,7 +7,14 @@ const searchParams = new URLSearchParams(window.location.search);
 const requestedBackend = searchParams.get('device');
 const deviceType = requestedBackend || (navigator.gpu ? 'webgpu' : 'webgl');
 const useWebGPU = deviceType === 'webgpu';
-const apiKey = searchParams.get('api_key');
+let apiKey = searchParams.get('api_key') ||
+    window.sessionStorage.getItem('tangram-nextzen-api-key');
+if (searchParams.has('api_key')) {
+    window.sessionStorage.setItem('tangram-nextzen-api-key', apiKey);
+    const sanitizedUrl = new URL(window.location.href);
+    sanitizedUrl.searchParams.delete('api_key');
+    window.history.replaceState(null, '', sanitizedUrl);
+}
 const TangramLayer = createTangramLayerClass({
     Layer,
     Renderer: Tangram.debug.Renderer
@@ -16,8 +23,8 @@ const TangramLayer = createTangramLayerClass({
 const BASEMAPS = {
     streetsVector: {
         label: 'CARTO Streets vector tiles',
-        scene: createVectorScene(),
-        deviceTypes: ['webgl']
+        scene: createVectorScene({ labels: !useWebGPU }),
+        deviceTypes: ['webgl', 'webgpu']
     },
     positronRaster: {
         label: 'CARTO Positron raster tiles',
@@ -25,11 +32,16 @@ const BASEMAPS = {
         deviceTypes: ['webgl', 'webgpu']
     },
     tron: {
-        label: 'Tangram TRON 2.0 vector style',
-        scene: createTronScene(apiKey),
+        label: 'TRON 2.0 shaders on CARTO vector tiles',
+        scene: createTronCartoScene({ portable: useWebGPU }),
+        deviceTypes: ['webgl', 'webgpu'],
+        webgpuStatus: 'Portable WebGPU styles active; animation WGSL pending.'
+    },
+    tronNextzen: {
+        label: 'Original TRON 2.0 on Nextzen tiles',
+        scene: createTronNextzenScene(apiKey),
         deviceTypes: ['webgl'],
-        requiresApiKey: true,
-        sourceUrl: 'https://github.com/tangrams/tron-style'
+        requiresApiKey: true
     }
 };
 
@@ -59,6 +71,9 @@ const deviceSelect = document.getElementById('device-type');
 const cartoAttribution = document.getElementById('carto-attribution');
 const nextzenAttribution = document.getElementById('nextzen-attribution');
 const tronSourceLink = document.getElementById('tron-source-link');
+const nextzenKeyForm = document.getElementById('nextzen-key-form');
+const nextzenKeyInput = document.getElementById('nextzen-api-key');
+nextzenKeyInput.value = apiKey || '';
 deviceSelect.value = deviceType;
 const defaultBasemapId = useWebGPU ? 'positronRaster' : 'streetsVector';
 const requestedBasemapId = searchParams.get('basemap');
@@ -69,6 +84,8 @@ basemapSelect.value = initialBasemapId;
 let basemapVisible = true;
 let basemapId = initialBasemapId;
 let lastError = null;
+let nextzenKeyValidated = false;
+let nextzenKeyValidationGeneration = 0;
 
 function setStatus(message, type = '') {
     if (type === 'error') {
@@ -84,13 +101,20 @@ function setStatus(message, type = '') {
 function createLayers() {
     const basemap = BASEMAPS[basemapId];
     const layers = [];
-    if (!basemap.requiresApiKey || apiKey) {
+    if (!basemap.requiresApiKey || (apiKey && nextzenKeyValidated)) {
         layers.push(new TangramLayer({
             id: 'tangram-basemap',
             scene: basemap.scene,
             apiKey,
             visible: basemapVisible,
-            onSceneLoad: () => setStatus(`${basemap.label} loaded through Tangram`, 'success'),
+            onSceneLoad: () => {
+                const message = `${basemap.label} loaded through Tangram`;
+                setStatus(
+                    useWebGPU && basemap.webgpuStatus ?
+                        `${message}. ${basemap.webgpuStatus}` : message,
+                    useWebGPU && basemap.webgpuStatus ? 'warning' : 'success'
+                );
+            },
             onSceneError: error => setStatus(error.message, 'error')
         }));
     }
@@ -119,14 +143,19 @@ function createLayers() {
 
 function updateBasemapPresentation() {
     const basemap = BASEMAPS[basemapId];
-    const isTron = basemapId === 'tron';
-    cartoAttribution.hidden = isTron;
-    nextzenAttribution.hidden = !isTron;
+    const isTron = basemapId === 'tron' || basemapId === 'tronNextzen';
+    const usesNextzen = basemapId === 'tronNextzen';
+    cartoAttribution.hidden = usesNextzen;
+    nextzenAttribution.hidden = !usesNextzen;
     tronSourceLink.hidden = !isTron;
+    nextzenKeyForm.hidden = !usesNextzen;
 
     lastError = null;
     if (basemap.requiresApiKey && !apiKey) {
-        setStatus('TRON 2.0 uses Nextzen vector tiles. Add ?api_key=YOUR_KEY to the URL.', 'error');
+        setStatus('Original TRON requires an existing Nextzen key; new signups are closed. Enter a key below.', 'error');
+    }
+    else if (basemap.requiresApiKey && !nextzenKeyValidated) {
+        setStatus(`Checking the existing Nextzen key for ${window.location.origin}…`, 'warning');
     }
     else {
         setStatus(`Loading ${basemap.label} through Tangram on ${deviceType}…`);
@@ -161,6 +190,9 @@ catch (error) {
 }
 
 updateBasemapPresentation();
+if (basemapId === 'tronNextzen' && apiKey) {
+    validateNextzenKey();
+}
 
 deviceSelect.addEventListener('change', event => {
     const url = new URL(window.location.href);
@@ -192,8 +224,63 @@ basemapSelect.addEventListener('change', event => {
     url.searchParams.set('basemap', basemapId);
     window.history.replaceState(null, '', url);
     updateBasemapPresentation();
-    deckInstance.setProps({ layers: createLayers() });
+    if (basemapId === 'tronNextzen' && apiKey && !nextzenKeyValidated) {
+        validateNextzenKey();
+    }
+    else {
+        deckInstance.setProps({ layers: createLayers() });
+    }
 });
+
+nextzenKeyForm.addEventListener('submit', event => {
+    event.preventDefault();
+    apiKey = nextzenKeyInput.value.trim();
+    if (apiKey) {
+        window.sessionStorage.setItem('tangram-nextzen-api-key', apiKey);
+    }
+    else {
+        window.sessionStorage.removeItem('tangram-nextzen-api-key');
+    }
+    BASEMAPS.tronNextzen.scene = createTronNextzenScene(apiKey);
+    validateNextzenKey();
+});
+
+async function validateNextzenKey() {
+    const validationGeneration = ++nextzenKeyValidationGeneration;
+    nextzenKeyValidated = false;
+    updateBasemapPresentation();
+    deckInstance.setProps({ layers: createLayers() });
+    if (!apiKey) {
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            'https://tile.nextzen.org/tilezen/vector/v1/512/all/0/0/0.mvt' +
+            `?api_key=${encodeURIComponent(apiKey)}`
+        );
+        if (!response.ok) {
+            const detail = (await response.text()).trim();
+            throw new Error(detail || `HTTP ${response.status}`);
+        }
+        if (validationGeneration !== nextzenKeyValidationGeneration) {
+            return;
+        }
+        nextzenKeyValidated = true;
+        updateBasemapPresentation();
+        deckInstance.setProps({ layers: createLayers() });
+    }
+    catch (error) {
+        if (validationGeneration !== nextzenKeyValidationGeneration) {
+            return;
+        }
+        lastError = null;
+        setStatus(
+            `Nextzen rejected the key for ${window.location.origin}: ${error.message}`,
+            'error'
+        );
+    }
+}
 
 function createRasterScene(url) {
     return {
@@ -215,8 +302,8 @@ function createRasterScene(url) {
     };
 }
 
-function createVectorScene() {
-    return {
+function createVectorScene({ labels = true } = {}) {
+    const scene = {
         scene: {
             background: { color: '#f5f3ef' }
         },
@@ -328,14 +415,136 @@ function createVectorScene() {
             }
         }
     };
+    if (!labels) {
+        delete scene.layers.places;
+    }
+    return scene;
 }
 
-function createTronScene(runtimeApiKey) {
+function createTronNextzenScene(runtimeApiKey) {
     return {
         import: ['https://www.nextzen.org/carto/tron-style/6/tron-style.zip'],
         global: {
             sdk_api_key: runtimeApiKey || '',
             sdk_animated: true
+        }
+    };
+}
+
+function createTronCartoScene({ portable = false } = {}) {
+    return {
+        import: ['https://www.nextzen.org/carto/tron-style/6/tron-style.zip'],
+        global: {
+            sdk_api_key: '',
+            sdk_animated: !portable,
+            sdk_building_extrude: true
+        },
+        scene: {
+            animated: !portable,
+            background: { color: '#08111f' }
+        },
+        sources: {
+            mapzen: {
+                type: 'MVT',
+                url: 'https://tiles-a.basemaps.cartocdn.com/vectortiles/carto.streets/v1/{z}/{x}/{y}.mvt',
+                url_params: null,
+                rasters: [],
+                tile_size: 512,
+                max_zoom: 14
+            }
+        },
+        layers: {
+            landuse: {
+                data: { source: 'mapzen', layer: '__tilezen_layer_disabled__' }
+            },
+            water: {
+                data: { source: 'mapzen', layer: '__tilezen_layer_disabled__' }
+            },
+            transit: {
+                data: { source: 'mapzen', layer: '__tilezen_layer_disabled__' }
+            },
+            'tron-carto-landcover': {
+                data: { source: 'mapzen', layer: 'landcover' },
+                draw: {
+                    polygons: { order: 1, color: '#182a42' }
+                }
+            },
+            'tron-carto-landuse': {
+                data: { source: 'mapzen', layer: 'landuse' },
+                draw: {
+                    polygons: { order: 2, color: '#223958' }
+                }
+            },
+            'tron-carto-water': {
+                data: { source: 'mapzen', layer: 'water' },
+                draw: {
+                    polygons: {
+                        style: portable ? 'polygons' : 'water-later',
+                        order: 3,
+                        color: '#17345c'
+                    }
+                }
+            },
+            'tron-carto-waterways': {
+                data: { source: 'mapzen', layer: 'waterway' },
+                draw: {
+                    lines: {
+                        style: portable ? 'lines' : 'water-boundaries-animated',
+                        order: 4,
+                        color: '#178fdb',
+                        width: [[8, '0.5px'], [14, '2px'], [18, '5px']]
+                    }
+                }
+            },
+            'tron-carto-buildings': {
+                data: { source: 'mapzen', layer: 'building' },
+                filter: { $zoom: { min: 14 } },
+                draw: {
+                    polygons: {
+                        order: 5,
+                        color: '#102a43',
+                        extrude: true
+                    },
+                    lines: {
+                        order: 6,
+                        color: '#2fa6b8',
+                        width: '0.5px',
+                        extrude: true
+                    }
+                }
+            },
+            'tron-carto-roads': {
+                data: { source: 'mapzen', layer: 'transportation' },
+                draw: {
+                    glow: {
+                        style: portable ? 'lines' : 'roads-glow',
+                        order: 7,
+                        color: '#007f96',
+                        width: [[8, '1px'], [13, '3px'], [18, '10px']]
+                    },
+                    traffic: {
+                        style: portable ? 'lines' : 'slow-traffic-animation-twoways',
+                        order: 8,
+                        color: '#2a4669',
+                        width: [[8, '0.5px'], [13, '1px'], [18, '5px']]
+                    }
+                },
+                major: {
+                    filter: { class: ['motorway', 'trunk', 'primary', 'secondary'] },
+                    draw: {
+                        glow: {
+                            color: '#00d9e8',
+                            width: [[8, '2px'], [13, '7px'], [18, '24px']]
+                        },
+                        traffic: {
+                            style: portable ? 'lines' : 'fast-traffic-animation-twoways',
+                            color: '#10223d',
+                            width: [[8, '1px'], [13, '4px'], [18, '14px']],
+                            outline: { color: '#63f5ed', width: '1px' }
+                        }
+                    }
+                }
+            }
         }
     };
 }

@@ -25,30 +25,34 @@ http://localhost:8000/demos/deck/
 The demo can switch between CARTO Streets vector tiles, styled locally by
 Tangram, CARTO Positron raster tiles, and the canonical animated TRON 2.0
 vector style from [`tangrams/tron-style`](https://github.com/tangrams/tron-style).
-The CARTO options do not require an API key. TRON uses Nextzen vector and
-terrain-normal tiles, so supply a key only at runtime:
-
-```text
-http://localhost:8000/demos/deck/?device=webgl&basemap=tron&api_key=YOUR_KEY
-```
-
-The demo never stores the key. TRON currently selects WebGL because its custom
-line, glow, and animation shaders are GLSL; their WGSL ports are part of the
-ongoing WebGPU renderer work.
+The CARTO-backed TRON adaptation reuses the original open-source style bundle,
+palette, glow, and animation shaders without requiring an API key. The exact
+original TRON scene uses Nextzen vector and terrain-normal tiles. Nextzen no
+longer accepts new signups, but an existing key can be entered in the demo's
+password field. It is retained only in that browser tab's session storage and
+is never written to source. The CARTO-backed adaptation stays on WebGPU using
+portable polygon and line shaders; its original custom glow and data-stream
+blocks remain WebGL-only until their WGSL translations land. The exact Nextzen
+scene currently selects WebGL because its point/text styles are also unported.
 It loads the pinned deck.gl browser bundle from unpkg.
 The prototype supports one Web Mercator view. deck.gl remains authoritative for
 longitude, latitude, zoom, bearing, and pitch; Tangram receives the deck camera
 matrices so vector and raster basemaps remain aligned with deck layers while the
 controller tilts and rotates the view.
-Tangram renders directly into deck.gl's WebGL context. The layer brackets
-Tangram GPU work with the luma.gl WebGLDevice state stack and then leaves a
-clean depth/stencil buffer for the deck layers above it.
+Tangram renders into deck.gl's active luma.gl render pass. On WebGL, the layer
+brackets Tangram GPU work with the WebGLDevice state stack and then leaves a
+clean depth/stencil buffer for the deck layers above it. The WebGPU path owns
+no raw context handle.
 
 The bridge constructs the experimental `Tangram.debug.Renderer` rather than
 driving Tangram's standalone `Scene.update()` loop. The renderer accepts a
 host-provided frame containing viewport dimensions, geographic view state,
 camera matrices, tile padding, and the active render pass. Standalone Tangram
 continues to use `Scene` for canvas construction and frame scheduling.
+
+On WebGPU, CARTO Streets exercises portable polygon and expanded-line WGSL
+pipelines. Labels are omitted on that backend until the point/text pipeline is
+ported; WebGL continues to render the complete vector scene.
 
 ## Uniform-buffer migration
 
