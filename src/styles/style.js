@@ -422,8 +422,8 @@ export var Style = {
         return new VBOMesh(this.gl, vertex_data, vertex_elements, vertex_layout, options);
     },
 
-    render (mesh) {
-        return mesh.render();
+    render (mesh, options) {
+        return mesh.render(options);
     },
 
     // Get a specific program, compiling if necessary

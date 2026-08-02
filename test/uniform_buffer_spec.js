@@ -34,6 +34,33 @@ describe('UniformBuffer', function () {
             '    vec2 resolution;',
             '};'
         ].join('\n'));
+        assert.strictEqual(uniform_buffer.getDeclaration({ language: 'wgsl', group: 2 }), [
+            'struct TangramView {',
+            '    time: f32,',
+            '    resolution: vec2<f32>,',
+            '};',
+            '@group(2) @binding(0) var<uniform> tangramView: TangramView;'
+        ].join('\n'));
+        assert.deepEqual(uniform_buffer.getBindingLayout({ group: 2 }), {
+            type: 'uniform',
+            name: 'TangramView',
+            group: 2,
+            location: 0,
+            minBindingSize: 16
+        });
+
+        const padded_uniform_buffer = new UniformBuffer(createFakeWebGL2Context(), {
+            name: 'TangramCamera',
+            binding: 3,
+            uniforms: { eye: 'vec3', panning: 'bool' }
+        });
+        assert.strictEqual(padded_uniform_buffer.getDeclaration({ language: 'wgsl' }), [
+            'struct TangramCamera {',
+            '    @size(16) eye: vec3<f32>,',
+            '    panning: u32,',
+            '};',
+            '@group(0) @binding(3) var<uniform> tangramCamera: TangramCamera;'
+        ].join('\n'));
     });
 
     it('packs, uploads, and binds values to a program binding point', function () {
@@ -111,6 +138,18 @@ describe('UniformBuffer', function () {
         });
         assert.strictEqual(uniform_buffer.buffer, handle);
         assert.lengthOf(gl.allocations, 0, 'Tangram does not allocate raw WebGL storage');
+
+        const program = new ShaderProgram(gl, '', '', {
+            uniform_blocks: { TangramView: uniform_buffer }
+        });
+        assert.deepEqual(program.getUniformBlockBindingLayouts(), [{
+            type: 'uniform',
+            name: 'TangramView',
+            group: 0,
+            location: 3,
+            minBindingSize: 16
+        }]);
+        assert.deepEqual(program.getUniformBlockBindings(), { TangramView: buffer_resource });
 
         uniform_buffer.setUniform('time', 0.5);
         assert.isTrue(uniform_buffer.bind({}));

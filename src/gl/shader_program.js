@@ -385,6 +385,24 @@ export default class ShaderProgram {
         }
     }
 
+    // Return portable luma.gl binding metadata for registered uniform blocks.
+    getUniformBlockBindingLayouts() {
+        return Object.values(this.uniform_blocks)
+            .filter(uniform_buffer => typeof uniform_buffer.getBindingLayout === 'function')
+            .map(uniform_buffer => uniform_buffer.getBindingLayout());
+    }
+
+    // Return luma.gl Buffer resources keyed by shader block name.
+    getUniformBlockBindings() {
+        const bindings = {};
+        for (const [name, uniform_buffer] of Object.entries(this.uniform_blocks)) {
+            if (uniform_buffer.buffer_resource) {
+                bindings[name] = uniform_buffer.buffer_resource;
+            }
+        }
+        return bindings;
+    }
+
     // Cache some or all uniform values so they can be restored
     saveUniforms(subset) {
         let uniforms = subset || this.uniforms;

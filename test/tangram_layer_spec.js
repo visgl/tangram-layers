@@ -181,10 +181,11 @@ describe('TangramLayer demo bridge', function () {
         scene.deferred.resolve();
         await flushPromises();
 
-        layer.draw();
+        const render_pass = {};
+        layer.draw({ renderPass: render_pass });
 
         assert.deepEqual(device.stateCalls, ['push', 'pop']);
-        assert.deepEqual(scene.updateCalls, [{ force: true }]);
+        assert.deepEqual(scene.updateCalls, [{ force: true, renderPass: render_pass }]);
         assert.deepInclude(gl.calls, ['depthMask', true]);
         assert.deepInclude(gl.calls, ['clear', gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT]);
         assert.deepInclude(gl.calls, ['useProgram', 'deck-program']);

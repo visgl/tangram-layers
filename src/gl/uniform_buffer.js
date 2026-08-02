@@ -4,17 +4,17 @@ const BLOCK_ALIGNMENT = 16;
 const INVALID_INDEX = 0xFFFFFFFF;
 
 const TYPES = {
-    float: { alignment: 4, size: 4, components: 1, kind: 'float' },
-    int: { alignment: 4, size: 4, components: 1, kind: 'int' },
-    bool: { alignment: 4, size: 4, components: 1, kind: 'int' },
-    vec2: { alignment: 8, size: 8, components: 2, kind: 'float' },
-    ivec2: { alignment: 8, size: 8, components: 2, kind: 'int' },
-    vec3: { alignment: 16, size: 16, components: 3, kind: 'float' },
-    ivec3: { alignment: 16, size: 16, components: 3, kind: 'int' },
-    vec4: { alignment: 16, size: 16, components: 4, kind: 'float' },
-    ivec4: { alignment: 16, size: 16, components: 4, kind: 'int' },
-    mat3: { alignment: 16, size: 48, columns: 3, rows: 3, kind: 'float' },
-    mat4: { alignment: 16, size: 64, columns: 4, rows: 4, kind: 'float' }
+    float: { alignment: 4, size: 4, components: 1, kind: 'float', wgsl: 'f32' },
+    int: { alignment: 4, size: 4, components: 1, kind: 'int', wgsl: 'i32' },
+    bool: { alignment: 4, size: 4, components: 1, kind: 'int', wgsl: 'u32' },
+    vec2: { alignment: 8, size: 8, components: 2, kind: 'float', wgsl: 'vec2<f32>' },
+    ivec2: { alignment: 8, size: 8, components: 2, kind: 'int', wgsl: 'vec2<i32>' },
+    vec3: { alignment: 16, size: 16, components: 3, kind: 'float', wgsl: 'vec3<f32>' },
+    ivec3: { alignment: 16, size: 16, components: 3, kind: 'int', wgsl: 'vec3<i32>' },
+    vec4: { alignment: 16, size: 16, components: 4, kind: 'float', wgsl: 'vec4<f32>' },
+    ivec4: { alignment: 16, size: 16, components: 4, kind: 'int', wgsl: 'vec4<i32>' },
+    mat3: { alignment: 16, size: 48, columns: 3, rows: 3, kind: 'float', wgsl: 'mat3x3<f32>' },
+    mat4: { alignment: 16, size: 64, columns: 4, rows: 4, kind: 'float', wgsl: 'mat4x4<f32>' }
 };
 
 export default class UniformBuffer {
@@ -93,11 +93,45 @@ export default class UniformBuffer {
         return this.layout.byte_length;
     }
 
-    getDeclaration() {
+    getDeclaration({ language = 'glsl', group = 0, variableName } = {}) {
+        if (language === 'wgsl') {
+            return this.getWGSLDeclaration({ group, variableName });
+        }
+        if (language !== 'glsl') {
+            throw new Error(`UniformBuffer: unsupported shader language '${language}'`);
+        }
         const declarations = Object.values(this.layout.uniforms)
             .map(uniform => `    ${uniform.type} ${uniform.name};`)
             .join('\n');
         return `layout(std140) uniform ${this.name} {\n${declarations}\n};`;
+    }
+
+    getWGSLDeclaration({ group = 0, variableName } = {}) {
+        variableName = variableName || lowerFirst(this.name);
+        const declarations = Object.values(this.layout.uniforms)
+            .map(uniform => {
+                // WGSL vec3 values have a natural size of 12 bytes. Preserve Tangram's
+                // std140-compatible 16-byte slot so the same packed data works in both APIs.
+                const size = (uniform.type === 'vec3' || uniform.type === 'ivec3') ? '@size(16) ' : '';
+                return `    ${size}${uniform.name}: ${uniform.wgsl},`;
+            })
+            .join('\n');
+        return [
+            `struct ${this.name} {`,
+            declarations,
+            '};',
+            `@group(${group}) @binding(${this.binding}) var<uniform> ${variableName}: ${this.name};`
+        ].join('\n');
+    }
+
+    getBindingLayout({ group = 0 } = {}) {
+        return {
+            type: 'uniform',
+            name: this.name,
+            group,
+            location: this.binding,
+            minBindingSize: this.byteLength
+        };
     }
 
     setUniform(name, value) {
@@ -226,4 +260,8 @@ export default class UniformBuffer {
 
 function align(value, alignment) {
     return Math.ceil(value / alignment) * alignment;
+}
+
+function lowerFirst(value) {
+    return value.charAt(0).toLowerCase() + value.slice(1);
 }

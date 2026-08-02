@@ -36,5 +36,12 @@ Camera projection state and per-tile transforms are supplied through separate
 `TangramCamera` and `TangramTile` blocks. Uniform-buffer storage is injectable,
 and the deck bridge now allocates and updates those buffers through luma.gl's
 `Device` API. Tangram still binds the WebGL resource handles while issuing its
-legacy draw calls. The remaining WebGPU-oriented steps are to express bindings
-through portable render-pass APIs and translate the generated shaders to WGSL.
+legacy draw calls.
+
+The bridge now forwards deck's active `RenderPass` through `Scene` to every
+mesh, and `VBOMesh` has an injectable renderer that can take ownership before
+any raw WebGL draw calls are issued. Uniform blocks also expose luma-compatible
+binding layouts and WGSL struct declarations while preserving their std140
+packing. luma.gl applies portable bindings as part of a render-pipeline draw, so
+the next migration must move `ShaderProgram` and `VBOMesh` to luma pipelines
+together; only then can the remaining direct uniform-block bindings be removed.

@@ -60,6 +60,17 @@ export default class VBOMesh  {
         }
 
         var program = options.program || ShaderProgram.current;
+        let visible_time = (+new Date() - this.created_at) / 1000;
+        if (options.meshRenderer && typeof options.meshRenderer.drawMesh === 'function') {
+            const needs_redraw = options.meshRenderer.drawMesh({
+                mesh: this,
+                program,
+                renderPass: options.renderPass,
+                visibleTime: visible_time
+            });
+            return Boolean(needs_redraw) || visible_time < this.fade_in_time;
+        }
+
         program.use();
 
         if (this.uniforms) {
@@ -67,7 +78,6 @@ export default class VBOMesh  {
             program.setUniforms(this.uniforms, false); // don't reset texture unit
         }
 
-        let visible_time = (+new Date() - this.created_at) / 1000;
         program.uniform('1f', 'u_visible_time', visible_time);
 
         this.bind(program);

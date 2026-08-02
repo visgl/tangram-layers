@@ -2416,6 +2416,22 @@ class ShaderProgram {
     }
   }
 
+  // Return portable luma.gl binding metadata for registered uniform blocks.
+  getUniformBlockBindingLayouts() {
+    return Object.values(this.uniform_blocks).filter(uniform_buffer => typeof uniform_buffer.getBindingLayout === 'function').map(uniform_buffer => uniform_buffer.getBindingLayout());
+  }
+
+  // Return luma.gl Buffer resources keyed by shader block name.
+  getUniformBlockBindings() {
+    const bindings = {};
+    for (const [name, uniform_buffer] of Object.entries(this.uniform_blocks)) {
+      if (uniform_buffer.buffer_resource) {
+        bindings[name] = uniform_buffer.buffer_resource;
+      }
+    }
+    return bindings;
+  }
+
   // Cache some or all uniform values so they can be restored
   saveUniforms(subset) {
     let uniforms = subset || this.uniforms;
@@ -4468,12 +4484,21 @@ class VBOMesh {
       return false;
     }
     var program = options.program || ShaderProgram.current;
+    let visible_time = (+new Date() - this.created_at) / 1000;
+    if (options.meshRenderer && typeof options.meshRenderer.drawMesh === 'function') {
+      const needs_redraw = options.meshRenderer.drawMesh({
+        mesh: this,
+        program,
+        renderPass: options.renderPass,
+        visibleTime: visible_time
+      });
+      return Boolean(needs_redraw) || visible_time < this.fade_in_time;
+    }
     program.use();
     if (this.uniforms) {
       program.saveUniforms(this.uniforms);
       program.setUniforms(this.uniforms, false); // don't reset texture unit
     }
-    let visible_time = (+new Date() - this.created_at) / 1000;
     program.uniform('1f', 'u_visible_time', visible_time);
     this.bind(program);
     if (this.toggle_element_array) {
@@ -7052,8 +7077,8 @@ var Style = {
     }
     return new VBOMesh(this.gl, vertex_data, vertex_elements, vertex_layout, options);
   },
-  render(mesh) {
-    return mesh.render();
+  render(mesh, options) {
+    return mesh.render(options);
   },
   // Get a specific program, compiling if necessary
   getProgram(key = 'program') {
@@ -21400,69 +21425,80 @@ const TYPES = {
     alignment: 4,
     size: 4,
     components: 1,
-    kind: 'float'
+    kind: 'float',
+    wgsl: 'f32'
   },
   int: {
     alignment: 4,
     size: 4,
     components: 1,
-    kind: 'int'
+    kind: 'int',
+    wgsl: 'i32'
   },
   bool: {
     alignment: 4,
     size: 4,
     components: 1,
-    kind: 'int'
+    kind: 'int',
+    wgsl: 'u32'
   },
   vec2: {
     alignment: 8,
     size: 8,
     components: 2,
-    kind: 'float'
+    kind: 'float',
+    wgsl: 'vec2<f32>'
   },
   ivec2: {
     alignment: 8,
     size: 8,
     components: 2,
-    kind: 'int'
+    kind: 'int',
+    wgsl: 'vec2<i32>'
   },
   vec3: {
     alignment: 16,
     size: 16,
     components: 3,
-    kind: 'float'
+    kind: 'float',
+    wgsl: 'vec3<f32>'
   },
   ivec3: {
     alignment: 16,
     size: 16,
     components: 3,
-    kind: 'int'
+    kind: 'int',
+    wgsl: 'vec3<i32>'
   },
   vec4: {
     alignment: 16,
     size: 16,
     components: 4,
-    kind: 'float'
+    kind: 'float',
+    wgsl: 'vec4<f32>'
   },
   ivec4: {
     alignment: 16,
     size: 16,
     components: 4,
-    kind: 'int'
+    kind: 'int',
+    wgsl: 'vec4<i32>'
   },
   mat3: {
     alignment: 16,
     size: 48,
     columns: 3,
     rows: 3,
-    kind: 'float'
+    kind: 'float',
+    wgsl: 'mat3x3<f32>'
   },
   mat4: {
     alignment: 16,
     size: 64,
     columns: 4,
     rows: 4,
-    kind: 'float'
+    kind: 'float',
+    wgsl: 'mat4x4<f32>'
   }
 };
 class UniformBuffer {
@@ -21529,9 +21565,46 @@ class UniformBuffer {
   get byteLength() {
     return this.layout.byte_length;
   }
-  getDeclaration() {
+  getDeclaration({
+    language = 'glsl',
+    group = 0,
+    variableName
+  } = {}) {
+    if (language === 'wgsl') {
+      return this.getWGSLDeclaration({
+        group,
+        variableName
+      });
+    }
+    if (language !== 'glsl') {
+      throw new Error(`UniformBuffer: unsupported shader language '${language}'`);
+    }
     const declarations = Object.values(this.layout.uniforms).map(uniform => `    ${uniform.type} ${uniform.name};`).join('\n');
     return `layout(std140) uniform ${this.name} {\n${declarations}\n};`;
+  }
+  getWGSLDeclaration({
+    group = 0,
+    variableName
+  } = {}) {
+    variableName = variableName || lowerFirst(this.name);
+    const declarations = Object.values(this.layout.uniforms).map(uniform => {
+      // WGSL vec3 values have a natural size of 12 bytes. Preserve Tangram's
+      // std140-compatible 16-byte slot so the same packed data works in both APIs.
+      const size = uniform.type === 'vec3' || uniform.type === 'ivec3' ? '@size(16) ' : '';
+      return `    ${size}${uniform.name}: ${uniform.wgsl},`;
+    }).join('\n');
+    return [`struct ${this.name} {`, declarations, '};', `@group(${group}) @binding(${this.binding}) var<uniform> ${variableName}: ${this.name};`].join('\n');
+  }
+  getBindingLayout({
+    group = 0
+  } = {}) {
+    return {
+      type: 'uniform',
+      name: this.name,
+      group,
+      location: this.binding,
+      minBindingSize: this.byteLength
+    };
   }
   setUniform(name, value) {
     const uniform = this.layout.uniforms[name];
@@ -21641,6 +21714,9 @@ class UniformBuffer {
 }
 function align(value, alignment) {
   return Math.ceil(value / alignment) * alignment;
+}
+function lowerFirst(value) {
+  return value.charAt(0).toLowerCase() + value.slice(1);
 }
 
 // Get a value for a nested property with path provided as an array (`a.b.c` => ['a', 'b', 'c'])
@@ -28822,6 +28898,7 @@ class Scene {
     this.redraw_callback = options.requestRedraw;
     this.enable_uniform_buffers = options.enableUniformBuffers === true;
     this.uniform_buffer_factory = options.uniformBufferFactory;
+    this.mesh_renderer = options.meshRenderer;
     this.uniform_buffers = {};
     this.lights = null;
     this.background = null;
@@ -29215,7 +29292,8 @@ class Scene {
     }
   }
   update({
-    force = false
+    force = false,
+    renderPass = null
   } = {}) {
     return this.withWebGLContext(() => {
       if (force) {
@@ -29224,10 +29302,14 @@ class Scene {
       if (this.external_gl) {
         this.resetWebGLState();
       }
-      return this.updateScene();
+      return this.updateScene({
+        renderPass
+      });
     });
   }
-  updateScene() {
+  updateScene({
+    renderPass = null
+  } = {}) {
     // Determine which passes (if any) to render
     let main = this.dirty;
     let selection = this.selection ? this.selection.hasPendingRequests() : false;
@@ -29249,7 +29331,8 @@ class Scene {
     this.updateDevicePixelRatio();
     this.render({
       main,
-      selection
+      selection,
+      renderPass
     });
     this.updateViewComplete(); // fires event when rendered tile set or style changes
     this.media_capture.completeScreenshot(); // completes screenshot capture if requested
@@ -29269,7 +29352,8 @@ class Scene {
   // Accepts flags indicating which render passes should be made
   render({
     main,
-    selection
+    selection,
+    renderPass = null
   }) {
     var gl = this.gl;
     this.updateBackground();
@@ -29278,7 +29362,9 @@ class Scene {
     // Render main pass
     this.render_count_changed = false;
     if (main) {
-      this.render_count = this.renderPass();
+      this.render_count = this.renderPass('program', {
+        renderPass
+      });
       this.last_main_render = this.frame;
 
       // Update feature selection map if necessary
@@ -29324,7 +29410,8 @@ class Scene {
   // Render all active styles, grouped by blend/depth type (opaque, overlay, etc.) and by program (style)
   // Called both for main render pass, and for secondary passes like selection buffer
   renderPass(program_key = 'program', {
-    allow_blend
+    allow_blend,
+    renderPass = null
   } = {}) {
     // optionally force alpha off (e.g. for selection pass)
     allow_blend = allow_blend == null ? true : allow_blend;
@@ -29359,7 +29446,7 @@ class Scene {
         if (blend === 'translucent') {
           // Depth pre-pass for translucency
           this.gl.colorMask(false, false, false, false);
-          this.renderStyle(style.name, program_key, blend_order);
+          this.renderStyle(style.name, program_key, blend_order, null, renderPass);
           this.gl.colorMask(true, true, true, true);
           this.gl.depthFunc(this.gl.EQUAL);
 
@@ -29371,7 +29458,7 @@ class Scene {
           this.gl.stencilOp(this.gl.KEEP, this.gl.KEEP, this.gl.INCR);
 
           // Main render pass
-          count += this.renderStyle(style.name, program_key, blend_order);
+          count += this.renderStyle(style.name, program_key, blend_order, null, renderPass);
 
           // Disable translucency-specific settings
           this.gl.disable(this.gl.STENCIL_TEST);
@@ -29400,24 +29487,24 @@ class Scene {
               // stencil test passes either for zero (not-yet-rendered),
               // or for other pixels at this proxy level (but not previous proxy levels)
               this.gl.stencilFunc(this.gl.GEQUAL, proxy_levels.length - i, 0xFF);
-              count += this.renderStyle(style.name, program_key, blend_order, proxy_levels[i]);
+              count += this.renderStyle(style.name, program_key, blend_order, proxy_levels[i], renderPass);
             }
             this.gl.disable(this.gl.STENCIL_TEST);
           } else {
             // No special render handling needed when there are no proxy tiles,
             // or if there is ONLY a single proxy tile level (e.g. with no non-proxy tiles)
-            count += this.renderStyle(style.name, program_key, blend_order);
+            count += this.renderStyle(style.name, program_key, blend_order, null, renderPass);
           }
         } else {
           // Regular render pass (no special blend handling, or selection buffer pass)
-          count += this.renderStyle(style.name, program_key, blend_order);
+          count += this.renderStyle(style.name, program_key, blend_order, null, renderPass);
         }
         last_blend = style.blend;
       }
     }
     return count;
   }
-  renderStyle(style_name, program_key, blend_order, proxy_level = null) {
+  renderStyle(style_name, program_key, blend_order, proxy_level = null, renderPass = null) {
     let style = this.styles[style_name];
     let first_for_style = true; // TODO: allow this state to be passed in (for multilpe blend orders, stencil tests, etc)
     let render_count = 0;
@@ -29480,7 +29567,10 @@ class Scene {
           }
 
           // Render this mesh variant
-          if (style.render(mesh)) {
+          if (style.render(mesh, {
+            renderPass,
+            meshRenderer: this.mesh_renderer
+          })) {
             this.requestRedraw();
           }
           render_count += mesh.geometry_count;
@@ -30841,7 +30931,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = '64d029154396fa777e789e6484da8b2c59cf3f97';
+	Tangram.debug.SHA = '903e094df0a822bc2365f3ddb8d4356f049d1421';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

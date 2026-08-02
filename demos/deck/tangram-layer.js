@@ -67,7 +67,7 @@ export function createTangramLayerClass({ Layer, Scene }) {
             }
         }
 
-        draw() {
+        draw({ renderPass } = {}) {
             const record = this.state.tangramRecord;
             if (!record || record.disposed) {
                 return;
@@ -80,7 +80,12 @@ export function createTangramLayerClass({ Layer, Scene }) {
             }
 
             record.scene.withWebGLContext(() => {
-                if (record.scene.update({ force: true })) {
+                const update_options = { force: true };
+                renderPass = renderPass || this.context.renderPass;
+                if (renderPass) {
+                    update_options.renderPass = renderPass;
+                }
+                if (record.scene.update(update_options)) {
                     // Tangram's depth and stencil buffers are internal implementation
                     // details. Preserve its color output but leave a clean depth buffer
                     // for deck layers that follow this basemap.
