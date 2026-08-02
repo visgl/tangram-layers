@@ -56,9 +56,11 @@ camera matrices, tile padding, and the active render pass. Standalone Tangram
 continues to use `Scene` for canvas construction and frame scheduling.
 
 On WebGPU, the default CARTO-backed TRON scene exercises portable polygon and
-expanded-line WGSL pipelines. Labels are omitted on that backend until the
-point/text pipeline is ported; WebGL continues to render the complete vector
-scene.
+expanded-line WGSL pipelines. Standalone labels retain Tangram's collision and
+canvas-atlas pipeline and render through a portable text-quad WGSL shader.
+Generic shader points and textured icons remain a later portability tranche.
+For diagnostics, `?portable_text=0` disables WebGPU labels and `?traffic=0`
+pauses the portable vehicle pulses without changing the selected basemap.
 
 ## Uniform-buffer migration
 

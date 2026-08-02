@@ -1,4 +1,4 @@
-import Tangram from '../../dist/tangram.debug.mjs?bridge=webgpu-traffic-wgsl';
+import Tangram from '../../dist/tangram.debug.mjs?bridge=webgpu-car-pulses';
 import createTangramLayerClass from './tangram-layer.js?bridge=std140-fix';
 import {webgpuAdapter} from 'https://esm.sh/@luma.gl/webgpu@9.4.0-alpha.1?bundle&deps=@luma.gl/core@9.4.0-alpha.1';
 
@@ -9,6 +9,8 @@ const defaultDeviceType = 'webgpu';
 const deviceType = requestedBackend ||
     (navigator.gpu ? defaultDeviceType : 'webgl');
 const useWebGPU = deviceType === 'webgpu';
+const enablePortableText = !useWebGPU || searchParams.get('portable_text') !== '0';
+const enablePortableTraffic = !useWebGPU || searchParams.get('traffic') !== '0';
 let apiKey = searchParams.get('api_key') ||
     window.sessionStorage.getItem('tangram-nextzen-api-key');
 if (searchParams.has('api_key')) {
@@ -25,7 +27,7 @@ const TangramLayer = createTangramLayerClass({
 const BASEMAPS = {
     streetsVector: {
         label: 'CARTO Streets vector tiles',
-        scene: createVectorScene({ labels: !useWebGPU }),
+        scene: createVectorScene({ labels: enablePortableText }),
         deviceTypes: ['webgl', 'webgpu']
     },
     positronRaster: {
@@ -35,9 +37,15 @@ const BASEMAPS = {
     },
     tron: {
         label: 'TRON 2.0 shaders on CARTO vector tiles',
-        scene: createTronCartoScene({ portable: useWebGPU }),
+        scene: createTronCartoScene({
+            portable: useWebGPU,
+            labels: enablePortableText,
+            animateTraffic: enablePortableTraffic
+        }),
         deviceTypes: ['webgl', 'webgpu'],
-        webgpuStatus: 'Portable cyan and purple palette with animated highway traffic.'
+        webgpuStatus: enablePortableTraffic ?
+            'Portable cyan and purple palette with animated highway traffic.' :
+            'Portable cyan and purple palette; traffic animation is paused.'
     },
     tronNextzen: {
         label: 'Original TRON 2.0 on Nextzen tiles',
@@ -440,9 +448,12 @@ function createTronNextzenScene(runtimeApiKey) {
     };
 }
 
-function createTronCartoScene({ portable = false } = {}) {
-    return {
+function createTronCartoScene({ portable = false, labels = true, animateTraffic = true } = {}) {
+    const scene = {
         import: ['https://www.nextzen.org/carto/tron-style/6/tron-style.zip'],
+        fonts: {
+            Montserrat: { url: '../fonts/montserrat.woff' }
+        },
         global: {
             sdk_api_key: '',
             sdk_animated: true,
@@ -455,7 +466,7 @@ function createTronCartoScene({ portable = false } = {}) {
         styles: {
             'tron-portable-traffic': {
                 base: 'lines',
-                animated: true,
+                animated: animateTraffic,
                 texcoords: true
             }
         },
@@ -561,21 +572,40 @@ function createTronCartoScene({ portable = false } = {}) {
                     }
                 },
                 highway: {
-                    filter: { class: ['motorway', 'trunk'] },
+                    filter: { class: 'motorway' },
                     draw: {
                         glow: {
                             color: '#7a2ca6',
-                            width: [[8, '2.5px'], [13, '8px'], [18, '26px']]
+                            width: [[8, '1.5px'], [13, '5px'], [18, '16px']]
                         },
                         traffic: {
                             style: portable ? 'tron-portable-traffic' : 'fast-traffic-animation-twoways',
                             color: '#241539',
-                            width: [[8, '1px'], [13, '4.5px'], [18, '15px']],
-                            outline: { color: '#c357e8', width: '1px' }
+                            width: [[8, '0.75px'], [13, '3px'], [18, '10px']],
+                            outline: { color: '#c357e8', width: '0.75px' }
+                        }
+                    }
+                }
+            },
+            'tron-carto-places': {
+                data: { source: 'mapzen', layer: 'place' },
+                draw: {
+                    text: {
+                        order: 9,
+                        text_source: 'name',
+                        font: {
+                            family: 'Montserrat',
+                            size: [[6, '11px'], [12, '13px'], [16, '15px']],
+                            fill: '#70f4ff',
+                            stroke: { color: '#08111f', width: 3 }
                         }
                     }
                 }
             }
         }
     };
+    if (!labels) {
+        delete scene.layers['tron-carto-places'];
+    }
+    return scene;
 }
