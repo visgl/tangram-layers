@@ -5295,6 +5295,13 @@ var VBOMesh = /*#__PURE__*/function () {
   }, {
     key: "upload",
     value: function upload() {
+      if (this.vertex_buffer_resource) {
+        if (typeof this.vertex_buffer_resource.write !== 'function') {
+          throw new Error('VBOMesh: portable vertex buffers must support write');
+        }
+        this.vertex_buffer_resource.write(this.vertex_data);
+        return;
+      }
       this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertex_buffer);
       this.gl.bufferData(this.gl.ARRAY_BUFFER, this.vertex_data, this.data_usage);
     }
@@ -11133,7 +11140,7 @@ function buildLinesWGSL() {
   var color_location = animated ? 3 : 2;
   var animated_varying = animated ? '\n    @location(1) texcoord: vec2<f32>,' : '';
   var animated_vertex = animated ? '\n    output.texcoord = attributes.a_texcoord;' : '';
-  var animated_fragment = animated ? "\n    let direction = select(-1.0, 1.0, input.texcoord.x < 0.5);\n    let stream_coordinate = input.texcoord.y * 0.125 -\n        TangramView.u_time * 1.8 * direction;\n    let stream_phase = fract(stream_coordinate);\n    let stream_head = smoothstep(0.58, 0.72, stream_phase);\n    let stream_tail = 1.0 - smoothstep(0.82, 0.98, stream_phase);\n    let stream = stream_head * stream_tail;\n    let lane_center = 1.0 - abs(input.texcoord.x * 2.0 - 1.0);\n    let lane_mask = mix(0.55, 1.0, lane_center);\n    let palette_phase = fract(\n        TangramView.u_time * 0.08 + input.texcoord.y * 0.017\n    );\n    let stream_color = mix(\n        vec3<f32>(0.0, 0.95, 1.0),\n        vec3<f32>(0.86, 0.18, 0.95),\n        palette_phase\n    );\n    let animated_color = mix(\n        input.color.rgb,\n        stream_color,\n        stream * lane_mask * 0.82\n    );\n    return vec4<f32>(animated_color, input.color.a);\n" : '    return input.color;\n';
+  var animated_fragment = animated ? "\n    let direction = select(-1.0, 1.0, input.texcoord.x < 0.5);\n    let stream_phase = fract(\n        input.texcoord.y - TangramView.u_time * 0.7 * direction\n    );\n    let along_distance = abs(stream_phase - 0.5);\n    let car_length = 1.0 - smoothstep(0.04, 0.11, along_distance);\n    let lane_center = select(0.72, 0.28, direction > 0.0);\n    let lane_distance = abs(input.texcoord.x - lane_center);\n    let lane_mask = 1.0 - smoothstep(0.12, 0.25, lane_distance);\n    let car = car_length * lane_mask;\n    let car_color = vec3<f32>(0.08, 1.0, 0.94);\n    let animated_color = mix(\n        input.color.rgb,\n        car_color,\n        car * 0.95\n    );\n    return vec4<f32>(animated_color, input.color.a);\n" : '    return input.color;\n';
   return "\nstruct LineAttributes {\n    @location(0) a_position: vec4<i32>,\n    @location(1) a_extrude: vec2<i32>,".concat(animated_attribute, "\n    @location(").concat(color_location, ") a_color: vec4<f32>,\n};\n\nstruct LineVaryings {\n    @builtin(position) position: vec4<f32>,\n    @location(0) color: vec4<f32>,").concat(animated_varying, "\n};\n\n@vertex\nfn vertexMain(attributes: LineAttributes) -> LineVaryings {\n    var output: LineVaryings;\n    var extrusion = vec2<f32>(attributes.a_extrude);\n\n    var zoom_delta = clamp(\n        TangramView.u_map_position.z - TangramTile.u_tile_origin.z,\n        0.0,\n        4.0\n    );\n    zoom_delta += step(1.0, zoom_delta) * (1.0 - zoom_delta) +\n        mix(0.0, 2.0, clamp((zoom_delta - 2.0) / 2.0, 0.0, 1.0));\n\n    let midpoint_zoom_delta = (zoom_delta - 0.5) * 2.0;\n    let width_scale = f32(attributes.a_position.z) / ").concat(ATTRIBUTE_SCALE, ".0;\n    extrusion -= extrusion * width_scale * midpoint_zoom_delta;\n    extrusion *= exp2(\n        -zoom_delta - (TangramTile.u_tile_origin.z - TangramTile.u_tile_origin.w)\n    );\n\n    let local_position = vec4<f32>(\n        vec2<f32>(attributes.a_position.xy) + extrusion,\n        0.0,\n        1.0\n    );\n    var clip_position = TangramCamera.u_projection *\n        (TangramTile.u_modelView * local_position);\n    let layer = f32(attributes.a_position.w) +\n        TangramTile.u_tile_proxy_order_offset + 1.0;\n    clip_position.z -= layer * ").concat(LAYER_DELTA, " * clip_position.w;\n\n    output.position = clip_position;\n    output.color = attributes.a_color;\n").concat(animated_vertex, "\n    return output;\n}\n\n@fragment\nfn fragmentMain(input: LineVaryings) -> @location(0) vec4<f32> {\n").concat(animated_fragment, "\n}\n");
 }
 
@@ -17912,11 +17919,29 @@ function getAbsAngleDiff(angle1, angle2) {
   return Math.abs(big - small);
 }
 
+var PI = Math.PI;
+
+/**
+ * Build the portable standalone-text shader used by the luma.gl WebGPU renderer.
+ *
+ * Text quads retain Tangram's CPU collision, atlas, and curved-label geometry.
+ * The shader applies the buffered screen-space shape and samples the luma-owned
+ * atlas texture without reading a backend texture handle.
+ *
+ * @returns {string} Complete WGSL source for Tangram's text style.
+ */
+function buildTextWGSL() {
+  return "\n@group(0) @binding(3) var u_texture: texture_2d<f32>;\n@group(0) @binding(4) var u_textureSampler: sampler;\n\nstruct TextAttributes {\n    @location(0) a_position: vec4<i32>,\n    @location(1) a_shape: vec4<i32>,\n    @location(2) a_texcoord: vec2<f32>,\n    @location(3) a_offset: vec2<i32>,\n    @location(4) a_color: vec4<f32>,\n    @location(6) a_pre_angles: vec4<i32>,\n    @location(7) a_angles: vec4<i32>,\n    @location(8) a_offsets: vec4<u32>,\n};\n\nstruct TextVaryings {\n    @builtin(position) position: vec4<f32>,\n    @location(0) texcoord: vec2<f32>,\n    @location(1) color: vec4<f32>,\n};\n\nfn rotate2D(point: vec2<f32>, angle: f32) -> vec2<f32> {\n    let cosine = cos(angle);\n    let sine = sin(angle);\n    return vec2<f32>(\n        cosine * point.x - sine * point.y,\n        sine * point.x + cosine * point.y\n    );\n}\n\nfn mix4Linear(values: vec4<f32>, amount: f32) -> f32 {\n    let clamped_amount = clamp(amount, 0.0, 1.0);\n    let first_segment = mix(values.x, values.y, 3.0 * clamped_amount);\n    let last_segment = mix(\n        values.z,\n        values.w,\n        3.0 * (max(clamped_amount, 0.66) - 0.66)\n    );\n    let remaining_segments = mix(\n        values.y,\n        last_segment,\n        3.0 * (clamp(clamped_amount, 0.33, 0.66) - 0.33)\n    );\n    return select(first_segment, remaining_segments, clamped_amount >= 0.33);\n}\n\n@vertex\nfn vertexMain(attributes: TextAttributes) -> TextVaryings {\n    var output: TextVaryings;\n    output.texcoord = vec2<f32>(\n        attributes.a_texcoord.x,\n        1.0 - attributes.a_texcoord.y\n    );\n    output.color = attributes.a_color;\n\n    if (attributes.a_shape.w == 0) {\n        output.position = vec4<f32>(2.0, 2.0, 2.0, 1.0);\n        return output;\n    }\n\n    var shape = vec2<f32>(attributes.a_shape.xy) / 256.0;\n    let offset = vec2<f32>(\n        f32(attributes.a_offset.x),\n        -f32(attributes.a_offset.y)\n    );\n    let theta = f32(attributes.a_shape.z) / 4096.0;\n\n    if (attributes.a_offsets.x != 0u) {\n        let zoom = clamp(\n            TangramView.u_map_position.z - TangramTile.u_tile_origin.z,\n            0.0,\n            1.0\n        );\n        let pre_angle = mix4Linear(\n            vec4<f32>(attributes.a_pre_angles) * (".concat(PI, " / 128.0),\n            zoom\n        );\n        let curve_angle = mix4Linear(\n            vec4<f32>(attributes.a_angles) * (").concat(PI, " / 16384.0),\n            zoom\n        );\n        let curve_offset = mix4Linear(\n            vec4<f32>(attributes.a_offsets) / 64.0,\n            zoom\n        );\n        shape = rotate2D(shape, pre_angle);\n        shape = vec2<f32>(shape.x + curve_offset, shape.y);\n        shape = rotate2D(shape, curve_angle);\n        shape += rotate2D(offset, theta);\n    }\n    else {\n        shape = rotate2D(shape + offset, theta);\n    }\n\n    let local_position = vec4<f32>(\n        f32(attributes.a_position.x),\n        f32(attributes.a_position.y),\n        f32(attributes.a_position.z),\n        1.0\n    );\n    var clip_position = TangramCamera.u_projection *\n        (TangramTile.u_modelView * local_position);\n    let screen_offset = shape * clip_position.w * 2.0 *\n        TangramView.u_device_pixel_ratio / TangramView.u_resolution;\n    clip_position = vec4<f32>(\n        clip_position.xy + screen_offset,\n        clip_position.zw\n    );\n\n    output.position = clip_position;\n    return output;\n}\n\n@fragment\nfn fragmentMain(input: TextVaryings) -> @location(0) vec4<f32> {\n    var atlas_color = textureSample(u_texture, u_textureSampler, input.texcoord);\n    return vec4<f32>(\n        atlas_color.rgb / max(atlas_color.a, 0.001),\n        atlas_color.a\n    );\n}\n");
+}
+
 var TextStyle = Object.create(Points);
 Object.assign(TextStyle, {
   name: 'text',
   super: Points,
   built_in: true,
+  getWGSLShaderSource: function getWGSLShaderSource() {
+    return buildTextWGSL();
+  },
   init: function init() {
     var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     Style.init.call(this, options);
@@ -36780,7 +36805,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = '7602fdac50dac89048bd4be34a62418ae60d974e';
+	Tangram.debug.SHA = 'a1a7de42577e0c92d6490c9115d35b494b02a31c';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}
