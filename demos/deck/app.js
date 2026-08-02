@@ -1,4 +1,4 @@
-import Tangram from '../../dist/tangram.debug.mjs?bridge=webgpu-stable-vehicles';
+import Tangram from '../../dist/tangram.debug.mjs?bridge=webgpu-line-position';
 import createTangramLayerClass from './tangram-layer.js?bridge=std140-fix';
 import {webgpuAdapter} from 'https://esm.sh/@luma.gl/webgpu@9.4.0-alpha.1?bundle&deps=@luma.gl/core@9.4.0-alpha.1';
 
@@ -12,6 +12,7 @@ const useWebGPU = deviceType === 'webgpu';
 const enablePortableText = !useWebGPU || searchParams.get('portable_text') !== '0';
 const enablePortableTraffic = !useWebGPU || searchParams.get('traffic') !== '0';
 const pointProbe = useWebGPU ? searchParams.get('points') : null;
+const lineProbe = searchParams.has('line_probe') && searchParams.get('line_probe') !== '0';
 let apiKey = searchParams.get('api_key') ||
     window.sessionStorage.getItem('tangram-nextzen-api-key');
 if (searchParams.has('api_key')) {
@@ -42,7 +43,8 @@ const BASEMAPS = {
             portable: useWebGPU,
             labels: enablePortableText,
             animateTraffic: enablePortableTraffic,
-            pointProbe
+            pointProbe,
+            lineProbe
         }),
         deviceTypes: ['webgl', 'webgpu'],
         webgpuStatus: enablePortableTraffic ?
@@ -454,7 +456,8 @@ function createTronCartoScene({
     portable = false,
     labels = true,
     animateTraffic = true,
-    pointProbe = false
+    pointProbe = false,
+    lineProbe = false
 } = {}) {
     const scene = {
         import: ['https://www.nextzen.org/carto/tron-style/6/tron-style.zip'],
@@ -650,6 +653,60 @@ function createTronCartoScene({
             scene.layers['tron-carto-places'].draw.points.color = '#ffffff';
             delete scene.layers['tron-carto-places'].draw.points.outline;
         }
+    }
+    if (lineProbe) {
+        const line = {
+            type: 'LineString',
+            coordinates: [
+                [-74.016, 40.707],
+                [-74.003, 40.707]
+            ]
+        };
+        const lineProbeData = {
+            type: 'FeatureCollection',
+            features: ['base', 'offset', 'elevated'].map(kind => ({
+                type: 'Feature',
+                properties: { kind },
+                geometry: line
+            }))
+        };
+        scene.sources['line-probe'] = {
+            type: 'GeoJSON',
+            url: 'data:application/json;charset=utf-8,' +
+                encodeURIComponent(JSON.stringify(lineProbeData))
+        };
+        scene.layers['line-probe'] = {
+            data: { source: 'line-probe' },
+            base: {
+                filter: { kind: 'base' },
+                draw: {
+                    lines: { order: 30, color: '#1af7ff', width: '3px' }
+                }
+            },
+            offset: {
+                filter: { kind: 'offset' },
+                draw: {
+                    lines: {
+                        order: 31,
+                        color: '#ff4fd8',
+                        width: '2px',
+                        offset: '10px'
+                    }
+                }
+            },
+            elevated: {
+                filter: { kind: 'elevated' },
+                draw: {
+                    lines: {
+                        order: 32,
+                        color: '#ff9d24',
+                        width: '2px',
+                        offset: '-10px',
+                        z: '60m'
+                    }
+                }
+            }
+        };
     }
     return scene;
 }

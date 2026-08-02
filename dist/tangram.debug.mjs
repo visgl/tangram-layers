@@ -10407,11 +10407,12 @@ const ATTRIBUTE_SCALE = 1024;
  *
  * Tangram's line builder emits expanded triangle geometry. The extrusion
  * vector and its fractional-zoom scaling are therefore applied before the
- * host-provided tile and camera matrices. Animated styles use the generated
- * line texture coordinates and Tangram's frame time to produce a portable
- * compact repeating vehicles without additive blending. Offsets, heights,
- * textures, arbitrary custom shader blocks, and selection remain follow-up
- * tranches.
+ * host-provided tile and camera matrices. Buffered offsets and elevation use
+ * the same zoom interpolation and height packing as Tangram's GLSL renderer.
+ * Animated styles use the generated line texture coordinates and Tangram's
+ * frame time to produce portable compact repeating vehicles without additive
+ * blending. Textures, arbitrary custom shader blocks, and selection remain
+ * follow-up tranches.
  *
  * @param {object} options Shader options.
  * @param {boolean} options.animated Enables the portable traffic vehicles.
@@ -10420,8 +10421,7 @@ const ATTRIBUTE_SCALE = 1024;
 function buildLinesWGSL({
   animated = false
 } = {}) {
-  const animated_attribute = animated ? '\n    @location(2) a_texcoord: vec2<f32>,' : '';
-  const color_location = animated ? 3 : 2;
+  const animated_attribute = animated ? '\n    @location(4) a_texcoord: vec2<f32>,' : '';
   const animated_varying = animated ? '\n    @location(1) texcoord: vec2<f32>,' : '';
   const animated_vertex = animated ? '\n    output.texcoord = attributes.a_texcoord / 65535.0;' : '';
   const animated_fragment = animated ? `
@@ -10469,8 +10469,10 @@ function buildLinesWGSL({
   return `
 struct LineAttributes {
     @location(0) a_position: vec4<i32>,
-    @location(1) a_extrude: vec2<i32>,${animated_attribute}
-    @location(${color_location}) a_color: vec4<f32>,
+    @location(1) a_extrude: vec2<i32>,
+    @location(2) a_offset: vec2<i32>,
+    @location(3) a_z_and_offset_scale: vec2<i32>,${animated_attribute}
+    @location(5) a_color: vec4<f32>,
 };
 
 struct LineVaryings {
@@ -10482,6 +10484,7 @@ struct LineVaryings {
 fn vertexMain(attributes: LineAttributes) -> LineVaryings {
     var output: LineVaryings;
     var extrusion = vec2<f32>(attributes.a_extrude);
+    var offset = vec2<f32>(attributes.a_offset);
 
     var zoom_delta = clamp(
         TangramView.u_map_position.z - TangramTile.u_tile_origin.z,
@@ -10494,13 +10497,24 @@ fn vertexMain(attributes: LineAttributes) -> LineVaryings {
     let midpoint_zoom_delta = (zoom_delta - 0.5) * 2.0;
     let width_scale = f32(attributes.a_position.z) / ${ATTRIBUTE_SCALE}.0;
     extrusion -= extrusion * width_scale * midpoint_zoom_delta;
-    extrusion *= exp2(
-        -zoom_delta - (TangramTile.u_tile_origin.z - TangramTile.u_tile_origin.w)
+
+    let offset_width_scale =
+        f32(attributes.a_z_and_offset_scale.y) / ${ATTRIBUTE_SCALE}.0;
+    let offset_scale_direction = sign(step(0.0, offset_width_scale) - 0.5);
+    offset -= offset * abs(offset_width_scale) * (
+        (1.0 - step(0.0, offset_scale_direction)) -
+        (zoom_delta * -offset_scale_direction)
     );
 
+    let screen_space_scale = exp2(
+        -zoom_delta - (TangramTile.u_tile_origin.z - TangramTile.u_tile_origin.w)
+    );
+    extrusion *= screen_space_scale;
+    offset *= screen_space_scale;
+
     let local_position = vec4<f32>(
-        vec2<f32>(attributes.a_position.xy) + extrusion,
-        0.0,
+        vec2<f32>(attributes.a_position.xy) + extrusion + offset,
+        f32(attributes.a_z_and_offset_scale.x) / ${Geo$1.height_scale}.0,
         1.0
     );
     var clip_position = TangramCamera.u_projection *
@@ -10950,8 +10964,11 @@ Object.assign(Lines, {
   // Create or return desired vertex layout permutation based on flags
   vertexLayoutForMeshVariant(variant) {
     if (this.vertex_layouts[variant.key] == null) {
+      const portable = this.shader_language === 'wgsl';
       // Attributes for this mesh variant
-      // Optional attributes have placeholder values assigned with `static` parameter
+      // WebGL can provide optional fields as constant vertex attributes. WebGPU
+      // requires every shader-declared input to be backed by a vertex buffer, so
+      // portable layouts write explicit zero values for unused line fields.
       const attribs = [{
         name: 'a_position',
         size: 4,
@@ -10967,13 +10984,13 @@ Object.assign(Lines, {
         size: 2,
         type: gl$1.SHORT,
         normalized: false,
-        static: variant.offset ? null : [0, 0]
+        static: portable || variant.offset ? null : [0, 0]
       }, {
         name: 'a_z_and_offset_scale',
         size: 2,
         type: gl$1.SHORT,
         normalized: false,
-        static: variant.z_or_offset ? null : [0, 0]
+        static: portable || variant.z_or_offset ? null : [0, 0]
       }, {
         name: 'a_texcoord',
         size: 2,
@@ -11007,6 +11024,7 @@ Object.assign(Lines, {
    */
   makeVertexTemplate(style, mesh) {
     let i = 0;
+    const portable = this.shader_language === 'wgsl';
 
     // a_position.xy - vertex position
     // a_position.z - line width scaling factor
@@ -11022,13 +11040,13 @@ Object.assign(Lines, {
 
     // a_offset.xy - normal vector
     // offset can be static or dynamic depending on style
-    if (mesh.variant.offset) {
+    if (portable || mesh.variant.offset) {
       this.vertex_template[i++] = 0;
       this.vertex_template[i++] = 0;
     }
 
     // a_z_and_offset_scale.xy
-    if (mesh.variant.z_or_offset) {
+    if (portable || mesh.variant.z_or_offset) {
       this.vertex_template[i++] = style.z || 0; // feature z position
       this.vertex_template[i++] = style.offset_scale * 1024; // line offset scaling factor
     }
@@ -34853,7 +34871,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = '036f494f85eb4b0e9cbfb4a7a0a008b7457dd81f';
+	Tangram.debug.SHA = '412be0dbc053242836cafe21d8fe3d2166bf95dc';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

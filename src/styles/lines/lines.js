@@ -485,13 +485,16 @@ Object.assign(Lines, {
     // Create or return desired vertex layout permutation based on flags
     vertexLayoutForMeshVariant (variant) {
         if (this.vertex_layouts[variant.key] == null) {
+            const portable = this.shader_language === 'wgsl';
             // Attributes for this mesh variant
-            // Optional attributes have placeholder values assigned with `static` parameter
+            // WebGL can provide optional fields as constant vertex attributes. WebGPU
+            // requires every shader-declared input to be backed by a vertex buffer, so
+            // portable layouts write explicit zero values for unused line fields.
             const attribs = [
                 { name: 'a_position', size: 4, type: gl.SHORT, normalized: false },
                 { name: 'a_extrude', size: 2, type: gl.SHORT, normalized: false },
-                { name: 'a_offset', size: 2, type: gl.SHORT, normalized: false, static: (variant.offset ? null : [0, 0]) },
-                { name: 'a_z_and_offset_scale', size: 2, type: gl.SHORT, normalized: false, static: (variant.z_or_offset ? null : [0, 0]) },
+                { name: 'a_offset', size: 2, type: gl.SHORT, normalized: false, static: ((portable || variant.offset) ? null : [0, 0]) },
+                { name: 'a_z_and_offset_scale', size: 2, type: gl.SHORT, normalized: false, static: ((portable || variant.z_or_offset) ? null : [0, 0]) },
                 {
                     name: 'a_texcoord',
                     size: 2,
@@ -520,6 +523,7 @@ Object.assign(Lines, {
      */
     makeVertexTemplate(style, mesh) {
         let i = 0;
+        const portable = this.shader_language === 'wgsl';
 
         // a_position.xy - vertex position
         // a_position.z - line width scaling factor
@@ -535,13 +539,13 @@ Object.assign(Lines, {
 
         // a_offset.xy - normal vector
         // offset can be static or dynamic depending on style
-        if (mesh.variant.offset) {
+        if (portable || mesh.variant.offset) {
             this.vertex_template[i++] = 0;
             this.vertex_template[i++] = 0;
         }
 
         // a_z_and_offset_scale.xy
-        if (mesh.variant.z_or_offset) {
+        if (portable || mesh.variant.z_or_offset) {
             this.vertex_template[i++] = style.z || 0; // feature z position
             this.vertex_template[i++] = style.offset_scale * 1024; // line offset scaling factor
         }

@@ -1,3 +1,5 @@
+import Geo from '../../utils/geo';
+
 const LAYER_DELTA = 1 / (1 << 14);
 const ATTRIBUTE_SCALE = 1024;
 
@@ -6,19 +8,19 @@ const ATTRIBUTE_SCALE = 1024;
  *
  * Tangram's line builder emits expanded triangle geometry. The extrusion
  * vector and its fractional-zoom scaling are therefore applied before the
- * host-provided tile and camera matrices. Animated styles use the generated
- * line texture coordinates and Tangram's frame time to produce a portable
- * compact repeating vehicles without additive blending. Offsets, heights,
- * textures, arbitrary custom shader blocks, and selection remain follow-up
- * tranches.
+ * host-provided tile and camera matrices. Buffered offsets and elevation use
+ * the same zoom interpolation and height packing as Tangram's GLSL renderer.
+ * Animated styles use the generated line texture coordinates and Tangram's
+ * frame time to produce portable compact repeating vehicles without additive
+ * blending. Textures, arbitrary custom shader blocks, and selection remain
+ * follow-up tranches.
  *
  * @param {object} options Shader options.
  * @param {boolean} options.animated Enables the portable traffic vehicles.
  * @returns {string} Complete WGSL source for the line style.
  */
 export function buildLinesWGSL({ animated = false } = {}) {
-    const animated_attribute = animated ? '\n    @location(2) a_texcoord: vec2<f32>,' : '';
-    const color_location = animated ? 3 : 2;
+    const animated_attribute = animated ? '\n    @location(4) a_texcoord: vec2<f32>,' : '';
     const animated_varying = animated ? '\n    @location(1) texcoord: vec2<f32>,' : '';
     const animated_vertex = animated ?
         '\n    output.texcoord = attributes.a_texcoord / 65535.0;' : '';
@@ -68,8 +70,10 @@ export function buildLinesWGSL({ animated = false } = {}) {
     return `
 struct LineAttributes {
     @location(0) a_position: vec4<i32>,
-    @location(1) a_extrude: vec2<i32>,${animated_attribute}
-    @location(${color_location}) a_color: vec4<f32>,
+    @location(1) a_extrude: vec2<i32>,
+    @location(2) a_offset: vec2<i32>,
+    @location(3) a_z_and_offset_scale: vec2<i32>,${animated_attribute}
+    @location(5) a_color: vec4<f32>,
 };
 
 struct LineVaryings {
@@ -81,6 +85,7 @@ struct LineVaryings {
 fn vertexMain(attributes: LineAttributes) -> LineVaryings {
     var output: LineVaryings;
     var extrusion = vec2<f32>(attributes.a_extrude);
+    var offset = vec2<f32>(attributes.a_offset);
 
     var zoom_delta = clamp(
         TangramView.u_map_position.z - TangramTile.u_tile_origin.z,
@@ -93,13 +98,24 @@ fn vertexMain(attributes: LineAttributes) -> LineVaryings {
     let midpoint_zoom_delta = (zoom_delta - 0.5) * 2.0;
     let width_scale = f32(attributes.a_position.z) / ${ATTRIBUTE_SCALE}.0;
     extrusion -= extrusion * width_scale * midpoint_zoom_delta;
-    extrusion *= exp2(
-        -zoom_delta - (TangramTile.u_tile_origin.z - TangramTile.u_tile_origin.w)
+
+    let offset_width_scale =
+        f32(attributes.a_z_and_offset_scale.y) / ${ATTRIBUTE_SCALE}.0;
+    let offset_scale_direction = sign(step(0.0, offset_width_scale) - 0.5);
+    offset -= offset * abs(offset_width_scale) * (
+        (1.0 - step(0.0, offset_scale_direction)) -
+        (zoom_delta * -offset_scale_direction)
     );
 
+    let screen_space_scale = exp2(
+        -zoom_delta - (TangramTile.u_tile_origin.z - TangramTile.u_tile_origin.w)
+    );
+    extrusion *= screen_space_scale;
+    offset *= screen_space_scale;
+
     let local_position = vec4<f32>(
-        vec2<f32>(attributes.a_position.xy) + extrusion,
-        0.0,
+        vec2<f32>(attributes.a_position.xy) + extrusion + offset,
+        f32(attributes.a_z_and_offset_scale.x) / ${Geo.height_scale}.0,
         1.0
     );
     var clip_position = TangramCamera.u_projection *

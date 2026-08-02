@@ -81,6 +81,32 @@ describe('Styles:', () => {
             assert.strictEqual(lines.shader_language, 'wgsl');
             assert.strictEqual(texcoord_attribute.type, gl.FLOAT);
             assert.isFalse(texcoord_attribute.normalized);
+            for (const attribute_name of ['a_offset', 'a_z_and_offset_scale']) {
+                const attribute = line_layout.dynamic_attribs.find(
+                    candidate => candidate.name === attribute_name
+                );
+                assert.strictEqual(attribute.static, null);
+                assert.strictEqual(
+                    line_layout.getBufferLayout().attributes.find(
+                        candidate => candidate.attribute === attribute_name
+                    ).format,
+                    'sint16x2'
+                );
+            }
+
+            const line_vertex_template = lines.makeVertexTemplate({
+                width_scale: 0,
+                order: 1,
+                z: 0,
+                offset_scale: 0,
+                color: [0.25, 0.5, 0.75, 1]
+            }, { variant: {
+                offset: 0,
+                z_or_offset: 0,
+                texcoords: 1,
+                selection: 0
+            }});
+            assert.deepEqual(line_vertex_template.slice(6, 10), [0, 0, 0, 0]);
 
             const polygons = style_manager.styles.polygons;
             const polygon_layout = polygons.vertexLayoutForMeshVariant({

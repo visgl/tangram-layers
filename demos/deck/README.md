@@ -67,7 +67,10 @@ For diagnostics, `?portable_text=0` disables WebGPU labels and `?traffic=0`
 pauses the portable vehicle pulses without changing the selected basemap. The
 portable traffic shader uses fragment derivatives to keep each vehicle a
 stable, compact screen-space mark while it moves continuously in both highway
-directions.
+directions. `?line_probe=1` adds three coincident test lines near the initial
+view: cyan at ground level, magenta with a positive screen-space offset, and
+orange with a negative offset at 60 meters elevation. It is useful for direct
+WebGPU/WebGL position comparisons and is absent from the default demo.
 
 ## Uniform-buffer migration
 
