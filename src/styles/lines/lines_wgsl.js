@@ -22,26 +22,20 @@ export function buildLinesWGSL({ animated = false } = {}) {
     const animated_vertex = animated ? '\n    output.texcoord = attributes.a_texcoord;' : '';
     const animated_fragment = animated ? `
     let direction = select(-1.0, 1.0, input.texcoord.x < 0.5);
-    let stream_coordinate = input.texcoord.y * 0.125 -
-        TangramView.u_time * 1.8 * direction;
-    let stream_phase = fract(stream_coordinate);
-    let stream_head = smoothstep(0.58, 0.72, stream_phase);
-    let stream_tail = 1.0 - smoothstep(0.82, 0.98, stream_phase);
-    let stream = stream_head * stream_tail;
-    let lane_center = 1.0 - abs(input.texcoord.x * 2.0 - 1.0);
-    let lane_mask = mix(0.55, 1.0, lane_center);
-    let palette_phase = fract(
-        TangramView.u_time * 0.08 + input.texcoord.y * 0.017
+    let stream_phase = fract(
+        input.texcoord.y - TangramView.u_time * 0.7 * direction
     );
-    let stream_color = mix(
-        vec3<f32>(0.0, 0.95, 1.0),
-        vec3<f32>(0.86, 0.18, 0.95),
-        palette_phase
-    );
+    let along_distance = abs(stream_phase - 0.5);
+    let car_length = 1.0 - smoothstep(0.04, 0.11, along_distance);
+    let lane_center = select(0.72, 0.28, direction > 0.0);
+    let lane_distance = abs(input.texcoord.x - lane_center);
+    let lane_mask = 1.0 - smoothstep(0.12, 0.25, lane_distance);
+    let car = car_length * lane_mask;
+    let car_color = vec3<f32>(0.08, 1.0, 0.94);
     let animated_color = mix(
         input.color.rgb,
-        stream_color,
-        stream * lane_mask * 0.82
+        car_color,
+        car * 0.95
     );
     return vec4<f32>(animated_color, input.color.a);
 ` : '    return input.color;\n';

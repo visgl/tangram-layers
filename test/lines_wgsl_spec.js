@@ -22,7 +22,10 @@ describe('Line WGSL', function () {
         assert.include(source, '@location(2) a_texcoord: vec2<f32>');
         assert.include(source, '@location(3) a_color: vec4<f32>');
         assert.include(source, 'TangramView.u_time');
-        assert.include(source, 'stream_color');
+        assert.include(source, 'car_length');
+        assert.include(source, 'lane_mask');
+        assert.include(source, 'car_color');
         assert.include(source, 'direction');
+        assert.notInclude(source, 'palette_phase');
     });
 });
