@@ -1,5 +1,6 @@
 import { assert } from 'chai';
 import Texture from '../src/gl/texture';
+import Context from '../src/gl/context';
 
 describe('Texture resource backend', function () {
     it('allocates, replaces, and destroys textures through an injected resource factory', function () {
@@ -52,26 +53,36 @@ describe('Texture resource backend', function () {
 
     it('owns handle-free portable texture resources without a WebGL context', function () {
         const resources = [];
-        const texture = Texture.create(null, '__portable_texture_test', {
-            width: 1,
-            height: 1,
-            data: new Uint8Array(4),
-            textureFactory() {
-                const resource = {
-                    get handle() { throw new Error('portable textures must remain opaque'); },
-                    destroy() { this.destroyed = true; }
-                };
-                resources.push(resource);
-                return resource;
-            }
-        });
+        const context_scope = sinon.stub(Context, 'withContext')
+            .throws(new Error('portable textures must bypass WebGL context scopes'));
+        let texture;
+        try {
+            texture = Texture.create(null, '__portable_texture_test', {
+                width: 1,
+                height: 1,
+                data: new Uint8Array(4),
+                textureFactory() {
+                    const resource = {
+                        get handle() { throw new Error('portable textures must remain opaque'); },
+                        destroy() { this.destroyed = true; }
+                    };
+                    resources.push(resource);
+                    return resource;
+                }
+            });
 
-        assert.lengthOf(resources, 2);
+            texture.update(new Uint8Array(4));
+            texture.setFiltering({ filtering: 'nearest' });
+            texture.destroy({ force: true });
+        }
+        finally {
+            context_scope.restore();
+        }
+
+        assert.lengthOf(resources, 3);
         assert.isTrue(resources[0].destroyed);
-        assert.strictEqual(texture.texture, resources[1]);
-        assert.strictEqual(texture.getResource(), resources[1]);
-
-        texture.destroy({ force: true });
         assert.isTrue(resources[1].destroyed);
+        assert.isTrue(resources[2].destroyed);
+        assert.isNull(texture.texture);
     });
 });

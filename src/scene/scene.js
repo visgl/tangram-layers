@@ -95,7 +95,7 @@ export default class Scene {
         this.device = options.device || null;
         this.shader_language = options.shaderLanguage || 'glsl';
         this.portable_rendering = Boolean(this.device && this.shader_language !== 'glsl');
-        this.resource_context = this.portable_rendering ? {} : null;
+        this.resource_context = this.portable_rendering ? this.device : null;
         this.owns_gl = !this.external_gl && !this.portable_rendering;
         this.webgl_context_scope = options.webGLContextScope;
         this.redraw_callback = options.requestRedraw;

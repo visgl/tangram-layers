@@ -1,4 +1,4 @@
-import Tangram from '../../dist/tangram.debug.mjs?bridge=webgpu-traffic-cells';
+import Tangram from '../../dist/tangram.debug.mjs?bridge=webgpu-device-resource-scope';
 import createTangramLayerClass from './tangram-layer.js?bridge=std140-fix';
 import {webgpuAdapter} from 'https://esm.sh/@luma.gl/webgpu@9.4.0-alpha.1?bundle&deps=@luma.gl/core@9.4.0-alpha.1';
 

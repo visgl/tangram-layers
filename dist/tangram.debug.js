@@ -1417,6 +1417,9 @@ var Texture = /*#__PURE__*/function () {
     value: function destroy() {
       var _this = this;
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      if (this.texture_factory) {
+        return this.destroyTexture(options);
+      }
       return Context$1.withContext(this.gl, function () {
         return _this.destroyTexture(options);
       });
@@ -1622,6 +1625,9 @@ var Texture = /*#__PURE__*/function () {
     value: function update(source) {
       var _this4 = this;
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+      if (this.texture_factory) {
+        return this.updateTexture(source, options);
+      }
       return Context$1.withContext(this.gl, function () {
         if (Context$1.hasContextScope(_this4.gl)) {
           Texture.resetBindings();
@@ -1707,6 +1713,9 @@ var Texture = /*#__PURE__*/function () {
     value: function setFiltering() {
       var _this5 = this;
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      if (this.texture_factory) {
+        return this.updateFiltering(options);
+      }
       return Context$1.withContext(this.gl, function () {
         if (Context$1.hasContextScope(_this5.gl)) {
           Texture.resetBindings();
@@ -31622,7 +31631,7 @@ var Scene = /*#__PURE__*/function () {
     this.device = options.device || null;
     this.shader_language = options.shaderLanguage || 'glsl';
     this.portable_rendering = Boolean(this.device && this.shader_language !== 'glsl');
-    this.resource_context = this.portable_rendering ? {} : null;
+    this.resource_context = this.portable_rendering ? this.device : null;
     this.owns_gl = !this.external_gl && !this.portable_rendering;
     this.webgl_context_scope = options.webGLContextScope;
     this.redraw_callback = options.requestRedraw;
@@ -36886,7 +36895,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = '957742785f9f1cd700b61499ce9cb239f728a3ec';
+	Tangram.debug.SHA = '49df0a8c6613863c2edbfcf913a5b41dbd565a7b';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

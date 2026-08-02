@@ -1246,6 +1246,9 @@ class Texture {
 
   // Destroy a single texture instance
   destroy(options = {}) {
+    if (this.texture_factory) {
+      return this.destroyTexture(options);
+    }
     return Context$1.withContext(this.gl, () => this.destroyTexture(options));
   }
   destroyTexture({
@@ -1424,6 +1427,9 @@ class Texture {
 
   // Uploads current image or buffer to the GPU (can be used to update animated textures on the fly)
   update(source, options = {}) {
+    if (this.texture_factory) {
+      return this.updateTexture(source, options);
+    }
     return Context$1.withContext(this.gl, () => {
       if (Context$1.hasContextScope(this.gl)) {
         Texture.resetBindings();
@@ -1497,6 +1503,9 @@ class Texture {
 
   // Determines appropriate filtering mode
   setFiltering(options = {}) {
+    if (this.texture_factory) {
+      return this.updateFiltering(options);
+    }
     return Context$1.withContext(this.gl, () => {
       if (Context$1.hasContextScope(this.gl)) {
         Texture.resetBindings();
@@ -29983,7 +29992,7 @@ class Scene {
     this.device = options.device || null;
     this.shader_language = options.shaderLanguage || 'glsl';
     this.portable_rendering = Boolean(this.device && this.shader_language !== 'glsl');
-    this.resource_context = this.portable_rendering ? {} : null;
+    this.resource_context = this.portable_rendering ? this.device : null;
     this.owns_gl = !this.external_gl && !this.portable_rendering;
     this.webgl_context_scope = options.webGLContextScope;
     this.redraw_callback = options.requestRedraw;
@@ -34815,7 +34824,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = '957742785f9f1cd700b61499ce9cb239f728a3ec';
+	Tangram.debug.SHA = '49df0a8c6613863c2edbfcf913a5b41dbd565a7b';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

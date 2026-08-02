@@ -59,6 +59,9 @@ export default class Texture {
 
     // Destroy a single texture instance
     destroy(options = {}) {
+        if (this.texture_factory) {
+            return this.destroyTexture(options);
+        }
         return Context.withContext(this.gl, () => this.destroyTexture(options));
     }
 
@@ -248,6 +251,9 @@ export default class Texture {
 
     // Uploads current image or buffer to the GPU (can be used to update animated textures on the fly)
     update(source, options = {}) {
+        if (this.texture_factory) {
+            return this.updateTexture(source, options);
+        }
         return Context.withContext(this.gl, () => {
             if (Context.hasContextScope(this.gl)) {
                 Texture.resetBindings();
@@ -331,6 +337,9 @@ export default class Texture {
 
     // Determines appropriate filtering mode
     setFiltering(options = {}) {
+        if (this.texture_factory) {
+            return this.updateFiltering(options);
+        }
         return Context.withContext(this.gl, () => {
             if (Context.hasContextScope(this.gl)) {
                 Texture.resetBindings();

@@ -75,6 +75,9 @@ describe('Renderer', function () {
             createRenderPipeline() {},
             createVertexArray() {}
         };
+        Object.defineProperty(device, 'handle', {
+            get() { throw new Error('portable scenes must not read device.handle'); }
+        });
         const renderer = Renderer.create({}, { device });
         sinon.spy(renderer.device_renderer, 'destroy');
 
@@ -111,6 +114,9 @@ describe('Renderer', function () {
             createRenderPipeline() {},
             createVertexArray() {}
         };
+        Object.defineProperty(device, 'handle', {
+            get() { throw new Error('portable scenes must not read device.handle'); }
+        });
         const canvas = document.createElement('canvas');
         const renderer = Renderer.create({}, { device, canvas });
 
@@ -125,6 +131,7 @@ describe('Renderer', function () {
 
         assert.isTrue(renderer.scene.portable_rendering);
         assert.strictEqual(renderer.scene.canvas, canvas);
+        assert.strictEqual(renderer.scene.resource_context, device);
         assert.strictEqual(renderer.scene.gl, renderer.scene.resource_context);
         assert.notProperty(renderer.scene.gl, 'getExtension');
         assert.lengthOf(buffers, 3);
