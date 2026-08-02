@@ -79,6 +79,15 @@ body {
     font-size: 12px;
 }
 
+.source-link {
+    margin: 8px 0 0;
+    font-size: 12px;
+}
+
+.source-link a {
+    color: #1967d2;
+}
+
 #attribution {
     position: absolute;
     z-index: 10;
