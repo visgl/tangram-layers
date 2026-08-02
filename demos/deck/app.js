@@ -22,8 +22,8 @@ const initialViewState = {
     longitude: -74.009764,
     latitude: 40.705319,
     zoom: 15,
-    bearing: 0,
-    pitch: 0
+    bearing: -20,
+    pitch: 35
 };
 
 const landmarks = [
@@ -84,8 +84,9 @@ const deckInstance = new Deck({
     parent: document.getElementById('deck-container'),
     initialViewState,
     controller: {
-        dragRotate: false,
-        touchRotate: false
+        dragRotate: true,
+        touchRotate: true,
+        maxPitch: 50
     },
     layers: createLayers(),
     getTooltip: ({ object }) => object && object.name,

@@ -15,7 +15,10 @@ http://localhost:8000/tangram/demos/deck/
 
 The demo can switch between CARTO Streets vector tiles, styled locally by
 Tangram, and CARTO Positron raster tiles. Neither option requires an API key.
-The prototype supports one flat Web Mercator view with zero bearing and pitch.
+The prototype supports one Web Mercator view. deck.gl remains authoritative for
+longitude, latitude, zoom, bearing, and pitch; Tangram receives the deck camera
+matrices so vector and raster basemaps remain aligned with deck layers while the
+controller tilts and rotates the view.
 Tangram renders directly into deck.gl's WebGL context. The layer brackets
 Tangram GPU work with the luma.gl WebGLDevice state stack and then leaves a
 clean depth/stencil buffer for the deck layers above it.

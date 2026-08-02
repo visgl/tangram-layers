@@ -1,5 +1,7 @@
 const DECK_TO_TANGRAM_ZOOM_OFFSET = 1;
 const VIEW_EPSILON = 1e-7;
+const DECK_WORLD_SIZE = 512;
+const TANGRAM_HALF_WORLD_METERS = 20037508.342789244;
 // luma.gl Buffer usage flags. Kept local so the demo does not add a package dependency.
 const LUMA_BUFFER_COPY_DST = 0x0008;
 const LUMA_BUFFER_INDEX = 0x0010;
@@ -30,6 +32,43 @@ export function injectNextzenApiKey(config, apiKey) {
         }
     }
     return updated;
+}
+
+/**
+ * Converts a deck.gl Web Mercator viewport into Tangram camera matrices.
+ *
+ * Tangram tile models use absolute EPSG:3857 meters while deck matrices consume
+ * zoom-zero common coordinates. Altitude remains in physical meters and uses
+ * deck's latitude-dependent distance scale.
+ *
+ * @param {object} viewport deck.gl WebMercatorViewport.
+ * @returns {{view: Float64Array, projection: Float32Array, position: number[]}}
+ */
+export function getExternalCameraFrame(viewport) {
+    const distance_scales = typeof viewport.getDistanceScales === 'function' ?
+        viewport.getDistanceScales() : viewport.distanceScales;
+    const units_per_meter = distance_scales && distance_scales.unitsPerMeter;
+    if (!viewport.viewMatrix || viewport.viewMatrix.length !== 16 ||
+        !viewport.projectionMatrix || viewport.projectionMatrix.length !== 16 ||
+        !units_per_meter || !Number.isFinite(units_per_meter[2])) {
+        throw new Error('deck viewport camera matrices and distance scales are required');
+    }
+
+    const xy_scale = DECK_WORLD_SIZE / (TANGRAM_HALF_WORLD_METERS * 2);
+    const meters_to_common = new Float64Array(16);
+    meters_to_common[0] = xy_scale;
+    meters_to_common[5] = xy_scale;
+    meters_to_common[10] = units_per_meter[2];
+    meters_to_common[12] = DECK_WORLD_SIZE / 2;
+    meters_to_common[13] = DECK_WORLD_SIZE / 2;
+    meters_to_common[15] = 1;
+
+    return {
+        view: multiplyMatrices(viewport.viewMatrix, meters_to_common),
+        projection: new Float32Array(viewport.projectionMatrix),
+        // The view matrix places the camera at the origin in eye coordinates.
+        position: [0, 0, 0]
+    };
 }
 
 /**
@@ -178,6 +217,7 @@ export function createTangramLayerClass({ Layer, Scene }) {
                     textureFactory: options => createDeviceTexture(device, options),
                     maxTextureSize: device.limits && device.limits.maxTextureDimension2D,
                     meshRenderer: record.meshRenderer,
+                    externalCamera: true,
                     continuousZoom: true,
                     highDensityDisplay: true,
                     logLevel: 'warn'
@@ -191,7 +231,9 @@ export function createTangramLayerClass({ Layer, Scene }) {
             record.scene = scene;
 
             scene.subscribe({
-                load: message => injectNextzenApiKey(message.config, record.apiKey),
+                load: message => {
+                    injectNextzenApiKey(message.config, record.apiKey);
+                },
                 error: message => this._reportSceneError(record, normalizeError(message))
             });
 
@@ -258,6 +300,20 @@ export function createTangramLayerClass({ Layer, Scene }) {
                 lat: viewport.latitude,
                 zoom: viewport.zoom + DECK_TO_TANGRAM_ZOOM_OFFSET
             });
+
+            if (typeof record.scene.setCameraMatrices === 'function') {
+                record.scene.setCameraMatrices(getExternalCameraFrame(viewport));
+            }
+            else if (record.loaded) {
+                const error = new Error('Tangram external camera is unavailable');
+                record.lastViewportError = error.message;
+                this._raiseViewportError(record, error);
+            }
+
+            const pitch = Math.abs(viewport.pitch || 0) * Math.PI / 180;
+            record.scene.view.buffer = Math.min(4, Math.ceil(
+                Math.tan(pitch) * viewport.height / 256
+            ));
         }
 
         _canRender(record, props) {
@@ -356,18 +412,40 @@ function validateViewport(viewport, viewports) {
     if (viewport.projectionMode != null &&
         viewport.projectionMode !== 1 &&
         viewport.projectionMode !== 4) {
-        return new Error('a flat Web Mercator viewport is required');
+        return new Error('a Web Mercator viewport is required');
     }
     if (!Number.isFinite(viewport.longitude) ||
         !Number.isFinite(viewport.latitude) ||
         !Number.isFinite(viewport.zoom)) {
         return new Error('a Web Mercator viewport is required');
     }
-    if (Math.abs(viewport.bearing || 0) > VIEW_EPSILON ||
-        Math.abs(viewport.pitch || 0) > VIEW_EPSILON) {
-        return new Error('bearing and pitch must both be zero');
+    if (!Number.isFinite(viewport.bearing || 0) ||
+        !Number.isFinite(viewport.pitch || 0) ||
+        (viewport.pitch || 0) < -VIEW_EPSILON ||
+        (viewport.pitch || 0) >= 90) {
+        return new Error('bearing and pitch must describe a finite deck.gl camera');
+    }
+    try {
+        getExternalCameraFrame(viewport);
+    }
+    catch (error) {
+        return error;
     }
     return null;
+}
+
+function multiplyMatrices(left, right) {
+    const result = new Float64Array(16);
+    for (let column = 0; column < 4; column++) {
+        for (let row = 0; row < 4; row++) {
+            let value = 0;
+            for (let index = 0; index < 4; index++) {
+                value += left[index * 4 + row] * right[column * 4 + index];
+            }
+            result[column * 4 + row] = value;
+        }
+    }
+    return result;
 }
 
 function normalizeError(value) {

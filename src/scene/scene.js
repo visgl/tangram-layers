@@ -122,6 +122,11 @@ export default class Scene {
         return new Scene(config, options);
     }
 
+    // Supply camera matrices from an embedding renderer
+    setCameraMatrices (matrices) {
+        this.view.setCameraMatrices(matrices);
+    }
+
     // Load scene (or reload existing scene if no new source specified)
     // Options:
     //   `base_path`: base URL against which scene resources should be resolved (useful for Play) (default nulll)

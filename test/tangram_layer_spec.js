@@ -1,5 +1,13 @@
 import { assert } from 'chai';
 import createTangramLayerClass from '../demos/deck/tangram-layer';
+import Camera from '../src/scene/camera';
+
+const IDENTITY_MATRIX = [
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1
+];
 
 class FakeLayer {
     constructor(props = {}) {
@@ -29,13 +37,15 @@ class FakeScene {
         this.listeners = {};
         this.resizeCalls = [];
         this.viewCalls = [];
+        this.cameraMatrixCalls = [];
         this.updateCalls = [];
         this.onUpdate = null;
         this.destroyed = false;
         this.loadArguments = null;
         this.deferred = createDeferred();
         this.view = {
-            setView: view => this.viewCalls.push(view)
+            setView: view => this.viewCalls.push(view),
+            buffer: 0
         };
     }
 
@@ -50,6 +60,10 @@ class FakeScene {
 
     resizeMap(width, height) {
         this.resizeCalls.push([width, height]);
+    }
+
+    setCameraMatrices(matrices) {
+        this.cameraMatrixCalls.push(matrices);
     }
 
     withWebGLContext(callback) {
@@ -84,6 +98,48 @@ FakeScene.create = function(source, options) {
 
 const TangramLayer = createTangramLayerClass({ Layer: FakeLayer, Scene: FakeScene });
 
+describe('ExternalCamera', function () {
+    it('accepts caller-provided matrices and supplies camera uniforms', function () {
+        let redraw_count = 0;
+        const camera = Camera.create('external', {
+            scene: {
+                requestRedraw() {
+                    redraw_count++;
+                }
+            }
+        }, { type: 'external' });
+        const view_matrix = IDENTITY_MATRIX.slice();
+        const projection_matrix = IDENTITY_MATRIX.slice();
+        view_matrix[12] = -10;
+        projection_matrix[0] = 2;
+
+        camera.setMatrices({
+            view: view_matrix,
+            projection: projection_matrix,
+            position: [0, 0, 0]
+        });
+        camera.setMatrices({
+            view: view_matrix,
+            projection: projection_matrix,
+            position: [0, 0, 0]
+        });
+
+        let uniforms;
+        camera.setupProgram(null, {
+            setUniforms(values) {
+                uniforms = values;
+            }
+        });
+
+        assert.strictEqual(camera.type, 'external');
+        assert.strictEqual(camera.view_matrix[12], -10);
+        assert.strictEqual(camera.projection_matrix[0], 2);
+        assert.deepEqual(uniforms.u_eye, [0, 0, 0]);
+        assert.deepEqual(uniforms.u_vanishing_point, [0, 0]);
+        assert.strictEqual(redraw_count, 1, 'unchanged matrices do not schedule another frame');
+    });
+});
+
 describe('TangramLayer demo bridge', function () {
     const layers = [];
     const parentElements = [];
@@ -106,7 +162,7 @@ describe('TangramLayer demo bridge', function () {
         FakeScene.instances.length = 0;
     });
 
-    it('shares deck WebGL context with Tangram and synchronizes the flat viewport', function () {
+    it('shares deck WebGL context with Tangram and synchronizes the viewport', function () {
         const { layer, parentElement, deckCanvas, device } = createLayer();
         const scene = FakeScene.instances[0];
 
@@ -114,6 +170,7 @@ describe('TangramLayer demo bridge', function () {
         assert.strictEqual(parentElement.children[0], deckCanvas);
         assert.strictEqual(scene.options.webGLContext, device.handle);
         assert.isTrue(scene.options.disableRenderLoop);
+        assert.isTrue(scene.options.externalCamera);
         assert.isTrue(scene.options.enableUniformBuffers);
         assert.isFunction(scene.options.uniformBufferFactory);
         assert.isFunction(scene.options.shaderFactory);
@@ -130,6 +187,13 @@ describe('TangramLayer demo bridge', function () {
             lat: 40.705319,
             zoom: 16.25
         }]);
+        assert.lengthOf(scene.cameraMatrixCalls, 1);
+        assert.closeTo(scene.cameraMatrixCalls[0].view[0], 512 / 40075016.68557849, 1e-15);
+        assert.closeTo(scene.cameraMatrixCalls[0].view[5], 512 / 40075016.68557849, 1e-15);
+        assert.strictEqual(scene.cameraMatrixCalls[0].view[10], 0.00002);
+        assert.strictEqual(scene.cameraMatrixCalls[0].view[12], 256);
+        assert.strictEqual(scene.cameraMatrixCalls[0].view[13], 256);
+        assert.deepEqual(Array.from(scene.cameraMatrixCalls[0].projection), IDENTITY_MATRIX);
 
         const uniform_buffer = scene.options.uniformBufferFactory({
             id: 'TangramView',
@@ -466,18 +530,41 @@ describe('TangramLayer demo bridge', function () {
         assert.lengthOf(scene.updateCalls, 1);
     });
 
+    it('synchronizes pitch and bearing through the external camera', function () {
+        const { layer } = createLayer();
+        const scene = FakeScene.instances[0];
+        const rotated_view = IDENTITY_MATRIX.slice();
+        rotated_view[0] = 0;
+        rotated_view[1] = 1;
+        rotated_view[4] = -1;
+        rotated_view[5] = 0;
+
+        layer.context.viewport = Object.assign({}, layer.context.viewport, {
+            bearing: 25,
+            pitch: 40,
+            viewMatrix: rotated_view
+        });
+        layer.draw();
+
+        assert.lengthOf(layer.errors, 0);
+        assert.lengthOf(scene.cameraMatrixCalls, 2);
+        assert.closeTo(scene.cameraMatrixCalls[1].view[1], 512 / 40075016.68557849, 1e-15);
+        assert.closeTo(scene.cameraMatrixCalls[1].view[4], -512 / 40075016.68557849, 1e-15);
+        assert.strictEqual(scene.view.buffer, 2);
+    });
+
     it('hides the basemap and reports unsupported viewport states once', function () {
         const { layer, deck } = createLayer();
         const record = layer.state.tangramRecord;
 
-        layer.context.viewport = Object.assign({}, layer.context.viewport, { bearing: 10 });
+        layer.context.viewport = Object.assign({}, layer.context.viewport, { pitch: 90 });
         layer.draw();
         layer.draw();
         assert.lengthOf(record.scene.updateCalls, 0);
         assert.lengthOf(layer.errors, 1);
         assert.match(layer.errors[0].error.message, /bearing and pitch/);
 
-        layer.context.viewport = Object.assign({}, layer.context.viewport, { bearing: 0 });
+        layer.context.viewport = Object.assign({}, layer.context.viewport, { pitch: 0 });
         deck.viewports = [layer.context.viewport, layer.context.viewport];
         layer.draw();
         assert.lengthOf(layer.errors, 2);
@@ -487,7 +574,15 @@ describe('TangramLayer demo bridge', function () {
         layer.context.viewport = Object.assign({}, layer.context.viewport, { projectionMode: 2 });
         layer.draw();
         assert.lengthOf(layer.errors, 3);
-        assert.match(layer.errors[2].error.message, /flat Web Mercator/);
+        assert.match(layer.errors[2].error.message, /Web Mercator/);
+
+        layer.context.viewport = Object.assign({}, layer.context.viewport, {
+            projectionMode: 1,
+            viewMatrix: null
+        });
+        layer.draw();
+        assert.lengthOf(layer.errors, 4);
+        assert.match(layer.errors[3].error.message, /camera matrices/);
     });
 
     it('reports scene load failures and skips shared-context rendering', async function () {
@@ -559,7 +654,12 @@ describe('TangramLayer demo bridge', function () {
             bearing: 0,
             pitch: 0,
             width: 800,
-            height: 600
+            height: 600,
+            viewMatrix: IDENTITY_MATRIX,
+            projectionMatrix: IDENTITY_MATRIX,
+            distanceScales: {
+                unitsPerMeter: [0.00002, 0.00002, 0.00002]
+            }
         };
         const gl = createFakeWebGLContext(deckCanvas);
         const device = {

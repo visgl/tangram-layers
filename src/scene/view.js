@@ -38,6 +38,7 @@ export default class View {
         this.aspect = null;
 
         this.buffer = 0;
+        this.external_camera = options.externalCamera === true;
         this.continuous_zoom = (typeof options.continuousZoom === 'boolean') ? options.continuousZoom : true;
         this.wrap = (options.wrapView === false) ? false : true;
         this.preserve_tiles_within_zoom = 1;
@@ -52,11 +53,23 @@ export default class View {
 
     // Create camera
     createCamera () {
+        if (this.external_camera) {
+            this.camera = Camera.create('external', this, { type: 'external' });
+            return;
+        }
         let active_camera = this.getActiveCamera();
         if (active_camera) {
             this.camera = Camera.create(active_camera, this, this.scene.config.cameras[active_camera]);
             this.camera.updateView();
         }
+    }
+
+    // Supply camera matrices from an embedding renderer
+    setCameraMatrices (matrices) {
+        if (!this.camera || this.camera.type !== 'external') {
+            throw new Error('View must be constructed with externalCamera to accept camera matrices');
+        }
+        this.camera.setMatrices(matrices);
     }
 
     // Get active camera - for public API
