@@ -187,7 +187,28 @@ function createVectorScene() {
                 data: { source: 'carto', layer: 'transportation' },
                 draw: {
                     lines: {
-                        order: 7,
+                        order: function () {
+                            var classOrder = {
+                                path: 0,
+                                track: 1,
+                                service: 2,
+                                minor: 3,
+                                tertiary: 4,
+                                secondary: 5,
+                                primary: 6,
+                                trunk: 7,
+                                motorway: 8
+                            };
+                            var layer = parseInt(feature.layer, 10) || 0;
+                            if (layer === 0 && feature.brunnel === 'bridge') {
+                                layer = 1;
+                            }
+                            else if (layer === 0 && feature.brunnel === 'tunnel') {
+                                layer = -1;
+                            }
+                            layer = Math.max(-5, Math.min(5, layer));
+                            return 128 + layer * 16 + (classOrder[feature.class] || 0);
+                        },
                         color: '#ffffff',
                         width: [[8, '0.5px'], [12, '1px'], [16, '3px']],
                         outline: { color: '#d5d0c8', width: '1px' }
