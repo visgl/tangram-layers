@@ -121,7 +121,14 @@ export function createTangramLayerClass({ Layer, Renderer }) {
                 if (renderPass) {
                     update_options.renderPass = renderPass;
                 }
-                if (record.renderer.render(update_options) && record.gl) {
+                const rendered = record.renderer.render(update_options);
+                if (record.scene.config && record.scene.config.scene &&
+                    record.scene.config.scene.animated === true) {
+                    // Keep host-driven scenes moving even while deck's view is idle.
+                    // Tangram's active-style list can lag tile/style activation by a frame.
+                    this.setNeedsRedraw();
+                }
+                if (rendered && record.gl) {
                     // Tangram's depth and stencil buffers are internal implementation
                     // details. Preserve its color output but leave a clean depth buffer
                     // for deck layers that follow this basemap.

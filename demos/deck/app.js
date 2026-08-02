@@ -1,4 +1,4 @@
-import Tangram from '../../dist/tangram.debug.mjs?bridge=webgpu-car-pulses';
+import Tangram from '../../dist/tangram.debug.mjs?bridge=webgpu-highway-traffic';
 import createTangramLayerClass from './tangram-layer.js?bridge=std140-fix';
 import {webgpuAdapter} from 'https://esm.sh/@luma.gl/webgpu@9.4.0-alpha.1?bundle&deps=@luma.gl/core@9.4.0-alpha.1';
 
@@ -549,8 +549,8 @@ function createTronCartoScene({ portable = false, labels = true, animateTraffic 
                         color: '#0b6f8d',
                         width: [[8, '0.75px'], [13, '2px'], [18, '7px']]
                     },
-                    traffic: {
-                        style: portable ? 'tron-portable-traffic' : 'slow-traffic-animation-twoways',
+                    centerline: {
+                        style: 'lines',
                         order: 8,
                         color: '#162c4c',
                         width: [[8, '0.35px'], [13, '0.75px'], [18, '3px']]
@@ -563,26 +563,37 @@ function createTronCartoScene({ portable = false, labels = true, animateTraffic 
                             color: '#169fbd',
                             width: [[8, '1.5px'], [13, '5px'], [18, '18px']]
                         },
+                        centerline: {
+                            color: '#10223d',
+                            width: [[8, '0.75px'], [13, '3px'], [18, '10px']]
+                        }
+                    }
+                },
+                trunk: {
+                    filter: { class: 'trunk', $zoom: { min: 10 } },
+                    draw: {
                         traffic: {
                             style: portable ? 'tron-portable-traffic' : 'fast-traffic-animation-twoways',
+                            order: 9,
                             color: '#10223d',
-                            width: [[8, '0.75px'], [13, '3px'], [18, '10px']],
-                            outline: { color: '#4ee5e1', width: '0.75px' }
+                            width: [[10, '0.5px'], [13, '3px'], [18, '10px']],
+                            outline: { color: '#4ee5e1', width: '0.5px' }
                         }
                     }
                 },
                 highway: {
-                    filter: { class: 'motorway' },
+                    filter: { class: 'motorway', $zoom: { min: 10 } },
                     draw: {
                         glow: {
-                            color: '#7a2ca6',
-                            width: [[8, '1.5px'], [13, '5px'], [18, '16px']]
+                            color: '#126d88',
+                            width: [[10, '1px'], [13, '4px'], [18, '14px']]
                         },
                         traffic: {
                             style: portable ? 'tron-portable-traffic' : 'fast-traffic-animation-twoways',
-                            color: '#241539',
-                            width: [[8, '0.75px'], [13, '3px'], [18, '10px']],
-                            outline: { color: '#c357e8', width: '0.75px' }
+                            order: 9,
+                            color: '#12223c',
+                            width: [[10, '0.5px'], [13, '3px'], [18, '10px']],
+                            outline: { color: '#8c3aae', width: '0.35px' }
                         }
                     }
                 }
@@ -591,7 +602,7 @@ function createTronCartoScene({ portable = false, labels = true, animateTraffic 
                 data: { source: 'mapzen', layer: 'place' },
                 draw: {
                     text: {
-                        order: 9,
+                        order: 10,
                         text_source: 'name',
                         font: {
                             family: 'Montserrat',

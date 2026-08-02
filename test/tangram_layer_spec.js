@@ -362,6 +362,20 @@ describe('TangramLayer demo bridge', function () {
         assert.deepEqual(device.stateCalls, []);
     });
 
+    it('keeps an explicitly animated host-driven scene drawing while the view is idle', async function () {
+        const { layer } = createLayer({}, { deviceType: 'webgpu' });
+        const scene = FakeScene.instances[0];
+        await flushPromises();
+        scene.deferred.resolve();
+        await flushPromises();
+        scene.config = { scene: { animated: true } };
+        const redraw_count = layer.redrawCount;
+
+        layer.draw({ renderPass: createFakeRenderPass() });
+
+        assert.strictEqual(layer.redrawCount, redraw_count + 1);
+    });
+
     it('builds and caches luma render pipelines and vertex arrays for Tangram meshes', async function () {
         const { layer, device } = createLayer();
         const scene = FakeScene.instances[0];

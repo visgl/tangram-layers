@@ -22,6 +22,10 @@ describe('Line WGSL', function () {
         assert.include(source, '@location(2) a_texcoord: vec2<f32>');
         assert.include(source, '@location(3) a_color: vec4<f32>');
         assert.include(source, 'TangramView.u_time');
+        assert.include(source, 'traffic_random');
+        assert.include(source, 'traffic_cell');
+        assert.include(source, 'cell_position');
+        assert.include(source, 'has_car');
         assert.include(source, 'car_length');
         assert.include(source, 'lane_mask');
         assert.include(source, 'car_color');

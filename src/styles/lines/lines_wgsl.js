@@ -20,27 +20,39 @@ export function buildLinesWGSL({ animated = false } = {}) {
     const color_location = animated ? 3 : 2;
     const animated_varying = animated ? '\n    @location(1) texcoord: vec2<f32>,' : '';
     const animated_vertex = animated ? '\n    output.texcoord = attributes.a_texcoord;' : '';
+    const animated_global = animated ? `
+    fn traffic_random(value: f32) -> f32 {
+        return fract(sin(value * 12.9898) * 43758.5453);
+    }
+
+` : '';
     const animated_fragment = animated ? `
+
     let direction = select(-1.0, 1.0, input.texcoord.x < 0.5);
-    let stream_phase = fract(
-        input.texcoord.y - TangramView.u_time * 0.7 * direction
-    );
-    let along_distance = abs(stream_phase - 0.5);
-    let car_length = 1.0 - smoothstep(0.04, 0.11, along_distance);
+    let traffic_coordinate = input.texcoord.y * 64.0 -
+        TangramView.u_time * 7.0 * direction;
+    let traffic_cell = floor(traffic_coordinate);
+    let cell_position = fract(traffic_coordinate);
+    let lane_seed = floor(input.texcoord.x * 5.0);
+    let has_car = step(0.48, traffic_random(traffic_cell + lane_seed * 19.19));
+    let car_front = smoothstep(0.04, 0.12, cell_position);
+    let car_back = 1.0 - smoothstep(0.40, 0.52, cell_position);
+    let car_length = car_front * car_back * has_car;
     let lane_center = select(0.72, 0.28, direction > 0.0);
     let lane_distance = abs(input.texcoord.x - lane_center);
-    let lane_mask = 1.0 - smoothstep(0.12, 0.25, lane_distance);
+    let lane_mask = 1.0 - smoothstep(0.06, 0.16, lane_distance);
     let car = car_length * lane_mask;
-    let car_color = vec3<f32>(0.08, 1.0, 0.94);
+    let car_color = vec3<f32>(0.15, 1.0, 0.96);
     let animated_color = mix(
         input.color.rgb,
         car_color,
-        car * 0.95
+        car * 0.98
     );
     return vec4<f32>(animated_color, input.color.a);
 ` : '    return input.color;\n';
 
     return `
+${animated_global}
 struct LineAttributes {
     @location(0) a_position: vec4<i32>,
     @location(1) a_extrude: vec2<i32>,${animated_attribute}
