@@ -4,6 +4,7 @@
 import {leafletLayer} from './leaflet_layer';
 import Scene from './scene/scene';
 import Renderer from './scene/renderer';
+import LumaDeviceRenderer from './gpu/luma_device_renderer';
 
 // Additional modules are exposed for debugging
 import version from './utils/version';
@@ -48,6 +49,7 @@ const debug = {
     Light,
     Scene,
     Renderer,
+    LumaDeviceRenderer,
     WorkerBroker,
     Task,
     StyleManager,

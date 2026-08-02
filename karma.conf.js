@@ -62,7 +62,13 @@ export default function (config) {
 
                 // These are needed for jszip node-environment compatibility,
                 // previously provided by browserify
-                globals(),
+                globals({
+                    exclude: [
+                        '**/node_modules/@luma.gl/**',
+                        '**/node_modules/@math.gl/**',
+                        '**/node_modules/@probe.gl/**'
+                    ]
+                }),
                 builtins()
             ]
         },
