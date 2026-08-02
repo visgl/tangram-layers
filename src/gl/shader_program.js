@@ -45,6 +45,7 @@ export default class ShaderProgram {
         this.uniform_blocks = Object.assign({}, options.uniform_blocks || {});
         this.defer_uniform_blocks = options.deferUniformBlocks === true;
         this.defer_texture_bindings = options.deferTextureBindings === true;
+        this.defer_uniform_updates = options.deferUniformUpdates === true;
         this.texture_uniforms = {};
         this.shader_factory = options.shaderFactory;
         this.vertex_shader_resource = null;
@@ -77,7 +78,7 @@ export default class ShaderProgram {
         }
 
         const changed = ShaderProgram.current !== this;
-        if (changed) {
+        if (changed && !this.defer_uniform_updates) {
             this.gl.useProgram(this.program);
         }
         ShaderProgram.current = this;
@@ -550,7 +551,7 @@ export default class ShaderProgram {
         this.uniforms[name] = this.uniforms[name] || {};
         let uniform = this.uniforms[name];
         uniform.name = name;
-        if (uniform.location === undefined) {
+        if (uniform.location === undefined && !this.defer_uniform_updates) {
             uniform.location = this.gl.getUniformLocation(this.program, name);
         }
         uniform.method = method;
@@ -564,7 +565,15 @@ export default class ShaderProgram {
             return;
         }
 
-        if (!uniform || uniform.location == null) {
+        if (!uniform) {
+            return;
+        }
+
+        if (this.defer_uniform_updates) {
+            return;
+        }
+
+        if (uniform.location == null) {
             return;
         }
 
@@ -623,6 +632,10 @@ export default class ShaderProgram {
     // Refresh uniform locations and set to last cached values
     refreshUniforms() {
         if (!this.compiled) {
+            return;
+        }
+
+        if (this.defer_uniform_updates) {
             return;
         }
 

@@ -238,6 +238,35 @@ describe('UniformBuffer', function () {
         });
     });
 
+    it('defers scalar uniform writes to an injected renderer without binding a raw program', function () {
+        const raw_calls = [];
+        const gl = {
+            useProgram() {
+                raw_calls.push('useProgram');
+            },
+            getUniformLocation() {
+                raw_calls.push('getUniformLocation');
+                return {};
+            },
+            uniform1f() {
+                raw_calls.push('uniform1f');
+            }
+        };
+        const program = new ShaderProgram(gl, '', '', {
+            deferUniformUpdates: true
+        });
+        program.program = {};
+        program.compiled = true;
+
+        ShaderProgram.resetCurrent();
+        program.use();
+        program.uniform('1f', 'u_opacity', 0.75);
+
+        assert.strictEqual(ShaderProgram.current, program);
+        assert.deepEqual(program.getUniformValues(), { u_opacity: 0.75 });
+        assert.lengthOf(raw_calls, 0);
+    });
+
     it('defers texture uniforms and exposes luma texture bindings to an injected renderer', function () {
         const resource = { handle: {} };
         const first_texture = {

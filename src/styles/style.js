@@ -410,6 +410,7 @@ export var Style = {
         this.mesh_buffer_factory = options.meshBufferFactory;
         this.defer_uniform_blocks = options.deferUniformBlocks === true;
         this.defer_texture_bindings = options.deferTextureBindings === true;
+        this.defer_uniform_updates = options.deferUniformUpdates === true;
         this.max_texture_size = options.maxTextureSize || Texture.getMaxTextureSize(this.gl);
     },
 
@@ -501,6 +502,7 @@ export var Style = {
                 uniform_blocks: this.uniform_blocks,
                 deferUniformBlocks: this.defer_uniform_blocks,
                 deferTextureBindings: this.defer_texture_bindings,
+                deferUniformUpdates: this.defer_uniform_updates,
                 shaderFactory: this.shader_factory,
                 blocks,
                 block_scopes,
@@ -520,6 +522,7 @@ export var Style = {
                     uniform_blocks: this.uniform_blocks,
                     deferUniformBlocks: this.defer_uniform_blocks,
                     deferTextureBindings: this.defer_texture_bindings,
+                    deferUniformUpdates: this.defer_uniform_updates,
                     shaderFactory: this.shader_factory,
                     blocks,
                     block_scopes,

@@ -407,7 +407,7 @@ describe('TangramLayer demo bridge', function () {
         assert.strictEqual(layer.redrawCount, 2);
     });
 
-    it('renders through luma WebGL state management and restores untracked state', async function () {
+    it('renders through luma WebGL state management and restores the compile-time program', async function () {
         const { layer, device, gl } = createLayer();
         const scene = FakeScene.instances[0];
         await flushPromises();
@@ -422,10 +422,10 @@ describe('TangramLayer demo bridge', function () {
         assert.deepInclude(gl.calls, ['depthMask', true]);
         assert.deepInclude(gl.calls, ['clear', gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT]);
         assert.deepInclude(gl.calls, ['useProgram', 'deck-program']);
-        assert.deepInclude(gl.calls, ['activeTexture', 'deck-active-texture']);
+        assert.notDeepInclude(gl.calls, ['activeTexture', 'deck-active-texture']);
     });
 
-    it('restores indexed and generic uniform-buffer bindings outside luma state tracking', async function () {
+    it('does not inspect raw texture or uniform-buffer bindings during a luma render', async function () {
         const { layer, gl } = createLayer();
         const scene = FakeScene.instances[0];
         await flushPromises();
@@ -433,25 +433,13 @@ describe('TangramLayer demo bridge', function () {
         await flushPromises();
 
         scene.uniform_buffers = { TangramView: { binding: 0 } };
-        gl.uniformBuffer = 'deck-generic-buffer';
-        gl.indexedUniformBuffers[0] = {
-            buffer: 'deck-view-buffer',
-            start: 16,
-            size: 64
-        };
-        scene.onUpdate = () => {
-            gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, 'tangram-view-buffer');
-            gl.bindBuffer(gl.UNIFORM_BUFFER, 'tangram-generic-buffer');
-        };
 
         layer.draw();
 
-        assert.deepEqual(gl.indexedUniformBuffers[0], {
-            buffer: 'deck-view-buffer',
-            start: 16,
-            size: 64
-        });
-        assert.strictEqual(gl.uniformBuffer, 'deck-generic-buffer');
+        assert.notInclude(gl.parameterQueries, gl.ACTIVE_TEXTURE);
+        assert.notInclude(gl.parameterQueries, gl.UNIFORM_BUFFER_BINDING);
+        assert.lengthOf(gl.indexedParameterQueries, 0);
+        assert.notDeepInclude(gl.calls, ['activeTexture', 'deck-active-texture']);
     });
 
     it('honors inherited visibility and zero opacity', async function () {
@@ -746,8 +734,11 @@ function createFakeWebGLContext(canvas) {
         lumaState: { program: 'deck-program' },
         uniformBuffer: null,
         indexedUniformBuffers: {},
+        parameterQueries: [],
+        indexedParameterQueries: [],
         calls: [],
         getParameter(parameter) {
+            this.parameterQueries.push(parameter);
             if (parameter === this.ACTIVE_TEXTURE) {
                 return 'deck-active-texture';
             }
@@ -757,6 +748,7 @@ function createFakeWebGLContext(canvas) {
             return null;
         },
         getIndexedParameter(parameter, binding) {
+            this.indexedParameterQueries.push([parameter, binding]);
             const state = this.indexedUniformBuffers[binding] || {};
             if (parameter === this.UNIFORM_BUFFER_BINDING) {
                 return state.buffer || null;

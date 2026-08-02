@@ -1264,6 +1264,7 @@ export default class Scene {
                 meshBufferFactory: this.mesh_buffer_factory,
                 deferUniformBlocks: Boolean(this.mesh_renderer),
                 deferTextureBindings: Boolean(this.mesh_renderer),
+                deferUniformUpdates: Boolean(this.mesh_renderer),
                 maxTextureSize: this.max_texture_size
             });
         }
