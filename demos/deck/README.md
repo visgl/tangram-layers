@@ -23,7 +23,18 @@ http://localhost:8000/demos/deck/
 ```
 
 The demo can switch between CARTO Streets vector tiles, styled locally by
-Tangram, and CARTO Positron raster tiles. Neither option requires an API key.
+Tangram, CARTO Positron raster tiles, and the canonical animated TRON 2.0
+vector style from [`tangrams/tron-style`](https://github.com/tangrams/tron-style).
+The CARTO options do not require an API key. TRON uses Nextzen vector and
+terrain-normal tiles, so supply a key only at runtime:
+
+```text
+http://localhost:8000/demos/deck/?device=webgl&basemap=tron&api_key=YOUR_KEY
+```
+
+The demo never stores the key. TRON currently selects WebGL because its custom
+line, glow, and animation shaders are GLSL; their WGSL ports are part of the
+ongoing WebGPU renderer work.
 It loads the pinned deck.gl browser bundle from unpkg.
 The prototype supports one Web Mercator view. deck.gl remains authoritative for
 longitude, latitude, zoom, bearing, and pitch; Tangram receives the deck camera

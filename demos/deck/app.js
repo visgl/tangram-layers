@@ -7,19 +7,29 @@ const searchParams = new URLSearchParams(window.location.search);
 const requestedBackend = searchParams.get('device');
 const deviceType = requestedBackend || (navigator.gpu ? 'webgpu' : 'webgl');
 const useWebGPU = deviceType === 'webgpu';
+const apiKey = searchParams.get('api_key');
 const TangramLayer = createTangramLayerClass({
     Layer,
     Renderer: Tangram.debug.Renderer
 });
 
-const CARTO_BASEMAPS = {
+const BASEMAPS = {
     streetsVector: {
         label: 'CARTO Streets vector tiles',
-        scene: createVectorScene()
+        scene: createVectorScene(),
+        deviceTypes: ['webgl']
     },
     positronRaster: {
         label: 'CARTO Positron raster tiles',
-        scene: createRasterScene('https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png')
+        scene: createRasterScene('https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'),
+        deviceTypes: ['webgl', 'webgpu']
+    },
+    tron: {
+        label: 'Tangram TRON 2.0 vector style',
+        scene: createTronScene(apiKey),
+        deviceTypes: ['webgl'],
+        requiresApiKey: true,
+        sourceUrl: 'https://github.com/tangrams/tron-style'
     }
 };
 
@@ -46,13 +56,18 @@ const statusElement = document.getElementById('status');
 const visibilityInput = document.getElementById('basemap-visible');
 const basemapSelect = document.getElementById('basemap-style');
 const deviceSelect = document.getElementById('device-type');
+const cartoAttribution = document.getElementById('carto-attribution');
+const nextzenAttribution = document.getElementById('nextzen-attribution');
+const tronSourceLink = document.getElementById('tron-source-link');
 deviceSelect.value = deviceType;
-if (useWebGPU) {
-    basemapSelect.value = 'positronRaster';
-    basemapSelect.querySelector('[value="streetsVector"]').disabled = true;
-}
+const defaultBasemapId = useWebGPU ? 'positronRaster' : 'streetsVector';
+const requestedBasemapId = searchParams.get('basemap');
+const initialBasemapId = requestedBasemapId && BASEMAPS[requestedBasemapId] &&
+    BASEMAPS[requestedBasemapId].deviceTypes.includes(deviceType) ?
+    requestedBasemapId : defaultBasemapId;
+basemapSelect.value = initialBasemapId;
 let basemapVisible = true;
-let basemapId = basemapSelect.value;
+let basemapId = initialBasemapId;
 let lastError = null;
 
 function setStatus(message, type = '') {
@@ -67,16 +82,18 @@ function setStatus(message, type = '') {
 }
 
 function createLayers() {
-    const basemap = CARTO_BASEMAPS[basemapId];
-    const layers = [
-        new TangramLayer({
+    const basemap = BASEMAPS[basemapId];
+    const layers = [];
+    if (!basemap.requiresApiKey || apiKey) {
+        layers.push(new TangramLayer({
             id: 'tangram-basemap',
             scene: basemap.scene,
+            apiKey,
             visible: basemapVisible,
             onSceneLoad: () => setStatus(`${basemap.label} loaded through Tangram`, 'success'),
             onSceneError: error => setStatus(error.message, 'error')
-        })
-    ];
+        }));
+    }
     layers.push(
         new PathLayer({
             id: 'alignment-path',
@@ -98,6 +115,22 @@ function createLayers() {
             pickable: true
         }));
     return layers;
+}
+
+function updateBasemapPresentation() {
+    const basemap = BASEMAPS[basemapId];
+    const isTron = basemapId === 'tron';
+    cartoAttribution.hidden = isTron;
+    nextzenAttribution.hidden = !isTron;
+    tronSourceLink.hidden = !isTron;
+
+    lastError = null;
+    if (basemap.requiresApiKey && !apiKey) {
+        setStatus('TRON 2.0 uses Nextzen vector tiles. Add ?api_key=YOUR_KEY to the URL.', 'error');
+    }
+    else {
+        setStatus(`Loading ${basemap.label} through Tangram on ${deviceType}…`);
+    }
 }
 
 let deckInstance;
@@ -127,11 +160,14 @@ catch (error) {
     throw error;
 }
 
-setStatus(`Loading ${CARTO_BASEMAPS[basemapId].label} through Tangram on ${deviceType}…`);
+updateBasemapPresentation();
 
 deviceSelect.addEventListener('change', event => {
     const url = new URL(window.location.href);
     url.searchParams.set('device', event.target.value);
+    if (!BASEMAPS[basemapId].deviceTypes.includes(event.target.value)) {
+        url.searchParams.delete('basemap');
+    }
     window.location.assign(url);
 });
 
@@ -141,8 +177,21 @@ visibilityInput.addEventListener('change', event => {
 });
 
 basemapSelect.addEventListener('change', event => {
-    basemapId = event.target.value;
-    setStatus(`Loading ${CARTO_BASEMAPS[basemapId].label} through Tangram on ${deviceType}…`);
+    const selectedBasemapId = event.target.value;
+    const selectedBasemap = BASEMAPS[selectedBasemapId];
+    if (!selectedBasemap.deviceTypes.includes(deviceType)) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('device', selectedBasemap.deviceTypes[0]);
+        url.searchParams.set('basemap', selectedBasemapId);
+        window.location.assign(url);
+        return;
+    }
+
+    basemapId = selectedBasemapId;
+    const url = new URL(window.location.href);
+    url.searchParams.set('basemap', basemapId);
+    window.history.replaceState(null, '', url);
+    updateBasemapPresentation();
     deckInstance.setProps({ layers: createLayers() });
 });
 
@@ -277,6 +326,16 @@ function createVectorScene() {
                     }
                 }
             }
+        }
+    };
+}
+
+function createTronScene(runtimeApiKey) {
+    return {
+        import: ['https://www.nextzen.org/carto/tron-style/6/tron-style.zip'],
+        global: {
+            sdk_api_key: runtimeApiKey || '',
+            sdk_animated: true
         }
     };
 }
