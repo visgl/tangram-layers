@@ -4,7 +4,7 @@ import createTangramLayerClass from './tangram-layer.js?bridge=shared-context';
 const { Deck, Layer, PathLayer, ScatterplotLayer } = window.deck;
 const TangramLayer = createTangramLayerClass({
     Layer,
-    Scene: Tangram.debug.Scene
+    Renderer: Tangram.debug.Renderer
 });
 
 const CARTO_BASEMAPS = {

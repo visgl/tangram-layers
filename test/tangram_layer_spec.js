@@ -96,7 +96,62 @@ FakeScene.create = function(source, options) {
     return scene;
 };
 
-const TangramLayer = createTangramLayerClass({ Layer: FakeLayer, Scene: FakeScene });
+class FakeRenderer {
+    constructor(source, options) {
+        this.scene = FakeScene.create(source, Object.assign({}, options, {
+            disableRenderLoop: true,
+            externalCamera: true
+        }));
+        this.frameCalls = [];
+        this.renderCalls = [];
+    }
+
+    subscribe(listeners) {
+        return this.scene.subscribe(listeners);
+    }
+
+    load(source, options) {
+        return this.scene.load(source, options);
+    }
+
+    setFrame(frame) {
+        this.frameCalls.push(frame);
+        const { viewport, view, camera, tileBuffer } = frame;
+        if (this.scene.view.size == null) {
+            this.scene.view.size = { css: {} };
+        }
+        if (this.scene.view.size.css.width !== viewport.width ||
+            this.scene.view.size.css.height !== viewport.height) {
+            this.scene.view.size.css = { width: viewport.width, height: viewport.height };
+            this.scene.resizeMap(viewport.width, viewport.height);
+        }
+        this.scene.view.setView({
+            lng: view.longitude,
+            lat: view.latitude,
+            zoom: view.zoom
+        });
+        this.scene.setCameraMatrices(camera);
+        this.scene.view.buffer = tileBuffer;
+    }
+
+    render(options) {
+        this.renderCalls.push(options);
+        return this.scene.update(options);
+    }
+
+    destroy() {
+        this.scene.destroy();
+    }
+}
+
+FakeRenderer.instances = [];
+FakeRenderer.create = function(source, options) {
+    const renderer = new FakeRenderer(source, options);
+    FakeRenderer.instances.push(renderer);
+    return renderer;
+};
+
+const TangramLayer = createTangramLayerClass({ Layer: FakeLayer, Renderer: FakeRenderer });
 
 describe('ExternalCamera', function () {
     it('accepts caller-provided matrices and supplies camera uniforms', function () {
@@ -160,6 +215,7 @@ describe('TangramLayer demo bridge', function () {
         layers.length = 0;
         parentElements.length = 0;
         FakeScene.instances.length = 0;
+        FakeRenderer.instances.length = 0;
     });
 
     it('shares deck WebGL context with Tangram and synchronizes the viewport', function () {
@@ -483,6 +539,10 @@ describe('TangramLayer demo bridge', function () {
 
         assert.deepEqual(device.stateCalls, ['push', 'pop']);
         assert.deepEqual(scene.updateCalls, [{ force: true, renderPass: render_pass }]);
+        assert.deepEqual(FakeRenderer.instances[0].renderCalls, [{
+            force: true,
+            renderPass: render_pass
+        }]);
         assert.deepInclude(gl.calls, ['depthMask', true]);
         assert.deepInclude(gl.calls, ['clear', gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT]);
         assert.deepInclude(gl.calls, ['useProgram', 'deck-program']);

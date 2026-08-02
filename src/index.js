@@ -3,6 +3,7 @@
 // The leaflet layer plugin is currently the primary public API
 import {leafletLayer} from './leaflet_layer';
 import Scene from './scene/scene';
+import Renderer from './scene/renderer';
 
 // Additional modules are exposed for debugging
 import version from './utils/version';
@@ -46,6 +47,7 @@ const debug = {
     Material,
     Light,
     Scene,
+    Renderer,
     WorkerBroker,
     Task,
     StyleManager,

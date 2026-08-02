@@ -80,12 +80,12 @@ export function getExternalCameraFrame(viewport) {
  *
  * @param {object} dependencies Bridge dependencies.
  * @param {typeof import('@deck.gl/core').Layer} dependencies.Layer deck.gl Layer class.
- * @param {object} dependencies.Scene Tangram Scene class.
+ * @param {object} dependencies.Renderer Embeddable Tangram Renderer class.
  * @returns {typeof import('@deck.gl/core').Layer} TangramLayer class.
  */
-export function createTangramLayerClass({ Layer, Scene }) {
-    if (!Layer || !Scene) {
-        throw new Error('createTangramLayerClass requires Layer and Scene');
+export function createTangramLayerClass({ Layer, Renderer }) {
+    if (!Layer || !Renderer) {
+        throw new Error('createTangramLayerClass requires Layer and Renderer');
     }
 
     class TangramLayer extends Layer {
@@ -129,7 +129,7 @@ export function createTangramLayerClass({ Layer, Scene }) {
                 if (renderPass) {
                     update_options.renderPass = renderPass;
                 }
-                if (record.scene.update(update_options)) {
+                if (record.renderer.render(update_options)) {
                     // Tangram's depth and stencil buffers are internal implementation
                     // details. Preserve its color output but leave a clean depth buffer
                     // for deck layers that follow this basemap.
@@ -177,6 +177,7 @@ export function createTangramLayerClass({ Layer, Scene }) {
 
             const record = {
                 owner: this,
+                renderer: null,
                 scene: null,
                 device,
                 gl,
@@ -199,9 +200,9 @@ export function createTangramLayerClass({ Layer, Scene }) {
                 meshRenderer: createDeviceMeshRenderer(device)
             };
 
-            let scene;
+            let renderer;
             try {
-                scene = Scene.create(props.scene, {
+                renderer = Renderer.create(props.scene, {
                     webGLContext: gl,
                     webGLContextScope: callback => this._withDeviceState(record, callback),
                     requestRedraw: () => {
@@ -209,7 +210,6 @@ export function createTangramLayerClass({ Layer, Scene }) {
                             record.owner.setNeedsRedraw();
                         }
                     },
-                    disableRenderLoop: true,
                     enableUniformBuffers: true,
                     uniformBufferFactory: options => createDeviceUniformBuffer(device, options),
                     shaderFactory: options => createDeviceShader(device, options),
@@ -217,7 +217,6 @@ export function createTangramLayerClass({ Layer, Scene }) {
                     textureFactory: options => createDeviceTexture(device, options),
                     maxTextureSize: device.limits && device.limits.maxTextureDimension2D,
                     meshRenderer: record.meshRenderer,
-                    externalCamera: true,
                     continuousZoom: true,
                     highDensityDisplay: true,
                     logLevel: 'warn'
@@ -228,9 +227,10 @@ export function createTangramLayerClass({ Layer, Scene }) {
                 this._raiseBridgeError(normalizeError(error));
                 return null;
             }
-            record.scene = scene;
+            record.renderer = renderer;
+            record.scene = renderer.scene;
 
-            scene.subscribe({
+            renderer.subscribe({
                 load: message => {
                     injectNextzenApiKey(message.config, record.apiKey);
                 },
@@ -243,7 +243,7 @@ export function createTangramLayerClass({ Layer, Scene }) {
                     if (record.disposed) {
                         return null;
                     }
-                    return scene.load(props.scene, {
+                    return renderer.load(props.scene, {
                         base_path: props.sceneBasePath,
                         blocking: false
                     });
@@ -252,7 +252,7 @@ export function createTangramLayerClass({ Layer, Scene }) {
                     if (!record.disposed) {
                         record.loaded = true;
                         record.owner.setNeedsRedraw && record.owner.setNeedsRedraw();
-                        record.owner.props.onSceneLoad(scene);
+                        record.owner.props.onSceneLoad(record.scene);
                     }
                     return result;
                 })
@@ -289,31 +289,21 @@ export function createTangramLayerClass({ Layer, Scene }) {
             const width = record.deckCanvas.clientWidth || viewport.width;
             const height = record.deckCanvas.clientHeight || viewport.height;
 
-            if (record.canvasWidth !== width || record.canvasHeight !== height) {
-                record.canvasWidth = width;
-                record.canvasHeight = height;
-                record.scene.resizeMap(width, height);
-            }
-
-            record.scene.view.setView({
-                lng: viewport.longitude,
-                lat: viewport.latitude,
-                zoom: viewport.zoom + DECK_TO_TANGRAM_ZOOM_OFFSET
-            });
-
-            if (typeof record.scene.setCameraMatrices === 'function') {
-                record.scene.setCameraMatrices(getExternalCameraFrame(viewport));
-            }
-            else if (record.loaded) {
-                const error = new Error('Tangram external camera is unavailable');
-                record.lastViewportError = error.message;
-                this._raiseViewportError(record, error);
-            }
-
             const pitch = Math.abs(viewport.pitch || 0) * Math.PI / 180;
-            record.scene.view.buffer = Math.min(4, Math.ceil(
-                Math.tan(pitch) * viewport.height / 256
-            ));
+            record.canvasWidth = width;
+            record.canvasHeight = height;
+            record.renderer.setFrame({
+                viewport: { width, height },
+                view: {
+                    longitude: viewport.longitude,
+                    latitude: viewport.latitude,
+                    zoom: viewport.zoom + DECK_TO_TANGRAM_ZOOM_OFFSET
+                },
+                camera: getExternalCameraFrame(viewport),
+                tileBuffer: Math.min(4, Math.ceil(
+                    Math.tan(pitch) * viewport.height / 256
+                ))
+            });
         }
 
         _canRender(record, props) {
@@ -360,7 +350,7 @@ export function createTangramLayerClass({ Layer, Scene }) {
             if (!record.destroyed) {
                 record.destroyed = true;
                 record.meshRenderer.destroy();
-                record.scene.destroy();
+                record.renderer.destroy();
             }
         }
 

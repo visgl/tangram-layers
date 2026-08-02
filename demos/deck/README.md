@@ -23,6 +23,12 @@ Tangram renders directly into deck.gl's WebGL context. The layer brackets
 Tangram GPU work with the luma.gl WebGLDevice state stack and then leaves a
 clean depth/stencil buffer for the deck layers above it.
 
+The bridge constructs the experimental `Tangram.debug.Renderer` rather than
+driving Tangram's standalone `Scene.update()` loop. The renderer accepts a
+host-provided frame containing viewport dimensions, geographic view state,
+camera matrices, tile padding, and the active render pass. Standalone Tangram
+continues to use `Scene` for canvas construction and frame scheduling.
+
 ## Uniform-buffer migration
 
 The `ib/deck-tangram-layer-uniform-buffers` sub-branch adds a WebGL2
