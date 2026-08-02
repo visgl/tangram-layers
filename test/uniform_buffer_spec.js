@@ -239,6 +239,21 @@ describe('UniformBuffer', function () {
         });
     });
 
+    it('exposes base luma values for one-element uniform arrays', function () {
+        const program = new ShaderProgram(createFakeWebGL2Context(), '', '');
+        program.uniforms = {
+            'u_raster_offsets[0]': { value: [0, 0, 1] },
+            'u_raster_sizes[0]': { value: [256, 256] }
+        };
+
+        assert.deepEqual(program.getUniformValues(), {
+            'u_raster_offsets[0]': [0, 0, 1],
+            u_raster_offsets: [0, 0, 1],
+            'u_raster_sizes[0]': [256, 256],
+            u_raster_sizes: [256, 256]
+        });
+    });
+
     it('defers scalar uniform writes to an injected renderer without binding a raw program', function () {
         const raw_calls = [];
         const gl = {
@@ -297,6 +312,33 @@ describe('UniformBuffer', function () {
 
         delete Texture.textures.__deferred_texture_test;
         delete Texture.textures.__deferred_texture_override_test;
+    });
+
+    it('exposes the base luma binding for deferred sampler arrays', function () {
+        const first_resource = { handle: {} };
+        const second_resource = { handle: {} };
+        Texture.textures.__deferred_texture_array_first = { getResource: () => first_resource };
+        Texture.textures.__deferred_texture_array_second = { getResource: () => second_resource };
+
+        const program = new ShaderProgram(createFakeWebGL2Context(), '', '', {
+            deferTextureBindings: true
+        });
+        program.compiled = true;
+        program.setUniforms({
+            u_rasters: [
+                '__deferred_texture_array_first',
+                '__deferred_texture_array_second'
+            ]
+        });
+
+        assert.deepEqual(program.getTextureBindings(), {
+            'u_rasters[0]': first_resource,
+            u_rasters: first_resource,
+            'u_rasters[1]': second_resource
+        });
+
+        delete Texture.textures.__deferred_texture_array_first;
+        delete Texture.textures.__deferred_texture_array_second;
     });
 
     it('upgrades legacy Tangram shader syntax and compiles a real WebGL2 uniform block', function () {

@@ -478,6 +478,12 @@ export default class ShaderProgram {
             const resource = texture && texture.getResource && texture.getResource();
             if (resource) {
                 bindings[uniform_name] = resource;
+                // WebGL reflects a sampler array through its base uniform name,
+                // while Tangram assigns each texture through an indexed name.
+                // Preserve the first element as the base binding expected by luma.
+                if (uniform_name.endsWith('[0]')) {
+                    bindings[uniform_name.slice(0, -3)] = resource;
+                }
             }
         }
         return bindings;
@@ -494,6 +500,11 @@ export default class ShaderProgram {
         for (const [name, uniform] of Object.entries(this.uniforms)) {
             if (uniform.value !== undefined) {
                 values[name] = uniform.value;
+                // A one-element uniform array is reflected through its base
+                // name in WebGL, even though Tangram assigns its first index.
+                if (name.endsWith('[0]')) {
+                    values[name.slice(0, -3)] = uniform.value;
+                }
             }
         }
         return values;
