@@ -75,4 +75,58 @@ describe('Renderer', function () {
         renderer.destroy();
         assert.isTrue(renderer.device_renderer.destroy.calledOnce);
     });
+
+    it('initializes portable scene resources without constructing a WebGL context', function () {
+        const buffers = [];
+        const device = {
+            type: 'webgpu',
+            info: { shadingLanguage: 'wgsl' },
+            limits: { maxTextureDimension2D: 4096 },
+            createBuffer(options) {
+                const buffer = {
+                    options,
+                    write() {},
+                    destroy() { this.destroyed = true; }
+                };
+                buffers.push(buffer);
+                return buffer;
+            },
+            createShader() {},
+            createTexture() {},
+            createRenderPipeline() {},
+            createVertexArray() {}
+        };
+        const canvas = document.createElement('canvas');
+        const renderer = Renderer.create({}, { device, canvas });
+
+        renderer.scene.createCanvas();
+        renderer.scene.initialized = true;
+        renderer.scene.setRenderState({
+            depth_test: true,
+            depth_write: false,
+            cull_face: false,
+            blend: 'overlay'
+        });
+
+        assert.isTrue(renderer.scene.portable_rendering);
+        assert.strictEqual(renderer.scene.canvas, canvas);
+        assert.strictEqual(renderer.scene.gl, renderer.scene.resource_context);
+        assert.notProperty(renderer.scene.gl, 'getExtension');
+        assert.lengthOf(buffers, 3);
+        assert.deepEqual(renderer.scene.mesh_render_state, {
+            cullMode: 'none',
+            depthCompare: 'less',
+            depthWriteEnabled: false,
+            blend: true,
+            blendColorOperation: 'add',
+            blendColorSrcFactor: 'src-alpha',
+            blendColorDstFactor: 'one-minus-src-alpha',
+            blendAlphaOperation: 'add',
+            blendAlphaSrcFactor: 'one',
+            blendAlphaDstFactor: 'one-minus-src-alpha'
+        });
+
+        renderer.destroy();
+        assert.isTrue(buffers.every(buffer => buffer.destroyed));
+    });
 });

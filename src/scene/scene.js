@@ -89,15 +89,18 @@ export default class Scene {
         this.resetTime();
 
         this.container = options.container;
-        this.canvas = null;
+        this.canvas = options.canvas || null;
         this.contextOptions = options.webGLContextOptions;
         this.external_gl = options.webGLContext || null;
-        this.owns_gl = !this.external_gl;
+        this.device = options.device || null;
+        this.shader_language = options.shaderLanguage || 'glsl';
+        this.portable_rendering = Boolean(this.device && this.shader_language !== 'glsl');
+        this.resource_context = this.portable_rendering ? {} : null;
+        this.owns_gl = !this.external_gl && !this.portable_rendering;
         this.webgl_context_scope = options.webGLContextScope;
         this.redraw_callback = options.requestRedraw;
         this.enable_uniform_buffers = options.enableUniformBuffers === true;
         this.uniform_buffer_factory = options.uniformBufferFactory;
-        this.shader_language = options.shaderLanguage || 'glsl';
         this.shader_factory = options.shaderFactory;
         this.mesh_buffer_factory = options.meshBufferFactory;
         this.mesh_renderer = options.meshRenderer;
@@ -272,7 +275,14 @@ export default class Scene {
     }
 
     createCanvasContext() {
-        if (this.external_gl) {
+        if (this.portable_rendering) {
+            this.gl = this.resource_context;
+            Texture.setResourceFactory(this.gl, this.texture_factory);
+            this.media_capture.setCanvas(this.canvas, null);
+            this.createUniformBuffers();
+            return;
+        }
+        else if (this.external_gl) {
             this.gl = Context.configure(this.external_gl, this.webgl_context_scope);
             this.canvas = this.gl.canvas;
         }
@@ -315,7 +325,8 @@ export default class Scene {
     }
 
     createUniformBuffers() {
-        if (!this.enable_uniform_buffers || !UniformBuffer.isSupported(this.gl)) {
+        if (!this.enable_uniform_buffers ||
+            (!UniformBuffer.isSupported(this.gl) && !this.uniform_buffer_factory)) {
             return;
         }
         this.uniform_buffers.TangramView = new UniformBuffer(this.gl, {
@@ -414,7 +425,8 @@ export default class Scene {
     // Instantiate workers from URL, init event handlers
     makeWorkers() {
         // Let VertexElements know if 32 bit indices for element arrays are available
-        let has_element_index_uint = this.gl.getExtension('OES_element_index_uint') ? true : false;
+        let has_element_index_uint = this.portable_rendering ||
+            (this.gl.getExtension('OES_element_index_uint') ? true : false);
 
         let queue = [];
         this.workers = [];
@@ -659,6 +671,10 @@ export default class Scene {
         // optionally force alpha off (e.g. for selection pass)
         allow_blend = (allow_blend == null) ? true : allow_blend;
 
+        if (this.portable_rendering) {
+            return this.renderPortablePass(program_key, { allow_blend, renderPass });
+        }
+
         this.clearFrame();
 
         let count = 0; // how many primitives were rendered
@@ -751,6 +767,29 @@ export default class Scene {
             }
         }
 
+        return count;
+    }
+
+    // Render styles through luma pipelines without mutating a raw WebGL state machine.
+    renderPortablePass(program_key, { allow_blend, renderPass }) {
+        let count = 0;
+        let last_blend;
+        const blend_orders = this.style_manager.getActiveBlendOrders();
+        for (const { blend_order, styles } of blend_orders) {
+            for (const style_name of styles) {
+                const style = this.styles[style_name];
+                if (!style) {
+                    continue;
+                }
+                if (style.blend !== last_blend) {
+                    this.setRenderState(Object.assign({}, Style.render_states[style.blend], {
+                        blend: allow_blend && style.blend
+                    }));
+                    last_blend = style.blend;
+                }
+                count += this.renderStyle(style.name, program_key, blend_order, null, renderPass);
+            }
+        }
         return count;
     }
 
@@ -879,6 +918,9 @@ export default class Scene {
         if (!this.initialized) {
             return;
         }
+        if (this.portable_rendering) {
+            return;
+        }
         this.render_states.depth_write.set({ depth_write: true });
         this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT | this.gl.STENCIL_BUFFER_BIT);
     }
@@ -891,16 +933,26 @@ export default class Scene {
         // Defaults
         // TODO: when we abstract out support for multiple render passes, these can be per-pass config options
         let render_states = this.render_states;
-        depth_test = (depth_test === false) ? false : render_states.defaults.depth_test;      // default true
-        depth_write = (depth_write === false) ? false : render_states.defaults.depth_write;   // default true
-        cull_face = (cull_face === false) ? false : render_states.defaults.culling;           // default true
-        blend = (blend != null) ? blend : render_states.defaults.blending;                    // default false
+        const defaults = this.portable_rendering ? {
+            depth_test: true,
+            depth_write: true,
+            culling: true,
+            blending: false
+        } : render_states.defaults;
+        depth_test = (depth_test === false) ? false : defaults.depth_test;      // default true
+        depth_write = (depth_write === false) ? false : defaults.depth_write;   // default true
+        cull_face = (cull_face === false) ? false : defaults.culling;           // default true
+        blend = (blend != null) ? blend : defaults.blending;                    // default false
         this.mesh_render_state = getMeshRenderState({
             depth_test,
             depth_write,
             cull_face,
             blend
         });
+
+        if (this.portable_rendering) {
+            return;
+        }
 
         // Reset frame state
         let gl = this.gl;
@@ -1363,7 +1415,9 @@ export default class Scene {
                 }
             }
 
-            this.gl.clearColor(...color);
+            if (!this.portable_rendering) {
+                this.gl.clearColor(...color);
+            }
         }
     }
 
