@@ -69,8 +69,7 @@ export default class UniformBuffer {
             byteLength: this.layout.byte_length,
             usage: 'uniform'
         });
-        this.buffer = has_buffer_factory ?
-            this.buffer_resource && (this.buffer_resource.handle || this.buffer_resource) : gl.createBuffer();
+        this.buffer = has_buffer_factory ? this.buffer_resource : gl.createBuffer();
         this.program_indices = new WeakMap();
         this.dirty = false;
 
@@ -80,7 +79,7 @@ export default class UniformBuffer {
         if (this.buffer_resource) {
             if (typeof this.buffer_resource.write !== 'function' ||
                 typeof this.buffer_resource.destroy !== 'function') {
-                throw new Error('UniformBuffer: bufferFactory must return a resource with handle, write, and destroy');
+                throw new Error('UniformBuffer: bufferFactory must return a resource with write and destroy');
             }
         }
         else {

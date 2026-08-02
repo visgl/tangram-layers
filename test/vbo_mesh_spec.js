@@ -13,7 +13,7 @@ describe('VBOMesh render backend', function () {
         const buffer_factory = options => {
             factory_options.push(options);
             const resource = {
-                handle: {},
+                get handle() { throw new Error('renderer-owned buffers must remain opaque'); },
                 destroyed: false,
                 destroy() {
                     this.destroyed = true;
@@ -36,8 +36,8 @@ describe('VBOMesh render backend', function () {
             bufferFactory: buffer_factory
         });
 
-        assert.strictEqual(mesh.vertex_buffer, resources[0].handle);
-        assert.strictEqual(mesh.element_buffer, resources[1].handle);
+        assert.strictEqual(mesh.vertex_buffer, resources[0]);
+        assert.strictEqual(mesh.element_buffer, resources[1]);
         assert.deepEqual(factory_options, [{
             id: 'mesh-test-vertices',
             usage: 'vertex',
@@ -71,7 +71,11 @@ describe('VBOMesh render backend', function () {
         const mesh = new VBOMesh(gl, vertex_data, element_data, vertex_layout, {
             id: 'descriptor',
             bufferFactory(options) {
-                const resource = { options, handle: {}, destroy() {} };
+                const resource = {
+                    options,
+                    get handle() { throw new Error('renderer-owned buffers must remain opaque'); },
+                    destroy() {}
+                };
                 resources.push(resource);
                 return resource;
             }
@@ -110,6 +114,7 @@ describe('VBOMesh render backend', function () {
         }, {
             bufferFactory() {
                 const resource = {
+                    get handle() { throw new Error('portable buffers must remain opaque'); },
                     destroy() { this.destroyed = true; }
                 };
                 resources.push(resource);
@@ -121,6 +126,26 @@ describe('VBOMesh render backend', function () {
         assert.strictEqual(mesh.getDrawDescriptor().topology, 'triangle-list');
         mesh.destroy();
         assert.isTrue(resources[0].destroyed);
+    });
+
+    it('describes Uint16 indices without consulting a WebGL context', function () {
+        const mesh = new VBOMesh(null, new Int16Array([0, 1, 2, 3]),
+            new Uint16Array([0, 1, 2]), {
+                stride: 8,
+                getBufferLayout() { return { name: 'vertices', attributes: [] }; },
+                getStaticAttributes() { return []; }
+            }, {
+                bufferFactory(options) {
+                    return {
+                        options,
+                        get handle() { throw new Error('portable buffers must remain opaque'); },
+                        destroy() {}
+                    };
+                }
+            });
+
+        assert.strictEqual(mesh.getDrawDescriptor().indexType, 'uint16');
+        mesh.destroy();
     });
 
     it('uploads retained collision changes through the portable vertex buffer', function () {

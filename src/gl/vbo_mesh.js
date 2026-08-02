@@ -20,8 +20,7 @@ export default class VBOMesh  {
             usage: 'vertex',
             data: this.vertex_data
         });
-        this.vertex_buffer = this.vertex_buffer_resource ?
-            (this.vertex_buffer_resource.handle || this.vertex_buffer_resource) : this.gl.createBuffer();
+        this.vertex_buffer = this.vertex_buffer_resource || this.gl.createBuffer();
         this.buffer_size = this.vertex_data.byteLength;
         this.draw_mode = options.draw_mode || 0x0004;
         this.data_usage = options.data_usage || (this.vertex_buffer_resource ? null : this.gl.STATIC_DRAW);
@@ -57,8 +56,7 @@ export default class VBOMesh  {
                 }
                 throw error;
             }
-            this.element_buffer = this.element_buffer_resource ?
-                (this.element_buffer_resource.handle || this.element_buffer_resource) : this.gl.createBuffer();
+            this.element_buffer = this.element_buffer_resource || this.gl.createBuffer();
             this.buffer_size += this.element_data.byteLength;
             if (!this.element_buffer_resource) {
                 this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.element_buffer);
@@ -137,7 +135,7 @@ export default class VBOMesh  {
             vertexCount: this.vertex_count,
             indexCount: this.element_count,
             indexType: this.toggle_element_array ?
-                (this.element_type === this.gl.UNSIGNED_SHORT ? 'uint16' : 'uint32') : null,
+                (this.element_type === 0x1403 ? 'uint16' : 'uint32') : null,
             vertexBuffer: this.vertex_buffer_resource,
             indexBuffer: this.element_buffer_resource || null,
             bufferLayout: this.vertex_layout.getBufferLayout(),

@@ -317,7 +317,7 @@ export default class Texture {
 
         const previous_resource = this.texture_resource;
         this.texture_resource = resource;
-        this.texture = resource.handle || resource;
+        this.texture = resource;
         if (previous_resource) {
             previous_resource.destroy();
         }

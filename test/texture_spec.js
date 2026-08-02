@@ -9,7 +9,7 @@ describe('Texture resource backend', function () {
         Texture.setResourceFactory(gl, options => {
             factory_options.push(options);
             const resource = {
-                handle: {},
+                get handle() { throw new Error('renderer-owned textures must remain opaque'); },
                 destroyed: false,
                 destroy() {
                     this.destroyed = true;
@@ -30,7 +30,7 @@ describe('Texture resource backend', function () {
         assert.lengthOf(resources, 2, 'placeholder is replaced by the requested data');
         assert.isTrue(resources[0].destroyed);
         assert.strictEqual(texture.getResource(), resources[1]);
-        assert.strictEqual(texture.texture, resources[1].handle);
+        assert.strictEqual(texture.texture, resources[1]);
         assert.deepInclude(factory_options[0], {
             id: '__resource_texture_test',
             width: 1,
@@ -58,6 +58,7 @@ describe('Texture resource backend', function () {
             data: new Uint8Array(4),
             textureFactory() {
                 const resource = {
+                    get handle() { throw new Error('portable textures must remain opaque'); },
                     destroy() { this.destroyed = true; }
                 };
                 resources.push(resource);

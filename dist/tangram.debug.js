@@ -1687,7 +1687,7 @@ var Texture = /*#__PURE__*/function () {
       }
       var previous_resource = this.texture_resource;
       this.texture_resource = resource;
-      this.texture = resource.handle || resource;
+      this.texture = resource;
       if (previous_resource) {
         previous_resource.destroy();
       }
@@ -5154,7 +5154,7 @@ var VBOMesh = /*#__PURE__*/function () {
       usage: 'vertex',
       data: this.vertex_data
     });
-    this.vertex_buffer = this.vertex_buffer_resource ? this.vertex_buffer_resource.handle || this.vertex_buffer_resource : this.gl.createBuffer();
+    this.vertex_buffer = this.vertex_buffer_resource || this.gl.createBuffer();
     this.buffer_size = this.vertex_data.byteLength;
     this.draw_mode = options.draw_mode || 0x0004;
     this.data_usage = options.data_usage || (this.vertex_buffer_resource ? null : this.gl.STATIC_DRAW);
@@ -5189,7 +5189,7 @@ var VBOMesh = /*#__PURE__*/function () {
         }
         throw error;
       }
-      this.element_buffer = this.element_buffer_resource ? this.element_buffer_resource.handle || this.element_buffer_resource : this.gl.createBuffer();
+      this.element_buffer = this.element_buffer_resource || this.gl.createBuffer();
       this.buffer_size += this.element_data.byteLength;
       if (!this.element_buffer_resource) {
         this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.element_buffer);
@@ -5262,7 +5262,7 @@ var VBOMesh = /*#__PURE__*/function () {
         topology: getTopology(this.draw_mode),
         vertexCount: this.vertex_count,
         indexCount: this.element_count,
-        indexType: this.toggle_element_array ? this.element_type === this.gl.UNSIGNED_SHORT ? 'uint16' : 'uint32' : null,
+        indexType: this.toggle_element_array ? this.element_type === 0x1403 ? 'uint16' : 'uint32' : null,
         vertexBuffer: this.vertex_buffer_resource,
         indexBuffer: this.element_buffer_resource || null,
         bufferLayout: this.vertex_layout.getBufferLayout(),
@@ -23883,7 +23883,7 @@ var UniformBuffer = /*#__PURE__*/function () {
       byteLength: this.layout.byte_length,
       usage: 'uniform'
     });
-    this.buffer = has_buffer_factory ? this.buffer_resource && (this.buffer_resource.handle || this.buffer_resource) : gl.createBuffer();
+    this.buffer = has_buffer_factory ? this.buffer_resource : gl.createBuffer();
     this.program_indices = new WeakMap();
     this.dirty = false;
     if (!this.buffer) {
@@ -23891,7 +23891,7 @@ var UniformBuffer = /*#__PURE__*/function () {
     }
     if (this.buffer_resource) {
       if (typeof this.buffer_resource.write !== 'function' || typeof this.buffer_resource.destroy !== 'function') {
-        throw new Error('UniformBuffer: bufferFactory must return a resource with handle, write, and destroy');
+        throw new Error('UniformBuffer: bufferFactory must return a resource with write and destroy');
       }
     } else {
       this.withBufferBinding(function () {
@@ -36886,7 +36886,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = 'c3e6f24ea316db3b001e821597b18d3a893f094e';
+	Tangram.debug.SHA = '448f17608403cbf5c78d98978806f5366ec44d0a';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

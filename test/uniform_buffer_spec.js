@@ -112,12 +112,11 @@ describe('UniformBuffer', function () {
 
     it('can delegate allocation, uploads, and destruction to an injected GPU buffer resource', function () {
         const gl = createFakeWebGL2Context();
-        const handle = {};
         const writes = [];
         let destroyed = false;
         let factory_options;
         const buffer_resource = {
-            handle,
+            get handle() { throw new Error('renderer-owned buffers must remain opaque'); },
             write(data) {
                 writes.push(Array.from(data));
             },
@@ -140,7 +139,7 @@ describe('UniformBuffer', function () {
             byteLength: 16,
             usage: 'uniform'
         });
-        assert.strictEqual(uniform_buffer.buffer, handle);
+        assert.strictEqual(uniform_buffer.buffer, buffer_resource);
         assert.lengthOf(gl.allocations, 0, 'Tangram does not allocate raw WebGL storage');
 
         const program = new ShaderProgram(gl, '', '', {
@@ -170,6 +169,7 @@ describe('UniformBuffer', function () {
     it('uses a handle-free portable buffer without accessing WebGL', function () {
         const writes = [];
         const resource = {
+            get handle() { throw new Error('portable buffers must remain opaque'); },
             write(data) { writes.push(Array.from(data)); },
             destroy() { this.destroyed = true; }
         };
