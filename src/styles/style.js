@@ -407,10 +407,12 @@ export var Style = {
         this.gl = gl;
         this.uniform_blocks = uniform_blocks;
         this.shader_factory = options.shaderFactory;
+        this.mesh_buffer_factory = options.meshBufferFactory;
         this.max_texture_size = Texture.getMaxTextureSize(this.gl);
     },
 
     makeMesh (vertex_data, vertex_elements, options = {}) {
+        options = { ...options, bufferFactory: this.mesh_buffer_factory };
         let vertex_layout = this.vertexLayoutForMeshVariant(options.variant);
 
         if (debugSettings.wireframe) {

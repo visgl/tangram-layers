@@ -44,7 +44,9 @@ any raw WebGL draw calls are issued. Uniform blocks also expose luma-compatible
 binding layouts and WGSL struct declarations while preserving their std140
 packing. Generated GLSL is compiled into luma.gl `Shader` resources, with an
 explicit location for Tangram's position attribute, before Tangram performs its
-compatible synchronous program link. luma.gl applies portable bindings as part
-of a render-pipeline draw, so the next migration must move `ShaderProgram` and
-`VBOMesh` to luma pipelines together; only then can the remaining direct
-uniform-block bindings be removed.
+compatible synchronous program link. Mesh vertex and index storage is also
+allocated and destroyed as luma.gl `Buffer` resources while Tangram continues
+to bind their WebGL handles. luma.gl applies portable bindings as part of a
+render-pipeline draw, so the next migration is to build per-topology pipeline
+and vertex-array variants in the injected mesh renderer; only then can the
+remaining direct uniform-block bindings be removed.

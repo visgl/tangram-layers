@@ -117,6 +117,7 @@ describe('TangramLayer demo bridge', function () {
         assert.isTrue(scene.options.enableUniformBuffers);
         assert.isFunction(scene.options.uniformBufferFactory);
         assert.isFunction(scene.options.shaderFactory);
+        assert.isFunction(scene.options.meshBufferFactory);
         assert.isFunction(scene.options.webGLContextScope);
         assert.isFunction(scene.options.requestRedraw);
         assert.deepEqual(scene.resizeCalls, [[800, 600]]);
@@ -150,6 +151,19 @@ describe('TangramLayer demo bridge', function () {
             stage: 'vertex',
             source: '#version 300 es\nvoid main() {}'
         }]);
+
+        const vertex_data = new Float32Array([0, 1, 2, 3]);
+        const vertex_buffer = scene.options.meshBufferFactory({
+            id: 'mesh-1-vertices',
+            usage: 'vertex',
+            data: vertex_data
+        });
+        assert.strictEqual(vertex_buffer, device.buffers[1]);
+        assert.deepEqual(device.bufferOptions[1], {
+            id: 'tangram-mesh-1-vertices',
+            usage: 0x0028,
+            data: vertex_data
+        });
 
         layer.draw();
         assert.lengthOf(scene.resizeCalls, 1, 'unchanged dimensions do not resize again');

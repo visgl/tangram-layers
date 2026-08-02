@@ -4503,7 +4503,14 @@ class VBOMesh {
     this.vertex_data = vertex_data; // typed array
     this.element_data = element_data; // typed array
     this.vertex_layout = vertex_layout;
-    this.vertex_buffer = this.gl.createBuffer();
+    this.id = options.id != null ? options.id : VBOMesh.id++;
+    this.buffer_factory = options.bufferFactory;
+    this.vertex_buffer_resource = createBufferResource(this.buffer_factory, {
+      id: `mesh-${this.id}-vertices`,
+      usage: 'vertex',
+      data: this.vertex_data
+    });
+    this.vertex_buffer = this.vertex_buffer_resource ? this.vertex_buffer_resource.handle : this.gl.createBuffer();
     this.buffer_size = this.vertex_data.byteLength;
     this.draw_mode = options.draw_mode || this.gl.TRIANGLES;
     this.data_usage = options.data_usage || this.gl.STATIC_DRAW;
@@ -4524,14 +4531,32 @@ class VBOMesh {
       this.element_count = this.element_data.length;
       this.geometry_count = this.element_count / this.vertices_per_geometry;
       this.element_type = this.element_data.constructor === Uint16Array ? this.gl.UNSIGNED_SHORT : this.gl.UNSIGNED_INT;
-      this.element_buffer = this.gl.createBuffer();
+      try {
+        this.element_buffer_resource = createBufferResource(this.buffer_factory, {
+          id: `mesh-${this.id}-indices`,
+          usage: 'index',
+          indexType: this.element_data.constructor === Uint16Array ? 'uint16' : 'uint32',
+          data: this.element_data
+        });
+      } catch (error) {
+        if (this.vertex_buffer_resource) {
+          this.vertex_buffer_resource.destroy();
+          this.vertex_buffer_resource = null;
+        }
+        throw error;
+      }
+      this.element_buffer = this.element_buffer_resource ? this.element_buffer_resource.handle : this.gl.createBuffer();
       this.buffer_size += this.element_data.byteLength;
-      this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.element_buffer);
-      this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.element_data, this.data_usage);
+      if (!this.element_buffer_resource) {
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.element_buffer);
+        this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.element_data, this.data_usage);
+      }
     } else {
       this.geometry_count = this.vertex_count / this.vertices_per_geometry;
     }
-    this.upload();
+    if (!this.vertex_buffer_resource) {
+      this.upload();
+    }
     if (!this.retain) {
       delete this.vertex_data;
       delete this.element_data;
@@ -4608,10 +4633,20 @@ class VBOMesh {
     for (let v in this.vaos) {
       VertexArrayObject.destroy(this.gl, this.vaos[v]);
     }
-    this.gl.deleteBuffer(this.vertex_buffer);
+    if (this.vertex_buffer_resource) {
+      this.vertex_buffer_resource.destroy();
+      this.vertex_buffer_resource = null;
+    } else {
+      this.gl.deleteBuffer(this.vertex_buffer);
+    }
     this.vertex_buffer = null;
     if (this.element_buffer) {
-      this.gl.deleteBuffer(this.element_buffer);
+      if (this.element_buffer_resource) {
+        this.element_buffer_resource.destroy();
+        this.element_buffer_resource = null;
+      } else {
+        this.gl.deleteBuffer(this.element_buffer);
+      }
       this.element_buffer = null;
     }
     delete this.vertex_data;
@@ -4621,6 +4656,17 @@ class VBOMesh {
     }
     return true;
   }
+}
+VBOMesh.id = 0;
+function createBufferResource(buffer_factory, options) {
+  if (typeof buffer_factory !== 'function') {
+    return null;
+  }
+  const resource = buffer_factory(options);
+  if (!resource || !resource.handle || typeof resource.destroy !== 'function') {
+    throw new Error('VBOMesh: bufferFactory must return a resource with handle and destroy');
+  }
+  return resource;
 }
 
 var material_source = `/*
@@ -7127,9 +7173,13 @@ var Style = {
     this.gl = gl;
     this.uniform_blocks = uniform_blocks;
     this.shader_factory = options.shaderFactory;
+    this.mesh_buffer_factory = options.meshBufferFactory;
     this.max_texture_size = Texture.getMaxTextureSize(this.gl);
   },
   makeMesh(vertex_data, vertex_elements, options = {}) {
+    options = _objectSpread$4(_objectSpread$4({}, options), {}, {
+      bufferFactory: this.mesh_buffer_factory
+    });
     let vertex_layout = this.vertexLayoutForMeshVariant(options.variant);
     if (debugSettings$1.wireframe) {
       // In wireframe debug mode, transform mesh into lines
@@ -28964,6 +29014,7 @@ class Scene {
     this.enable_uniform_buffers = options.enableUniformBuffers === true;
     this.uniform_buffer_factory = options.uniformBufferFactory;
     this.shader_factory = options.shaderFactory;
+    this.mesh_buffer_factory = options.meshBufferFactory;
     this.mesh_renderer = options.meshRenderer;
     this.uniform_buffers = {};
     this.lights = null;
@@ -30147,7 +30198,8 @@ class Scene {
     // Optionally set GL context (used when initializing or re-initializing GL resources)
     for (let style in this.styles) {
       this.styles[style].setGL(this.gl, this.uniform_buffers, {
-        shaderFactory: this.shader_factory
+        shaderFactory: this.shader_factory,
+        meshBufferFactory: this.mesh_buffer_factory
       });
     }
     this.dirty = true;
@@ -30999,7 +31051,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = 'd51011d3bf81b50c7211d23b9c112db3ae02cfc6';
+	Tangram.debug.SHA = '86177b10366a198f393ba1996dbb41be5a5d2d8b';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

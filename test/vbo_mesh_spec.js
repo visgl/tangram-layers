@@ -3,6 +3,55 @@ import VBOMesh from '../src/gl/vbo_mesh';
 import Scene from '../src/scene/scene';
 
 describe('VBOMesh render backend', function () {
+    it('can allocate and destroy luma-style vertex and index buffer resources', function () {
+        const vertex_data = new Float32Array([0, 1, 2, 3, 4, 5]);
+        const element_data = new Uint16Array([0, 1, 2]);
+        const resources = [];
+        const factory_options = [];
+        const buffer_factory = options => {
+            factory_options.push(options);
+            const resource = {
+                handle: {},
+                destroyed: false,
+                destroy() {
+                    this.destroyed = true;
+                }
+            };
+            resources.push(resource);
+            return resource;
+        };
+        const gl = {
+            STATIC_DRAW: 0x88E4,
+            TRIANGLES: 0x0004,
+            UNSIGNED_SHORT: 0x1403,
+            UNSIGNED_INT: 0x1405,
+            createBuffer() {
+                throw new Error('raw WebGL buffer allocation should be skipped');
+            }
+        };
+        const mesh = new VBOMesh(gl, vertex_data, element_data, { stride: 8 }, {
+            id: 'test',
+            bufferFactory: buffer_factory
+        });
+
+        assert.strictEqual(mesh.vertex_buffer, resources[0].handle);
+        assert.strictEqual(mesh.element_buffer, resources[1].handle);
+        assert.deepEqual(factory_options, [{
+            id: 'mesh-test-vertices',
+            usage: 'vertex',
+            data: vertex_data
+        }, {
+            id: 'mesh-test-indices',
+            usage: 'index',
+            indexType: 'uint16',
+            data: element_data
+        }]);
+
+        mesh.destroy();
+        assert.isTrue(resources[0].destroyed);
+        assert.isTrue(resources[1].destroyed);
+    });
+
     it('delegates a mesh draw with the active render pass before issuing raw WebGL calls', function () {
         const render_pass = {};
         const program = {

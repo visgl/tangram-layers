@@ -13,7 +13,15 @@ export default class VBOMesh  {
         this.vertex_data = vertex_data; // typed array
         this.element_data = element_data; // typed array
         this.vertex_layout = vertex_layout;
-        this.vertex_buffer = this.gl.createBuffer();
+        this.id = options.id != null ? options.id : VBOMesh.id++;
+        this.buffer_factory = options.bufferFactory;
+        this.vertex_buffer_resource = createBufferResource(this.buffer_factory, {
+            id: `mesh-${this.id}-vertices`,
+            usage: 'vertex',
+            data: this.vertex_data
+        });
+        this.vertex_buffer = this.vertex_buffer_resource ?
+            this.vertex_buffer_resource.handle : this.gl.createBuffer();
         this.buffer_size = this.vertex_data.byteLength;
         this.draw_mode = options.draw_mode || this.gl.TRIANGLES;
         this.data_usage = options.data_usage || this.gl.STATIC_DRAW;
@@ -34,16 +42,36 @@ export default class VBOMesh  {
             this.element_count = this.element_data.length;
             this.geometry_count = this.element_count / this.vertices_per_geometry;
             this.element_type = (this.element_data.constructor === Uint16Array) ? this.gl.UNSIGNED_SHORT: this.gl.UNSIGNED_INT;
-            this.element_buffer = this.gl.createBuffer();
+            try {
+                this.element_buffer_resource = createBufferResource(this.buffer_factory, {
+                    id: `mesh-${this.id}-indices`,
+                    usage: 'index',
+                    indexType: this.element_data.constructor === Uint16Array ? 'uint16' : 'uint32',
+                    data: this.element_data
+                });
+            }
+            catch (error) {
+                if (this.vertex_buffer_resource) {
+                    this.vertex_buffer_resource.destroy();
+                    this.vertex_buffer_resource = null;
+                }
+                throw error;
+            }
+            this.element_buffer = this.element_buffer_resource ?
+                this.element_buffer_resource.handle : this.gl.createBuffer();
             this.buffer_size += this.element_data.byteLength;
-            this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.element_buffer);
-            this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.element_data, this.data_usage);
+            if (!this.element_buffer_resource) {
+                this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.element_buffer);
+                this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.element_data, this.data_usage);
+            }
         }
         else {
             this.geometry_count = this.vertex_count / this.vertices_per_geometry;
         }
 
-        this.upload();
+        if (!this.vertex_buffer_resource) {
+            this.upload();
+        }
 
         if (!this.retain) {
             delete this.vertex_data;
@@ -135,11 +163,23 @@ export default class VBOMesh  {
             VertexArrayObject.destroy(this.gl, this.vaos[v]);
         }
 
-        this.gl.deleteBuffer(this.vertex_buffer);
+        if (this.vertex_buffer_resource) {
+            this.vertex_buffer_resource.destroy();
+            this.vertex_buffer_resource = null;
+        }
+        else {
+            this.gl.deleteBuffer(this.vertex_buffer);
+        }
         this.vertex_buffer = null;
 
         if (this.element_buffer) {
-            this.gl.deleteBuffer(this.element_buffer);
+            if (this.element_buffer_resource) {
+                this.element_buffer_resource.destroy();
+                this.element_buffer_resource = null;
+            }
+            else {
+                this.gl.deleteBuffer(this.element_buffer);
+            }
             this.element_buffer = null;
         }
 
@@ -153,4 +193,17 @@ export default class VBOMesh  {
         return true;
     }
 
+}
+
+VBOMesh.id = 0;
+
+function createBufferResource(buffer_factory, options) {
+    if (typeof buffer_factory !== 'function') {
+        return null;
+    }
+    const resource = buffer_factory(options);
+    if (!resource || !resource.handle || typeof resource.destroy !== 'function') {
+        throw new Error('VBOMesh: bufferFactory must return a resource with handle and destroy');
+    }
+    return resource;
 }

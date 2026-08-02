@@ -2,6 +2,8 @@ const DECK_TO_TANGRAM_ZOOM_OFFSET = 1;
 const VIEW_EPSILON = 1e-7;
 // luma.gl Buffer usage flags. Kept local so the demo does not add a package dependency.
 const LUMA_BUFFER_COPY_DST = 0x0008;
+const LUMA_BUFFER_INDEX = 0x0010;
+const LUMA_BUFFER_VERTEX = 0x0020;
 const LUMA_BUFFER_UNIFORM = 0x0040;
 
 /**
@@ -165,6 +167,7 @@ export function createTangramLayerClass({ Layer, Scene }) {
                     enableUniformBuffers: true,
                     uniformBufferFactory: options => createDeviceUniformBuffer(device, options),
                     shaderFactory: options => createDeviceShader(device, options),
+                    meshBufferFactory: options => createDeviceMeshBuffer(device, options),
                     continuousZoom: true,
                     highDensityDisplay: true,
                     logLevel: 'warn'
@@ -435,6 +438,23 @@ function createDeviceShader(device, options) {
         stage: options.stage,
         source: options.source
     });
+}
+
+function createDeviceMeshBuffer(device, options) {
+    const usage = options.usage === 'vertex' ? LUMA_BUFFER_VERTEX :
+        options.usage === 'index' ? LUMA_BUFFER_INDEX : null;
+    if (usage == null) {
+        throw new Error(`unsupported Tangram mesh buffer usage '${options.usage}'`);
+    }
+    const props = {
+        id: `tangram-${options.id}`,
+        usage: usage | LUMA_BUFFER_COPY_DST,
+        data: options.data
+    };
+    if (options.indexType) {
+        props.indexType = options.indexType;
+    }
+    return device.createBuffer(props);
 }
 
 export default createTangramLayerClass;
