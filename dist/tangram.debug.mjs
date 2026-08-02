@@ -10398,8 +10398,9 @@ const ATTRIBUTE_SCALE = 1024;
  * vector and its fractional-zoom scaling are therefore applied before the
  * host-provided tile and camera matrices. Animated styles use the generated
  * line texture coordinates and Tangram's frame time to produce a portable
- * data-stream pulse without additive blending. Offsets, heights, textures,
- * arbitrary custom shader blocks, and selection remain follow-up tranches.
+ * compact repeating vehicles without additive blending. Offsets, heights,
+ * textures, arbitrary custom shader blocks, and selection remain follow-up
+ * tranches.
  *
  * @param {object} options Shader options.
  * @param {boolean} options.animated Enables the portable data-stream pulse.
@@ -10412,45 +10413,31 @@ function buildLinesWGSL({
   const color_location = animated ? 3 : 2;
   const animated_varying = animated ? '\n    @location(1) texcoord: vec2<f32>,' : '';
   const animated_vertex = animated ? '\n    output.texcoord = attributes.a_texcoord / 65535.0;' : '';
-  const animated_global = animated ? `
-    fn traffic_random(value: f32) -> f32 {
-        return fract(sin(value * 12.9898) * 43758.5453);
-    }
-
-` : '';
   const animated_fragment = animated ? `
 
     let direction = select(-1.0, 1.0, input.texcoord.x < 0.5);
-    let tile_phase = traffic_random(
-        TangramTile.u_tile_origin.x * 0.00001 +
-        TangramTile.u_tile_origin.y * 0.00003
-    );
-    let lane_seed = select(1.0, 3.0, input.texcoord.x < 0.5);
+    let lane_phase = select(0.0, 2.25, direction > 0.0);
+    // A deterministic spatial window translates smoothly. Randomizing the
+    // time-shifted cell made complete road segments pop between frames.
     let traffic_coordinate = input.texcoord.y * 512.0 -
-        TangramView.u_time * 1.2 * direction +
-        tile_phase + lane_seed * 0.31;
-    let traffic_cell = floor(traffic_coordinate);
-    let cell_position = fract(traffic_coordinate);
-    let has_car = step(0.80, traffic_random(
-        traffic_cell + lane_seed * 19.19 + tile_phase * 31.7
-    ));
-    let car_front = smoothstep(0.02, 0.06, cell_position);
-    let car_back = 1.0 - smoothstep(0.30, 0.36, cell_position);
-    let car_length = car_front * car_back * has_car;
+        TangramView.u_time * 4.0 * direction + lane_phase;
+    let vehicle_position = fract(traffic_coordinate / 5.0);
+    let vehicle_front = smoothstep(0.003, 0.010, vehicle_position);
+    let vehicle_back = 1.0 - smoothstep(0.032, 0.043, vehicle_position);
+    let vehicle_length = vehicle_front * vehicle_back;
     let lane_center = select(0.72, 0.28, direction > 0.0);
     let lane_distance = abs(input.texcoord.x - lane_center);
-    let lane_mask = 1.0 - smoothstep(0.06, 0.16, lane_distance);
-    let car = car_length * lane_mask;
-    let car_color = vec3<f32>(0.15, 1.0, 0.96);
+    let lane_mask = 1.0 - smoothstep(0.08, 0.20, lane_distance);
+    let vehicle = vehicle_length * lane_mask;
+    let vehicle_color = vec3<f32>(0.35, 1.0, 0.98);
     let animated_color = mix(
         input.color.rgb,
-        car_color,
-        car * 0.98
+        vehicle_color,
+        vehicle * 0.98
     );
     return vec4<f32>(animated_color, input.color.a);
 ` : '    return input.color;\n';
   return `
-${animated_global}
 struct LineAttributes {
     @location(0) a_position: vec4<i32>,
     @location(1) a_extrude: vec2<i32>,${animated_attribute}
@@ -34841,7 +34828,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = 'bfea9c70b8badc513b653b40c1a7e5010b086b61';
+	Tangram.debug.SHA = 'd682546e47a95ee9139f11b8a14c1f8a1815b472';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

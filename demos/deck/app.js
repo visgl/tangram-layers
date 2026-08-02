@@ -1,4 +1,4 @@
-import Tangram from '../../dist/tangram.debug.mjs?bridge=webgpu-no-scene-gl';
+import Tangram from '../../dist/tangram.debug.mjs?bridge=webgpu-compact-traffic';
 import createTangramLayerClass from './tangram-layer.js?bridge=std140-fix';
 import {webgpuAdapter} from 'https://esm.sh/@luma.gl/webgpu@9.4.0-alpha.1?bundle&deps=@luma.gl/core@9.4.0-alpha.1';
 
@@ -592,15 +592,15 @@ function createTronCartoScene({
                     filter: { class: 'motorway', $zoom: { min: 10 } },
                     draw: {
                         glow: {
-                            color: '#6c3a91',
-                            width: [[10, '1px'], [13, '4px'], [18, '14px']]
+                            color: '#8246b3',
+                            width: [[10, '1.5px'], [13, '5px'], [18, '16px']]
                         },
                         traffic: {
                             style: portable ? 'tron-portable-traffic' : 'fast-traffic-animation-twoways',
                             order: 9,
-                            color: '#12223c',
+                            color: '#251a3d',
                             width: [[10, '0.5px'], [13, '3px'], [18, '10px']],
-                            outline: { color: '#8c3aae', width: '0.35px' }
+                            outline: { color: '#a14bc4', width: '0.4px' }
                         }
                     }
                 }
