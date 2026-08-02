@@ -1,5 +1,5 @@
-import Tangram from '../../dist/tangram.debug.mjs?bridge=renderer-entry';
-import createTangramLayerClass from './tangram-layer.js?bridge=renderer-entry';
+import Tangram from '../../dist/tangram.debug.mjs?bridge=std140-fix';
+import createTangramLayerClass from './tangram-layer.js?bridge=std140-fix';
 
 const { Deck, Layer, PathLayer, ScatterplotLayer } = window.deck;
 const TangramLayer = createTangramLayerClass({
