@@ -1,11 +1,13 @@
-import Tangram from '../../dist/tangram.debug.mjs?bridge=webgpu-lines-animation';
+import Tangram from '../../dist/tangram.debug.mjs?bridge=webgpu-traffic-wgsl';
 import createTangramLayerClass from './tangram-layer.js?bridge=std140-fix';
 import {webgpuAdapter} from 'https://esm.sh/@luma.gl/webgpu@9.4.0-alpha.1?bundle&deps=@luma.gl/core@9.4.0-alpha.1';
 
 const { Deck, Layer, PathLayer, ScatterplotLayer } = window.deck;
 const searchParams = new URLSearchParams(window.location.search);
 const requestedBackend = searchParams.get('device');
-const deviceType = requestedBackend || (navigator.gpu ? 'webgpu' : 'webgl');
+const defaultDeviceType = 'webgpu';
+const deviceType = requestedBackend ||
+    (navigator.gpu ? defaultDeviceType : 'webgl');
 const useWebGPU = deviceType === 'webgpu';
 let apiKey = searchParams.get('api_key') ||
     window.sessionStorage.getItem('tangram-nextzen-api-key');
@@ -35,7 +37,7 @@ const BASEMAPS = {
         label: 'TRON 2.0 shaders on CARTO vector tiles',
         scene: createTronCartoScene({ portable: useWebGPU }),
         deviceTypes: ['webgl', 'webgpu'],
-        webgpuStatus: 'Portable WebGPU styles active; animation WGSL pending.'
+        webgpuStatus: 'Portable cyan and purple palette with animated highway traffic.'
     },
     tronNextzen: {
         label: 'Original TRON 2.0 on Nextzen tiles',
@@ -64,6 +66,11 @@ const bridgePath = [
     [-73.996864, 40.706086]
 ];
 
+const overlayParameters = {
+    depthCompare: 'always',
+    depthWriteEnabled: false
+};
+
 const statusElement = document.getElementById('status');
 const visibilityInput = document.getElementById('basemap-visible');
 const basemapSelect = document.getElementById('basemap-style');
@@ -75,7 +82,7 @@ const nextzenKeyForm = document.getElementById('nextzen-key-form');
 const nextzenKeyInput = document.getElementById('nextzen-api-key');
 nextzenKeyInput.value = apiKey || '';
 deviceSelect.value = deviceType;
-const defaultBasemapId = useWebGPU ? 'positronRaster' : 'streetsVector';
+const defaultBasemapId = 'tron';
 const requestedBasemapId = searchParams.get('basemap');
 const initialBasemapId = requestedBasemapId && BASEMAPS[requestedBasemapId] &&
     BASEMAPS[requestedBasemapId].deviceTypes.includes(deviceType) ?
@@ -125,7 +132,8 @@ function createLayers() {
             getPath: object => object.path,
             getColor: () => [255, 96, 32, 220],
             getWidth: () => 6,
-            widthUnits: 'pixels'
+            widthUnits: 'pixels',
+            parameters: overlayParameters
         }),
         new ScatterplotLayer({
             id: 'alignment-landmarks',
@@ -136,7 +144,8 @@ function createLayers() {
             getLineColor: () => [255, 255, 255, 255],
             lineWidthMinPixels: 2,
             stroked: true,
-            pickable: true
+            pickable: true,
+            parameters: overlayParameters
         }));
     return layers;
 }
@@ -436,12 +445,19 @@ function createTronCartoScene({ portable = false } = {}) {
         import: ['https://www.nextzen.org/carto/tron-style/6/tron-style.zip'],
         global: {
             sdk_api_key: '',
-            sdk_animated: !portable,
+            sdk_animated: true,
             sdk_building_extrude: true
         },
         scene: {
-            animated: !portable,
+            animated: true,
             background: { color: '#08111f' }
+        },
+        styles: {
+            'tron-portable-traffic': {
+                base: 'lines',
+                animated: true,
+                texcoords: true
+            }
         },
         sources: {
             mapzen: {
@@ -466,13 +482,13 @@ function createTronCartoScene({ portable = false } = {}) {
             'tron-carto-landcover': {
                 data: { source: 'mapzen', layer: 'landcover' },
                 draw: {
-                    polygons: { order: 1, color: '#182a42' }
+                    polygons: { order: 1, color: '#101d31' }
                 }
             },
             'tron-carto-landuse': {
                 data: { source: 'mapzen', layer: 'landuse' },
                 draw: {
-                    polygons: { order: 2, color: '#223958' }
+                    polygons: { order: 2, color: '#1b2946' }
                 }
             },
             'tron-carto-water': {
@@ -481,7 +497,7 @@ function createTronCartoScene({ portable = false } = {}) {
                     polygons: {
                         style: portable ? 'polygons' : 'water-later',
                         order: 3,
-                        color: '#17345c'
+                        color: '#102b4c'
                     }
                 }
             },
@@ -502,12 +518,12 @@ function createTronCartoScene({ portable = false } = {}) {
                 draw: {
                     polygons: {
                         order: 5,
-                        color: '#102a43',
+                        color: '#14243c',
                         extrude: true
                     },
                     lines: {
                         order: 6,
-                        color: '#2fa6b8',
+                        color: '#267f9e',
                         width: '0.5px',
                         extrude: true
                     }
@@ -519,28 +535,43 @@ function createTronCartoScene({ portable = false } = {}) {
                     glow: {
                         style: portable ? 'lines' : 'roads-glow',
                         order: 7,
-                        color: '#007f96',
-                        width: [[8, '1px'], [13, '3px'], [18, '10px']]
+                        color: '#0b6f8d',
+                        width: [[8, '0.75px'], [13, '2px'], [18, '7px']]
                     },
                     traffic: {
-                        style: portable ? 'lines' : 'slow-traffic-animation-twoways',
+                        style: portable ? 'tron-portable-traffic' : 'slow-traffic-animation-twoways',
                         order: 8,
-                        color: '#2a4669',
-                        width: [[8, '0.5px'], [13, '1px'], [18, '5px']]
+                        color: '#162c4c',
+                        width: [[8, '0.35px'], [13, '0.75px'], [18, '3px']]
                     }
                 },
                 major: {
-                    filter: { class: ['motorway', 'trunk', 'primary', 'secondary'] },
+                    filter: { class: ['primary', 'secondary'] },
                     draw: {
                         glow: {
-                            color: '#00d9e8',
-                            width: [[8, '2px'], [13, '7px'], [18, '24px']]
+                            color: '#169fbd',
+                            width: [[8, '1.5px'], [13, '5px'], [18, '18px']]
                         },
                         traffic: {
-                            style: portable ? 'lines' : 'fast-traffic-animation-twoways',
+                            style: portable ? 'tron-portable-traffic' : 'fast-traffic-animation-twoways',
                             color: '#10223d',
-                            width: [[8, '1px'], [13, '4px'], [18, '14px']],
-                            outline: { color: '#63f5ed', width: '1px' }
+                            width: [[8, '0.75px'], [13, '3px'], [18, '10px']],
+                            outline: { color: '#4ee5e1', width: '0.75px' }
+                        }
+                    }
+                },
+                highway: {
+                    filter: { class: ['motorway', 'trunk'] },
+                    draw: {
+                        glow: {
+                            color: '#7a2ca6',
+                            width: [[8, '2.5px'], [13, '8px'], [18, '26px']]
+                        },
+                        traffic: {
+                            style: portable ? 'tron-portable-traffic' : 'fast-traffic-animation-twoways',
+                            color: '#241539',
+                            width: [[8, '1px'], [13, '4.5px'], [18, '15px']],
+                            outline: { color: '#c357e8', width: '1px' }
                         }
                     }
                 }

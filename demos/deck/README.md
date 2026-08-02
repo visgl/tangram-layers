@@ -22,6 +22,10 @@ Then open:
 http://localhost:8000/demos/deck/
 ```
 
+The zero-parameter demo defaults to WebGPU when the browser exposes it and to
+the CARTO-backed TRON style. Use the selectors or `?device=webgl` and
+`?basemap=streetsVector` to exercise the compatibility paths.
+
 The demo can switch between CARTO Streets vector tiles, styled locally by
 Tangram, CARTO Positron raster tiles, and the canonical animated TRON 2.0
 vector style from [`tangrams/tron-style`](https://github.com/tangrams/tron-style).
@@ -31,9 +35,10 @@ original TRON scene uses Nextzen vector and terrain-normal tiles. Nextzen no
 longer accepts new signups, but an existing key can be entered in the demo's
 password field. It is retained only in that browser tab's session storage and
 is never written to source. The CARTO-backed adaptation stays on WebGPU using
-portable polygon and line shaders; its original custom glow and data-stream
-blocks remain WebGL-only until their WGSL translations land. The exact Nextzen
-scene currently selects WebGL because its point/text styles are also unported.
+portable polygon and line shaders, including a non-additive WGSL translation
+of the two-way highway traffic pulses. More general custom shader blocks remain
+WebGL-only. The exact Nextzen scene currently selects WebGL because its
+point/text styles are also unported.
 It loads the pinned deck.gl browser bundle from unpkg.
 The prototype supports one Web Mercator view. deck.gl remains authoritative for
 longitude, latitude, zoom, bearing, and pitch; Tangram receives the deck camera
@@ -50,9 +55,10 @@ host-provided frame containing viewport dimensions, geographic view state,
 camera matrices, tile padding, and the active render pass. Standalone Tangram
 continues to use `Scene` for canvas construction and frame scheduling.
 
-On WebGPU, CARTO Streets exercises portable polygon and expanded-line WGSL
-pipelines. Labels are omitted on that backend until the point/text pipeline is
-ported; WebGL continues to render the complete vector scene.
+On WebGPU, the default CARTO-backed TRON scene exercises portable polygon and
+expanded-line WGSL pipelines. Labels are omitted on that backend until the
+point/text pipeline is ported; WebGL continues to render the complete vector
+scene.
 
 ## Uniform-buffer migration
 
