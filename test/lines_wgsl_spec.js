@@ -9,7 +9,10 @@ describe('Line WGSL', function () {
         assert.include(source, '@location(1) a_extrude: vec2<i32>');
         assert.include(source, '@location(2) a_offset: vec2<i32>');
         assert.include(source, '@location(3) a_z_and_offset_scale: vec2<i32>');
+        assert.include(source, '@location(4) a_texcoord: vec2<f32>');
         assert.include(source, '@location(5) a_color: vec4<f32>');
+        assert.include(source, '@binding(3) var u_texture: texture_2d<f32>');
+        assert.include(source, '@binding(4) var u_textureSampler: sampler');
         assert.include(source, 'TangramView.u_map_position.z');
         assert.include(source, 'TangramTile.u_tile_origin.z');
         assert.include(source, 'TangramTile.u_modelView * local_position');
@@ -20,6 +23,11 @@ describe('Line WGSL', function () {
         assert.include(source, 'offset *= screen_space_scale');
         assert.include(source, 'attributes.a_position.xy) + extrusion + offset');
         assert.include(source, 'attributes.a_z_and_offset_scale.x) / 16.0');
+        assert.include(source, 'TangramLine.u_v_scale_adjust');
+        assert.include(source, 'TangramLine.u_has_line_texture != 0u');
+        assert.include(source, 'TangramLine.u_texture_ratio');
+        assert.include(source, 'TangramLine.u_dash_background_color');
+        assert.include(source, 'textureSample(u_texture, u_textureSampler, line_texcoord)');
         assert.notInclude(source, 'TangramView.u_time');
     });
 
@@ -29,7 +37,7 @@ describe('Line WGSL', function () {
         assert.include(source, '@location(4) a_texcoord: vec2<f32>');
         assert.include(source, '@location(5) a_color: vec4<f32>');
         assert.include(source, 'TangramView.u_time');
-        assert.include(source, 'input.texcoord.y * 512.0');
+        assert.include(source, 'input.texcoord.y * 0.125');
         assert.include(source, 'traffic_coordinate / 6.0');
         assert.include(source, 'vehicle_position');
         assert.include(source, 'longitudinal_derivative = max(fwidth(vehicle_position)');

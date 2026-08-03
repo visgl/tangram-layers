@@ -117,26 +117,45 @@ describe('LumaDeviceRenderer', function () {
         assert.strictEqual(device.pipeline.options.parameters, render_state);
     });
 
-    it('snapshots tile uniforms per mesh for deferred WebGPU execution', function () {
+    it('snapshots mutable uniform blocks per mesh for deferred WebGPU execution', function () {
         const device = createDevice([]);
         device.type = 'webgpu';
         device.info.shadingLanguage = 'wgsl';
-        device.pipelineBindings = [{ type: 'uniform', name: 'TangramTile' }];
+        device.pipelineBindings = [
+            { type: 'uniform', name: 'TangramTile' },
+            { type: 'uniform', name: 'TangramLine' }
+        ];
         const renderer = new LumaDeviceRenderer(device);
         const render_pass = createRenderPass();
         const tile_data = new ArrayBuffer(16);
         const tile_values = new Float32Array(tile_data);
+        const line_data = new ArrayBuffer(16);
+        const line_values = new Float32Array(line_data);
         const shared_tile_buffer = { id: 'shared-tile-buffer' };
+        const shared_line_buffer = { id: 'shared-line-buffer' };
         const program = createProgram({});
         program.uniform_blocks = {
-            TangramTile: { data: tile_data, byteLength: tile_data.byteLength }
+            TangramTile: {
+                data: tile_data,
+                byteLength: tile_data.byteLength,
+                snapshot_per_mesh: true
+            },
+            TangramLine: {
+                data: line_data,
+                byteLength: line_data.byteLength,
+                snapshot_per_mesh: true
+            }
         };
-        program.getBindings = () => ({ TangramTile: shared_tile_buffer });
+        program.getBindings = () => ({
+            TangramTile: shared_tile_buffer,
+            TangramLine: shared_line_buffer
+        });
         const first_mesh = createMesh();
         const second_mesh = createMesh();
         second_mesh.id = 2;
 
         tile_values[0] = 1;
+        line_values[0] = 10;
         renderer.drawMesh({
             mesh: first_mesh,
             program,
@@ -144,6 +163,7 @@ describe('LumaDeviceRenderer', function () {
             visibleTime: 0
         });
         tile_values[0] = 2;
+        line_values[0] = 20;
         renderer.drawMesh({
             mesh: second_mesh,
             program,
@@ -151,8 +171,9 @@ describe('LumaDeviceRenderer', function () {
             visibleTime: 0
         });
 
-        assert.lengthOf(device.buffers, 2);
+        assert.lengthOf(device.buffers, 4);
         assert.notStrictEqual(render_pass.bindings[0].TangramTile, shared_tile_buffer);
+        assert.notStrictEqual(render_pass.bindings[0].TangramLine, shared_line_buffer);
         assert.notStrictEqual(
             render_pass.bindings[0].TangramTile,
             render_pass.bindings[1].TangramTile
@@ -161,9 +182,13 @@ describe('LumaDeviceRenderer', function () {
             render_pass.bindings.map(bindings => bindings.TangramTile.writes[0][0]),
             [1, 2]
         );
+        assert.deepEqual(
+            render_pass.bindings.map(bindings => bindings.TangramLine.writes[0][0]),
+            [10, 20]
+        );
 
         renderer.destroy();
-        assert.isTrue(device.buffers[0].destroyed);
+        assert.isTrue(device.buffers.every(buffer => buffer.destroyed));
         assert.isTrue(device.buffers[1].destroyed);
     });
 });

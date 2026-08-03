@@ -10,20 +10,17 @@ const ATTRIBUTE_SCALE = 1024;
  * vector and its fractional-zoom scaling are therefore applied before the
  * host-provided tile and camera matrices. Buffered offsets and elevation use
  * the same zoom interpolation and height packing as Tangram's GLSL renderer.
- * Animated styles use the generated line texture coordinates and Tangram's
- * frame time to produce portable compact repeating vehicles without additive
- * blending. Textures, arbitrary custom shader blocks, and selection remain
- * follow-up tranches.
+ * Textured and dashed styles sample luma-owned textures using per-mesh state
+ * from a std140 uniform block. Animated styles reuse the generated line
+ * texture coordinates and Tangram's frame time to produce portable compact
+ * repeating vehicles without additive blending. Arbitrary custom shader
+ * blocks and selection remain follow-up tranches.
  *
  * @param {object} options Shader options.
  * @param {boolean} options.animated Enables the portable traffic vehicles.
  * @returns {string} Complete WGSL source for the line style.
  */
 export function buildLinesWGSL({ animated = false } = {}) {
-    const animated_attribute = animated ? '\n    @location(4) a_texcoord: vec2<f32>,' : '';
-    const animated_varying = animated ? '\n    @location(1) texcoord: vec2<f32>,' : '';
-    const animated_vertex = animated ?
-        '\n    output.texcoord = attributes.a_texcoord / 65535.0;' : '';
     const animated_fragment = animated ? `
 
     let direction = select(-1.0, 1.0, input.texcoord.x < 0.5);
@@ -31,7 +28,7 @@ export function buildLinesWGSL({ animated = false } = {}) {
     // Keep the pattern continuous along the buffered road distance. The
     // derivative-aware body below remains a few pixels long at every zoom
     // instead of collapsing to a sub-pixel flash or stretching into a trail.
-    let traffic_coordinate = input.texcoord.y * 512.0 -
+    let traffic_coordinate = input.texcoord.y * 0.125 -
         TangramView.u_time * 1.8 * direction + lane_phase;
     let vehicle_position = fract(traffic_coordinate / 6.0);
     let longitudinal_distance = abs(vehicle_position - 0.5);
@@ -60,25 +57,30 @@ export function buildLinesWGSL({ animated = false } = {}) {
     let vehicle = max(vehicle_body, vehicle_halo * 0.35) * lane_mask;
     let vehicle_color = vec3<f32>(0.62, 1.0, 0.98);
     let animated_color = mix(
-        input.color.rgb,
+        color.rgb,
         vehicle_color,
         vehicle * 0.98
     );
-    return vec4<f32>(animated_color, input.color.a);
-` : '    return input.color;\n';
+    color = vec4<f32>(animated_color, color.a);
+` : '';
 
     return `
+@group(0) @binding(3) var u_texture: texture_2d<f32>;
+@group(0) @binding(4) var u_textureSampler: sampler;
+
 struct LineAttributes {
     @location(0) a_position: vec4<i32>,
     @location(1) a_extrude: vec2<i32>,
     @location(2) a_offset: vec2<i32>,
-    @location(3) a_z_and_offset_scale: vec2<i32>,${animated_attribute}
+    @location(3) a_z_and_offset_scale: vec2<i32>,
+    @location(4) a_texcoord: vec2<f32>,
     @location(5) a_color: vec4<f32>,
 };
 
 struct LineVaryings {
     @builtin(position) position: vec4<f32>,
-    @location(0) color: vec4<f32>,${animated_varying}
+    @location(0) color: vec4<f32>,
+    @location(1) texcoord: vec2<f32>,
 };
 
 @vertex
@@ -126,13 +128,37 @@ fn vertexMain(attributes: LineAttributes) -> LineVaryings {
 
     output.position = clip_position;
     output.color = attributes.a_color;
-${animated_vertex}
+    output.texcoord = attributes.a_texcoord / 65535.0;
+    output.texcoord.y *= TangramLine.u_v_scale_adjust;
     return output;
 }
 
 @fragment
 fn fragmentMain(input: LineVaryings) -> @location(0) vec4<f32> {
+    var color = input.color;
+    if (TangramLine.u_has_line_texture != 0u) {
+        let line_texcoord = vec2<f32>(
+            input.texcoord.x,
+            fract(input.texcoord.y / TangramLine.u_texture_ratio)
+        );
+        let line_color = textureSample(u_texture, u_textureSampler, line_texcoord);
+        let textured_color = color * line_color;
+        let dashed_color = mix(
+            TangramLine.u_dash_background_color,
+            color,
+            line_color.a
+        );
+        color = mix(
+            textured_color,
+            dashed_color,
+            clamp(TangramLine.u_has_dash, 0.0, 1.0)
+        );
+        if (color.a < 0.001) {
+            discard;
+        }
+    }
 ${animated_fragment}
+    return color;
 }
 `;
 }

@@ -58,14 +58,16 @@ export default class UniformBuffer {
         }
 
         this.gl = gl;
+        this.id = options.id || options.name;
         this.name = options.name;
         this.binding = options.binding || 0;
+        this.snapshot_per_mesh = options.snapshotPerMesh === true;
         this.usage = options.usage || (has_buffer_factory ? null : gl.DYNAMIC_DRAW);
         this.layout = UniformBuffer.createLayout(options.uniforms || {});
         this.data = new ArrayBuffer(this.layout.byte_length);
         this.data_view = new DataView(this.data);
         this.buffer_resource = has_buffer_factory && options.bufferFactory({
-            id: this.name,
+            id: this.id,
             byteLength: this.layout.byte_length,
             usage: 'uniform'
         });

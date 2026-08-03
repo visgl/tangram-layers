@@ -72,7 +72,7 @@ describe('Styles:', () => {
                 key: 'portable-lines',
                 offset: 0,
                 z_or_offset: 0,
-                texcoords: 1,
+                texcoords: 0,
                 selection: 0
             });
             const texcoord_attribute = line_layout.dynamic_attribs.find(
@@ -103,7 +103,7 @@ describe('Styles:', () => {
             }, { variant: {
                 offset: 0,
                 z_or_offset: 0,
-                texcoords: 1,
+                texcoords: 0,
                 selection: 0
             }});
             assert.deepEqual(line_vertex_template.slice(6, 10), [0, 0, 0, 0]);

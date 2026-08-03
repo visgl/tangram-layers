@@ -594,6 +594,17 @@ export default class ShaderProgram {
                 uniform.saved_value = uniform.value;
             }
         }
+        this.saved_uniform_block_data = new Map();
+        for (const uniform_buffer of Object.values(this.uniform_blocks)) {
+            const block_uniforms = uniform_buffer.layout && uniform_buffer.layout.uniforms;
+            if (uniform_buffer.data && block_uniforms &&
+                Object.keys(uniforms).some(name => block_uniforms[name])) {
+                this.saved_uniform_block_data.set(
+                    uniform_buffer,
+                    new Uint8Array(uniform_buffer.data).slice()
+                );
+            }
+        }
         this.saved_texture_unit = this.texture_unit || 0;
         this.saved_texture_uniforms = Object.assign({}, this.texture_uniforms);
     }
@@ -603,11 +614,16 @@ export default class ShaderProgram {
         let uniforms = subset || this.uniforms;
         for (let u in uniforms) {
             let uniform = this.uniforms[u];
-            if (uniform && uniform.saved_value) {
+            if (uniform && uniform.saved_value !== undefined) {
                 uniform.value = uniform.saved_value;
                 this.updateUniform(uniform);
             }
         }
+        for (const [uniform_buffer, data] of this.saved_uniform_block_data || []) {
+            new Uint8Array(uniform_buffer.data).set(data);
+            uniform_buffer.dirty = true;
+        }
+        this.saved_uniform_block_data = null;
         this.texture_unit = this.saved_texture_unit || 0;
         this.texture_uniforms = this.saved_texture_uniforms || {};
     }
@@ -633,6 +649,13 @@ export default class ShaderProgram {
     uniform(method, name, value) { // 'value' is a method-appropriate arguments list
         if (!this.compiled) {
             return;
+        }
+
+        for (const uniform_buffer of Object.values(this.uniform_blocks)) {
+            if (uniform_buffer.layout && uniform_buffer.layout.uniforms[name]) {
+                uniform_buffer.setUniform(name, value);
+                return;
+            }
         }
 
         this.uniforms[name] = this.uniforms[name] || {};

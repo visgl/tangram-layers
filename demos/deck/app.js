@@ -1,4 +1,4 @@
-import Tangram from '../../dist/tangram.debug.mjs?bridge=webgpu-line-position';
+import Tangram from '../../dist/tangram.debug.mjs?bridge=webgpu-line-textures';
 import createTangramLayerClass from './tangram-layer.js?bridge=std140-fix';
 import {webgpuAdapter} from 'https://esm.sh/@luma.gl/webgpu@9.4.0-alpha.1?bundle&deps=@luma.gl/core@9.4.0-alpha.1';
 
@@ -664,7 +664,7 @@ function createTronCartoScene({
         };
         const lineProbeData = {
             type: 'FeatureCollection',
-            features: ['base', 'offset', 'elevated'].map(kind => ({
+            features: ['base', 'offset', 'elevated', 'dashed'].map(kind => ({
                 type: 'Feature',
                 properties: { kind },
                 geometry: line
@@ -703,6 +703,19 @@ function createTronCartoScene({
                         width: '2px',
                         offset: '-10px',
                         z: '60m'
+                    }
+                }
+            },
+            dashed: {
+                filter: { kind: 'dashed' },
+                draw: {
+                    lines: {
+                        order: 33,
+                        color: '#a8ff42',
+                        width: '4px',
+                        offset: '-26px',
+                        dash: [4, 2],
+                        dash_background_color: '#18304a'
                     }
                 }
             }

@@ -333,11 +333,9 @@ export default class Scene {
             (!UniformBuffer.isSupported(this.gl) && !this.uniform_buffer_factory)) {
             return;
         }
-        const gl = this.portable_rendering ? null : this.gl;
-        this.uniform_buffers.TangramView = new UniformBuffer(gl, {
+        this.uniform_buffers.TangramView = this.createUniformBuffer({
             name: 'TangramView',
             binding: 0,
-            bufferFactory: this.uniform_buffer_factory,
             uniforms: {
                 u_resolution: 'vec2',
                 u_time: 'float',
@@ -348,20 +346,19 @@ export default class Scene {
                 u_view_panning: 'bool'
             }
         });
-        this.uniform_buffers.TangramCamera = new UniformBuffer(gl, {
+        this.uniform_buffers.TangramCamera = this.createUniformBuffer({
             name: 'TangramCamera',
             binding: 1,
-            bufferFactory: this.uniform_buffer_factory,
             uniforms: {
                 u_projection: 'mat4',
                 u_eye: 'vec3',
                 u_vanishing_point: 'vec2'
             }
         });
-        this.uniform_buffers.TangramTile = new UniformBuffer(gl, {
+        this.uniform_buffers.TangramTile = this.createUniformBuffer({
             name: 'TangramTile',
             binding: 2,
-            bufferFactory: this.uniform_buffer_factory,
+            snapshotPerMesh: true,
             uniforms: {
                 u_tile_origin: 'vec4',
                 u_tile_proxy_order_offset: 'float',
@@ -372,6 +369,12 @@ export default class Scene {
                 u_tile_fade_in: 'bool'
             }
         });
+    }
+
+    createUniformBuffer(options) {
+        return new UniformBuffer(this.portable_rendering ? null : this.gl, Object.assign({}, options, {
+            bufferFactory: this.uniform_buffer_factory
+        }));
     }
 
     destroyUniformBuffers() {
@@ -1343,6 +1346,7 @@ export default class Scene {
                 resourceContext: this.portable_rendering ? this.resource_context : this.gl,
                 shaderFactory: this.shader_factory,
                 shaderLanguage: this.shader_language,
+                uniformBlockFactory: options => this.createUniformBuffer(options),
                 meshBufferFactory: this.mesh_buffer_factory,
                 textureFactory: this.texture_factory,
                 deferUniformBlocks: Boolean(this.mesh_renderer),

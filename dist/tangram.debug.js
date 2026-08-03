@@ -66,17 +66,17 @@ function _iterableToArrayLimit(r, l) {
   }
 }
 
-function _arrayLikeToArray$1(r, a) {
+function _arrayLikeToArray$2(r, a) {
   (null == a || a > r.length) && (a = r.length);
   for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
   return n;
 }
 
-function _unsupportedIterableToArray$1(r, a) {
+function _unsupportedIterableToArray$2(r, a) {
   if (r) {
-    if ("string" == typeof r) return _arrayLikeToArray$1(r, a);
+    if ("string" == typeof r) return _arrayLikeToArray$2(r, a);
     var t = {}.toString.call(r).slice(8, -1);
-    return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray$1(r, a) : void 0;
+    return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray$2(r, a) : void 0;
   }
 }
 
@@ -85,7 +85,7 @@ function _nonIterableRest() {
 }
 
 function _slicedToArray(r, e) {
-  return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray$1(r, e) || _nonIterableRest();
+  return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray$2(r, e) || _nonIterableRest();
 }
 
 /*jshint worker: true*/
@@ -146,7 +146,7 @@ function _defineProperty(e, r, t) {
 }
 
 function _arrayWithoutHoles(r) {
-  if (Array.isArray(r)) return _arrayLikeToArray$1(r);
+  if (Array.isArray(r)) return _arrayLikeToArray$2(r);
 }
 
 function _iterableToArray(r) {
@@ -158,7 +158,7 @@ function _nonIterableSpread() {
 }
 
 function _toConsumableArray(r) {
-  return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray$1(r) || _nonIterableSpread();
+  return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray$2(r) || _nonIterableSpread();
 }
 
 function _classCallCheck(a, n) {
@@ -2364,6 +2364,10 @@ function requireGlShaderErrors () {
 var glShaderErrorsExports = requireGlShaderErrors();
 var parseShaderErrors = /*@__PURE__*/getDefaultExportFromCjs(glShaderErrorsExports);
 
+function _createForOfIteratorHelper$1(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray$1(r)) || e) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t.return || t.return(); } finally { if (u) throw o; } } }; }
+function _unsupportedIterableToArray$1(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray$1(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray$1(r, a) : void 0; } }
+function _arrayLikeToArray$1(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+
 // Regex patterns
 var re_pragma = /^\s*#pragma.*$/gm; // for removing unused pragmas after shader block injection
 var re_continue_line = /\\\s*\n/mg; // for removing backslash line continuations
@@ -2984,12 +2988,26 @@ var ShaderProgram = /*#__PURE__*/function () {
   }, {
     key: "saveUniforms",
     value: function saveUniforms(subset) {
+      var _this4 = this;
       var uniforms = subset || this.uniforms;
       for (var u in uniforms) {
         var uniform = this.uniforms[u];
         if (uniform) {
           uniform.saved_value = uniform.value;
         }
+      }
+      this.saved_uniform_block_data = new Map();
+      var _loop = function _loop() {
+        var uniform_buffer = _Object$values4[_i8];
+        var block_uniforms = uniform_buffer.layout && uniform_buffer.layout.uniforms;
+        if (uniform_buffer.data && block_uniforms && Object.keys(uniforms).some(function (name) {
+          return block_uniforms[name];
+        })) {
+          _this4.saved_uniform_block_data.set(uniform_buffer, new Uint8Array(uniform_buffer.data).slice());
+        }
+      };
+      for (var _i8 = 0, _Object$values4 = Object.values(this.uniform_blocks); _i8 < _Object$values4.length; _i8++) {
+        _loop();
       }
       this.saved_texture_unit = this.texture_unit || 0;
       this.saved_texture_uniforms = Object.assign({}, this.texture_uniforms);
@@ -3002,11 +3020,27 @@ var ShaderProgram = /*#__PURE__*/function () {
       var uniforms = subset || this.uniforms;
       for (var u in uniforms) {
         var uniform = this.uniforms[u];
-        if (uniform && uniform.saved_value) {
+        if (uniform && uniform.saved_value !== undefined) {
           uniform.value = uniform.saved_value;
           this.updateUniform(uniform);
         }
       }
+      var _iterator = _createForOfIteratorHelper$1(this.saved_uniform_block_data || []),
+        _step;
+      try {
+        for (_iterator.s(); !(_step = _iterator.n()).done;) {
+          var _step$value = _slicedToArray(_step.value, 2),
+            uniform_buffer = _step$value[0],
+            data = _step$value[1];
+          new Uint8Array(uniform_buffer.data).set(data);
+          uniform_buffer.dirty = true;
+        }
+      } catch (err) {
+        _iterator.e(err);
+      } finally {
+        _iterator.f();
+      }
+      this.saved_uniform_block_data = null;
       this.texture_unit = this.saved_texture_unit || 0;
       this.texture_uniforms = this.saved_texture_uniforms || {};
     }
@@ -3036,6 +3070,13 @@ var ShaderProgram = /*#__PURE__*/function () {
       // 'value' is a method-appropriate arguments list
       if (!this.compiled) {
         return;
+      }
+      for (var _i9 = 0, _Object$values5 = Object.values(this.uniform_blocks); _i9 < _Object$values5.length; _i9++) {
+        var uniform_buffer = _Object$values5[_i9];
+        if (uniform_buffer.layout && uniform_buffer.layout.uniforms[name]) {
+          uniform_buffer.setUniform(name, value);
+          return;
+        }
       }
       this.uniforms[name] = this.uniforms[name] || {};
       var uniform = this.uniforms[name];
@@ -3244,12 +3285,12 @@ var ShaderProgram = /*#__PURE__*/function () {
   }, {
     key: "checkExtensions",
     value: function checkExtensions() {
-      var _this4 = this;
+      var _this5 = this;
       var exts = [];
       this.extensions.forEach(function (name) {
-        var ext = getExtension(_this4.gl, name);
+        var ext = getExtension(_this5.gl, name);
         var def = "TANGRAM_EXTENSION_".concat(name);
-        _this4.defines[def] = ext != null;
+        _this5.defines[def] = ext != null;
         if (ext) {
           exts.push(name);
         } else {
@@ -7838,6 +7879,7 @@ var Style = {
     this.gl = null;
     this.resource_context = null;
     this.uniform_blocks = null;
+    this.uniform_block_factory = null;
     this.initialized = false;
   },
   reset: function reset() {},
@@ -8122,6 +8164,7 @@ var Style = {
     this.uniform_blocks = uniform_blocks;
     this.shader_language = options.shaderLanguage || 'glsl';
     this.shader_factory = options.shaderFactory;
+    this.uniform_block_factory = options.uniformBlockFactory;
     this.mesh_buffer_factory = options.meshBufferFactory;
     this.texture_factory = options.textureFactory;
     this.defer_uniform_blocks = options.deferUniformBlocks === true;
@@ -11144,10 +11187,11 @@ var ATTRIBUTE_SCALE = 1024;
  * vector and its fractional-zoom scaling are therefore applied before the
  * host-provided tile and camera matrices. Buffered offsets and elevation use
  * the same zoom interpolation and height packing as Tangram's GLSL renderer.
- * Animated styles use the generated line texture coordinates and Tangram's
- * frame time to produce portable compact repeating vehicles without additive
- * blending. Textures, arbitrary custom shader blocks, and selection remain
- * follow-up tranches.
+ * Textured and dashed styles sample luma-owned textures using per-mesh state
+ * from a std140 uniform block. Animated styles reuse the generated line
+ * texture coordinates and Tangram's frame time to produce portable compact
+ * repeating vehicles without additive blending. Arbitrary custom shader
+ * blocks and selection remain follow-up tranches.
  *
  * @param {object} options Shader options.
  * @param {boolean} options.animated Enables the portable traffic vehicles.
@@ -11157,11 +11201,8 @@ function buildLinesWGSL() {
   var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
     _ref$animated = _ref.animated,
     animated = _ref$animated === void 0 ? false : _ref$animated;
-  var animated_attribute = animated ? '\n    @location(4) a_texcoord: vec2<f32>,' : '';
-  var animated_varying = animated ? '\n    @location(1) texcoord: vec2<f32>,' : '';
-  var animated_vertex = animated ? '\n    output.texcoord = attributes.a_texcoord / 65535.0;' : '';
-  var animated_fragment = animated ? "\n\n    let direction = select(-1.0, 1.0, input.texcoord.x < 0.5);\n    let lane_phase = select(0.0, 2.75, direction > 0.0);\n    // Keep the pattern continuous along the buffered road distance. The\n    // derivative-aware body below remains a few pixels long at every zoom\n    // instead of collapsing to a sub-pixel flash or stretching into a trail.\n    let traffic_coordinate = input.texcoord.y * 512.0 -\n        TangramView.u_time * 1.8 * direction + lane_phase;\n    let vehicle_position = fract(traffic_coordinate / 6.0);\n    let longitudinal_distance = abs(vehicle_position - 0.5);\n    let longitudinal_derivative = max(fwidth(vehicle_position), 0.001);\n    let vehicle_half_length = max(0.022, longitudinal_derivative * 1.35);\n    let vehicle_body = 1.0 - smoothstep(\n        vehicle_half_length,\n        vehicle_half_length + longitudinal_derivative,\n        longitudinal_distance\n    );\n    let vehicle_halo = 1.0 - smoothstep(\n        vehicle_half_length + longitudinal_derivative,\n        vehicle_half_length + longitudinal_derivative * 2.5,\n        longitudinal_distance\n    );\n    let lane_center = select(0.72, 0.28, direction > 0.0);\n    let lane_distance = abs(input.texcoord.x - lane_center);\n    let lane_derivative = max(fwidth(input.texcoord.x), 0.01);\n    let lane_half_width = clamp(lane_derivative * 0.45, 0.10, 0.22);\n    let lane_edge = clamp(lane_derivative * 0.35, 0.02, 0.18);\n    let lane_mask = 1.0 - smoothstep(\n        lane_half_width,\n        lane_half_width + lane_edge,\n        lane_distance\n    );\n    let vehicle = max(vehicle_body, vehicle_halo * 0.35) * lane_mask;\n    let vehicle_color = vec3<f32>(0.62, 1.0, 0.98);\n    let animated_color = mix(\n        input.color.rgb,\n        vehicle_color,\n        vehicle * 0.98\n    );\n    return vec4<f32>(animated_color, input.color.a);\n" : '    return input.color;\n';
-  return "\nstruct LineAttributes {\n    @location(0) a_position: vec4<i32>,\n    @location(1) a_extrude: vec2<i32>,\n    @location(2) a_offset: vec2<i32>,\n    @location(3) a_z_and_offset_scale: vec2<i32>,".concat(animated_attribute, "\n    @location(5) a_color: vec4<f32>,\n};\n\nstruct LineVaryings {\n    @builtin(position) position: vec4<f32>,\n    @location(0) color: vec4<f32>,").concat(animated_varying, "\n};\n\n@vertex\nfn vertexMain(attributes: LineAttributes) -> LineVaryings {\n    var output: LineVaryings;\n    var extrusion = vec2<f32>(attributes.a_extrude);\n    var offset = vec2<f32>(attributes.a_offset);\n\n    var zoom_delta = clamp(\n        TangramView.u_map_position.z - TangramTile.u_tile_origin.z,\n        0.0,\n        4.0\n    );\n    zoom_delta += step(1.0, zoom_delta) * (1.0 - zoom_delta) +\n        mix(0.0, 2.0, clamp((zoom_delta - 2.0) / 2.0, 0.0, 1.0));\n\n    let midpoint_zoom_delta = (zoom_delta - 0.5) * 2.0;\n    let width_scale = f32(attributes.a_position.z) / ").concat(ATTRIBUTE_SCALE, ".0;\n    extrusion -= extrusion * width_scale * midpoint_zoom_delta;\n\n    let offset_width_scale =\n        f32(attributes.a_z_and_offset_scale.y) / ").concat(ATTRIBUTE_SCALE, ".0;\n    let offset_scale_direction = sign(step(0.0, offset_width_scale) - 0.5);\n    offset -= offset * abs(offset_width_scale) * (\n        (1.0 - step(0.0, offset_scale_direction)) -\n        (zoom_delta * -offset_scale_direction)\n    );\n\n    let screen_space_scale = exp2(\n        -zoom_delta - (TangramTile.u_tile_origin.z - TangramTile.u_tile_origin.w)\n    );\n    extrusion *= screen_space_scale;\n    offset *= screen_space_scale;\n\n    let local_position = vec4<f32>(\n        vec2<f32>(attributes.a_position.xy) + extrusion + offset,\n        f32(attributes.a_z_and_offset_scale.x) / ").concat(Geo$1.height_scale, ".0,\n        1.0\n    );\n    var clip_position = TangramCamera.u_projection *\n        (TangramTile.u_modelView * local_position);\n    let layer = f32(attributes.a_position.w) +\n        TangramTile.u_tile_proxy_order_offset + 1.0;\n    clip_position.z -= layer * ").concat(LAYER_DELTA, " * clip_position.w;\n\n    output.position = clip_position;\n    output.color = attributes.a_color;\n").concat(animated_vertex, "\n    return output;\n}\n\n@fragment\nfn fragmentMain(input: LineVaryings) -> @location(0) vec4<f32> {\n").concat(animated_fragment, "\n}\n");
+  var animated_fragment = animated ? "\n\n    let direction = select(-1.0, 1.0, input.texcoord.x < 0.5);\n    let lane_phase = select(0.0, 2.75, direction > 0.0);\n    // Keep the pattern continuous along the buffered road distance. The\n    // derivative-aware body below remains a few pixels long at every zoom\n    // instead of collapsing to a sub-pixel flash or stretching into a trail.\n    let traffic_coordinate = input.texcoord.y * 0.125 -\n        TangramView.u_time * 1.8 * direction + lane_phase;\n    let vehicle_position = fract(traffic_coordinate / 6.0);\n    let longitudinal_distance = abs(vehicle_position - 0.5);\n    let longitudinal_derivative = max(fwidth(vehicle_position), 0.001);\n    let vehicle_half_length = max(0.022, longitudinal_derivative * 1.35);\n    let vehicle_body = 1.0 - smoothstep(\n        vehicle_half_length,\n        vehicle_half_length + longitudinal_derivative,\n        longitudinal_distance\n    );\n    let vehicle_halo = 1.0 - smoothstep(\n        vehicle_half_length + longitudinal_derivative,\n        vehicle_half_length + longitudinal_derivative * 2.5,\n        longitudinal_distance\n    );\n    let lane_center = select(0.72, 0.28, direction > 0.0);\n    let lane_distance = abs(input.texcoord.x - lane_center);\n    let lane_derivative = max(fwidth(input.texcoord.x), 0.01);\n    let lane_half_width = clamp(lane_derivative * 0.45, 0.10, 0.22);\n    let lane_edge = clamp(lane_derivative * 0.35, 0.02, 0.18);\n    let lane_mask = 1.0 - smoothstep(\n        lane_half_width,\n        lane_half_width + lane_edge,\n        lane_distance\n    );\n    let vehicle = max(vehicle_body, vehicle_halo * 0.35) * lane_mask;\n    let vehicle_color = vec3<f32>(0.62, 1.0, 0.98);\n    let animated_color = mix(\n        color.rgb,\n        vehicle_color,\n        vehicle * 0.98\n    );\n    color = vec4<f32>(animated_color, color.a);\n" : '';
+  return "\n@group(0) @binding(3) var u_texture: texture_2d<f32>;\n@group(0) @binding(4) var u_textureSampler: sampler;\n\nstruct LineAttributes {\n    @location(0) a_position: vec4<i32>,\n    @location(1) a_extrude: vec2<i32>,\n    @location(2) a_offset: vec2<i32>,\n    @location(3) a_z_and_offset_scale: vec2<i32>,\n    @location(4) a_texcoord: vec2<f32>,\n    @location(5) a_color: vec4<f32>,\n};\n\nstruct LineVaryings {\n    @builtin(position) position: vec4<f32>,\n    @location(0) color: vec4<f32>,\n    @location(1) texcoord: vec2<f32>,\n};\n\n@vertex\nfn vertexMain(attributes: LineAttributes) -> LineVaryings {\n    var output: LineVaryings;\n    var extrusion = vec2<f32>(attributes.a_extrude);\n    var offset = vec2<f32>(attributes.a_offset);\n\n    var zoom_delta = clamp(\n        TangramView.u_map_position.z - TangramTile.u_tile_origin.z,\n        0.0,\n        4.0\n    );\n    zoom_delta += step(1.0, zoom_delta) * (1.0 - zoom_delta) +\n        mix(0.0, 2.0, clamp((zoom_delta - 2.0) / 2.0, 0.0, 1.0));\n\n    let midpoint_zoom_delta = (zoom_delta - 0.5) * 2.0;\n    let width_scale = f32(attributes.a_position.z) / ".concat(ATTRIBUTE_SCALE, ".0;\n    extrusion -= extrusion * width_scale * midpoint_zoom_delta;\n\n    let offset_width_scale =\n        f32(attributes.a_z_and_offset_scale.y) / ").concat(ATTRIBUTE_SCALE, ".0;\n    let offset_scale_direction = sign(step(0.0, offset_width_scale) - 0.5);\n    offset -= offset * abs(offset_width_scale) * (\n        (1.0 - step(0.0, offset_scale_direction)) -\n        (zoom_delta * -offset_scale_direction)\n    );\n\n    let screen_space_scale = exp2(\n        -zoom_delta - (TangramTile.u_tile_origin.z - TangramTile.u_tile_origin.w)\n    );\n    extrusion *= screen_space_scale;\n    offset *= screen_space_scale;\n\n    let local_position = vec4<f32>(\n        vec2<f32>(attributes.a_position.xy) + extrusion + offset,\n        f32(attributes.a_z_and_offset_scale.x) / ").concat(Geo$1.height_scale, ".0,\n        1.0\n    );\n    var clip_position = TangramCamera.u_projection *\n        (TangramTile.u_modelView * local_position);\n    let layer = f32(attributes.a_position.w) +\n        TangramTile.u_tile_proxy_order_offset + 1.0;\n    clip_position.z -= layer * ").concat(LAYER_DELTA, " * clip_position.w;\n\n    output.position = clip_position;\n    output.color = attributes.a_color;\n    output.texcoord = attributes.a_texcoord / 65535.0;\n    output.texcoord.y *= TangramLine.u_v_scale_adjust;\n    return output;\n}\n\n@fragment\nfn fragmentMain(input: LineVaryings) -> @location(0) vec4<f32> {\n    var color = input.color;\n    if (TangramLine.u_has_line_texture != 0u) {\n        let line_texcoord = vec2<f32>(\n            input.texcoord.x,\n            fract(input.texcoord.y / TangramLine.u_texture_ratio)\n        );\n        let line_color = textureSample(u_texture, u_textureSampler, line_texcoord);\n        let textured_color = color * line_color;\n        let dashed_color = mix(\n            TangramLine.u_dash_background_color,\n            color,\n            line_color.a\n        );\n        color = mix(\n            textured_color,\n            dashed_color,\n            clamp(TangramLine.u_has_dash, 0.0, 1.0)\n        );\n        if (color.a < 0.001) {\n            discard;\n        }\n    }\n").concat(animated_fragment, "\n    return color;\n}\n");
 }
 
 // Line rendering style
@@ -11180,6 +11221,43 @@ Object.assign(Lines, {
     return buildLinesWGSL({
       animated: this.animated === true
     });
+  },
+  setGL: function setGL(gl_context) {
+    var uniform_blocks = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    if (Object.prototype.hasOwnProperty.call(this, 'line_uniform_buffer') && this.line_uniform_buffer) {
+      this.line_uniform_buffer.destroy();
+      this.line_uniform_buffer = null;
+    }
+    Style.setGL.call(this, gl_context, uniform_blocks, options);
+    if (this.shader_language === 'wgsl') {
+      if (typeof this.uniform_block_factory !== 'function') {
+        throw new Error('portable line styles require a uniform block factory');
+      }
+      this.line_uniform_buffer = this.uniform_block_factory({
+        id: "".concat(this.name, "-line-style"),
+        name: 'TangramLine',
+        binding: 5,
+        snapshotPerMesh: true,
+        uniforms: {
+          u_has_line_texture: 'bool',
+          u_texture_ratio: 'float',
+          u_v_scale_adjust: 'float',
+          u_has_dash: 'float',
+          u_dash_background_color: 'vec4'
+        }
+      });
+      this.uniform_blocks = Object.assign({}, this.uniform_blocks, {
+        TangramLine: this.line_uniform_buffer
+      });
+    }
+  },
+  destroy: function destroy() {
+    Style.destroy.call(this);
+    if (Object.prototype.hasOwnProperty.call(this, 'line_uniform_buffer') && this.line_uniform_buffer) {
+      this.line_uniform_buffer.destroy();
+      this.line_uniform_buffer = null;
+    }
   },
   init: function init() {
     Style.init.apply(this, arguments);
@@ -11510,7 +11588,10 @@ Object.assign(Lines, {
           if (tile_data) {
             tile_data.uniforms.u_has_line_texture = false;
             tile_data.uniforms.u_texture = Texture.default;
+            tile_data.uniforms.u_texture_ratio = 1;
             tile_data.uniforms.u_v_scale_adjust = Geo$1.tile_scale;
+            tile_data.uniforms.u_has_dash = 0;
+            tile_data.uniforms.u_dash_background_color = [0, 0, 0, 0];
             pending = [];
             _loop = function _loop() {
               return new Promise(function ($return, $error) {
@@ -11705,7 +11786,7 @@ Object.assign(Lines, {
         size: 2,
         type: this.shader_language === 'wgsl' ? gl$1.FLOAT : gl$1.UNSIGNED_SHORT,
         normalized: this.shader_language !== 'wgsl',
-        static: variant.texcoords ? null : [0, 0]
+        static: portable || variant.texcoords ? null : [0, 0]
       }, {
         name: 'a_color',
         size: 4,
@@ -11761,7 +11842,7 @@ Object.assign(Lines, {
     }
 
     // a_texcoord.uv - texture coordinates
-    if (mesh.variant.texcoords) {
+    if (portable || mesh.variant.texcoords) {
       this.vertex_template[i++] = 0;
       this.vertex_template[i++] = 0;
     }
@@ -11798,7 +11879,10 @@ Object.assign(Lines, {
     var vertex_data = mesh.vertex_data;
     var vertex_layout = vertex_data.vertex_layout;
     var vertex_template = this.makeVertexTemplate(style, mesh);
-    return buildPolylines(lines, style, vertex_data, vertex_template, vertex_layout.index, options && options.closed_polygon,
+    var vertex_layout_index = this.shader_language === 'wgsl' && !mesh.variant.texcoords ? Object.assign({}, vertex_layout.index, {
+      a_texcoord: null
+    }) : vertex_layout.index;
+    return buildPolylines(lines, style, vertex_data, vertex_template, vertex_layout_index, options && options.closed_polygon,
     // closed_polygon
     !style.tile_edges && options && options.remove_tile_edges,
     // remove_tile_edges
@@ -23892,14 +23976,16 @@ var UniformBuffer = /*#__PURE__*/function () {
       throw new Error('UniformBuffer requires a uniform block name');
     }
     this.gl = gl;
+    this.id = options.id || options.name;
     this.name = options.name;
     this.binding = options.binding || 0;
+    this.snapshot_per_mesh = options.snapshotPerMesh === true;
     this.usage = options.usage || (has_buffer_factory ? null : gl.DYNAMIC_DRAW);
     this.layout = UniformBuffer.createLayout(options.uniforms || {});
     this.data = new ArrayBuffer(this.layout.byte_length);
     this.data_view = new DataView(this.data);
     this.buffer_resource = has_buffer_factory && options.bufferFactory({
-      id: this.name,
+      id: this.id,
       byteLength: this.layout.byte_length,
       usage: 'uniform'
     });
@@ -31893,11 +31979,9 @@ var Scene = /*#__PURE__*/function () {
       if (!this.enable_uniform_buffers || !UniformBuffer.isSupported(this.gl) && !this.uniform_buffer_factory) {
         return;
       }
-      var gl = this.portable_rendering ? null : this.gl;
-      this.uniform_buffers.TangramView = new UniformBuffer(gl, {
+      this.uniform_buffers.TangramView = this.createUniformBuffer({
         name: 'TangramView',
         binding: 0,
-        bufferFactory: this.uniform_buffer_factory,
         uniforms: {
           u_resolution: 'vec2',
           u_time: 'float',
@@ -31908,20 +31992,19 @@ var Scene = /*#__PURE__*/function () {
           u_view_panning: 'bool'
         }
       });
-      this.uniform_buffers.TangramCamera = new UniformBuffer(gl, {
+      this.uniform_buffers.TangramCamera = this.createUniformBuffer({
         name: 'TangramCamera',
         binding: 1,
-        bufferFactory: this.uniform_buffer_factory,
         uniforms: {
           u_projection: 'mat4',
           u_eye: 'vec3',
           u_vanishing_point: 'vec2'
         }
       });
-      this.uniform_buffers.TangramTile = new UniformBuffer(gl, {
+      this.uniform_buffers.TangramTile = this.createUniformBuffer({
         name: 'TangramTile',
         binding: 2,
-        bufferFactory: this.uniform_buffer_factory,
+        snapshotPerMesh: true,
         uniforms: {
           u_tile_origin: 'vec4',
           u_tile_proxy_order_offset: 'float',
@@ -31932,6 +32015,13 @@ var Scene = /*#__PURE__*/function () {
           u_tile_fade_in: 'bool'
         }
       });
+    }
+  }, {
+    key: "createUniformBuffer",
+    value: function createUniformBuffer(options) {
+      return new UniformBuffer(this.portable_rendering ? null : this.gl, Object.assign({}, options, {
+        bufferFactory: this.uniform_buffer_factory
+      }));
     }
   }, {
     key: "destroyUniformBuffers",
@@ -33131,6 +33221,7 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "updateStyles",
     value: function updateStyles() {
+      var _this14 = this;
       if (!this.initialized && !this.initializing) {
         throw new Error('Scene.updateStyles() called before scene was initialized');
       }
@@ -33145,6 +33236,9 @@ var Scene = /*#__PURE__*/function () {
           resourceContext: this.portable_rendering ? this.resource_context : this.gl,
           shaderFactory: this.shader_factory,
           shaderLanguage: this.shader_language,
+          uniformBlockFactory: function uniformBlockFactory(options) {
+            return _this14.createUniformBuffer(options);
+          },
           meshBufferFactory: this.mesh_buffer_factory,
           textureFactory: this.texture_factory,
           deferUniformBlocks: Boolean(this.mesh_renderer),
@@ -33160,10 +33254,10 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "animated",
     get: function get() {
-      var _this14 = this;
+      var _this15 = this;
       // Disable animation is scene flag requests it, otherwise enable animation if any animated styles are in view
       return this.config.scene.animated === false ? false : this.style_manager.getActiveStyles().some(function (s) {
-        return _this14.styles[s].animated;
+        return _this15.styles[s].animated;
       });
     }
 
@@ -33251,14 +33345,14 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "setIntrospection",
     value: function setIntrospection(val) {
-      var _this15 = this;
+      var _this16 = this;
       if (val !== this.introspection) {
         this.introspection = val != null ? val : false;
         this.updating++;
         return this.updateConfig({
           normalize: false
         }).then(function () {
-          return _this15.updating--;
+          return _this16.updating--;
         });
       }
       return Promise.resolve();
@@ -33269,7 +33363,7 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "updateConfig",
     value: function updateConfig() {
-      var _this16 = this;
+      var _this17 = this;
       var _ref14 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
         _ref14$loading = _ref14.loading,
         loading = _ref14$loading === void 0 ? false : _ref14$loading,
@@ -33296,16 +33390,16 @@ var Scene = /*#__PURE__*/function () {
         config: this.config
       });
       this.withWebGLContext(function () {
-        _this16.style_manager.init();
-        _this16.view.reset();
-        _this16.createLights();
-        _this16.createDataSources(loading);
-        _this16.loadTextures();
-        _this16.setBackground();
-        topojson.FontManager.loadFonts(_this16.config.fonts);
+        _this17.style_manager.init();
+        _this17.view.reset();
+        _this17.createLights();
+        _this17.createDataSources(loading);
+        _this17.loadTextures();
+        _this17.setBackground();
+        topojson.FontManager.loadFonts(_this17.config.fonts);
 
         // TODO: detect changes to styles? already (currently) need to recompile anyway when camera or lights change
-        _this16.updateStyles();
+        _this17.updateStyles();
       });
 
       // Optionally rebuild geometry
@@ -33323,8 +33417,8 @@ var Scene = /*#__PURE__*/function () {
       this.view.updateBounds();
       this.requestRedraw();
       return done.then(function () {
-        _this16.last_render_count = 0; // force re-evaluation of selection map
-        _this16.requestRedraw();
+        _this17.last_render_count = 0; // force re-evaluation of selection map
+        _this17.requestRedraw();
       });
     }
 
@@ -33349,20 +33443,20 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "createListeners",
     value: function createListeners() {
-      var _this17 = this;
+      var _this18 = this;
       this.listeners = {};
       this.listeners.view = {
         move: function move() {
-          return _this17.trigger('move');
+          return _this18.trigger('move');
         }
       };
       this.view.subscribe(this.listeners.view);
       this.listeners.texture = {
         update: function update() {
-          return _this17.dirty = true;
+          return _this18.dirty = true;
         },
         warning: function warning(data) {
-          return _this17.trigger('warning', Object.assign({
+          return _this18.trigger('warning', Object.assign({
             type: 'textures'
           }, data));
         }
@@ -33370,7 +33464,7 @@ var Scene = /*#__PURE__*/function () {
       topojson.Texture.subscribe(this.listeners.texture);
       this.listeners.scene_loader = {
         error: function error(data) {
-          return _this17.trigger('error', Object.assign({
+          return _this18.trigger('error', Object.assign({
             type: 'scene'
           }, data));
         }
@@ -33397,12 +33491,12 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "resetFeatureSelection",
     value: function resetFeatureSelection() {
-      var _this18 = this;
+      var _this19 = this;
       if (this.portable_rendering) {
         return;
       }
       this.selection = new topojson.FeatureSelection(this.gl, this.workers, function () {
-        return _this18.building;
+        return _this19.building;
       });
       this.last_render_count = 0; // force re-evaluation of selection map
     }
@@ -33419,11 +33513,11 @@ var Scene = /*#__PURE__*/function () {
   }, {
     key: "getFeatureSelectionMapSize",
     value: function getFeatureSelectionMapSize() {
-      var _this19 = this;
+      var _this20 = this;
       // Only allow one fetch process to run at a time
       if (this.fetching_selection_map == null) {
         this.fetching_selection_map = topojson.WorkerBroker.postMessage(this.workers, 'self.getFeatureSelectionMapSize').then(function (sizes) {
-          _this19.fetching_selection_map = null;
+          _this20.fetching_selection_map = null;
           return sizes.reduce(function (a, b) {
             return a + b;
           });
@@ -36609,26 +36703,49 @@ var LumaDeviceRenderer = /*#__PURE__*/function () {
       this.pipelines.clear();
     }
 
-    /** Copies per-tile uniform state into storage unique to the encoded mesh draw. */
+    /** Copies mutable uniform blocks into storage unique to the encoded mesh draw. */
   }, {
     key: "snapshotMeshUniformBindings",
     value: function snapshotMeshUniformBindings(mesh, program, bindings) {
-      var uniform_buffer = program.uniform_blocks && program.uniform_blocks.TangramTile;
-      if (!uniform_buffer || !uniform_buffer.data) {
+      var uniform_blocks = program.uniform_blocks || {};
+      var snapshot_blocks = Object.entries(uniform_blocks).filter(function (_ref2) {
+        var _ref3 = topojson._slicedToArray(_ref2, 2),
+          uniform_buffer = _ref3[1];
+        return uniform_buffer.snapshot_per_mesh && uniform_buffer.data;
+      });
+      if (snapshot_blocks.length === 0) {
         return;
       }
-      var buffer = this.mesh_uniform_buffer_cache.get(mesh);
-      if (!buffer) {
-        buffer = this.device.createBuffer({
-          id: "tangram-mesh-".concat(mesh.id, "-tile-uniforms"),
-          byteLength: uniform_buffer.byteLength,
-          usage: Buffer.UNIFORM | Buffer.COPY_DST
-        });
-        this.mesh_uniform_buffer_cache.set(mesh, buffer);
-        this.mesh_uniform_buffers.add(buffer);
+      var mesh_buffers = this.mesh_uniform_buffer_cache.get(mesh);
+      if (!mesh_buffers) {
+        mesh_buffers = new Map();
+        this.mesh_uniform_buffer_cache.set(mesh, mesh_buffers);
       }
-      buffer.write(new Uint8Array(uniform_buffer.data));
-      bindings.TangramTile = buffer;
+      var _iterator4 = _createForOfIteratorHelper(snapshot_blocks),
+        _step4;
+      try {
+        for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+          var _step4$value = topojson._slicedToArray(_step4.value, 2),
+            name = _step4$value[0],
+            uniform_buffer = _step4$value[1];
+          var buffer = mesh_buffers.get(name);
+          if (!buffer) {
+            buffer = this.device.createBuffer({
+              id: "tangram-mesh-".concat(mesh.id, "-").concat(name, "-uniforms"),
+              byteLength: uniform_buffer.byteLength,
+              usage: Buffer.UNIFORM | Buffer.COPY_DST
+            });
+            mesh_buffers.set(name, buffer);
+            this.mesh_uniform_buffers.add(buffer);
+          }
+          buffer.write(new Uint8Array(uniform_buffer.data));
+          bindings[name] = buffer;
+        }
+      } catch (err) {
+        _iterator4.e(err);
+      } finally {
+        _iterator4.f();
+      }
     }
   }, {
     key: "getPipeline",
@@ -36688,26 +36805,26 @@ var LumaDeviceRenderer = /*#__PURE__*/function () {
       var attributes = new Map(pipeline.shaderLayout.attributes.map(function (attribute) {
         return [attribute.name, attribute];
       }));
-      var _iterator4 = _createForOfIteratorHelper(descriptor.bufferLayout.attributes),
-        _step4;
+      var _iterator5 = _createForOfIteratorHelper(descriptor.bufferLayout.attributes),
+        _step5;
       try {
-        for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
-          var attribute = _step4.value;
+        for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
+          var attribute = _step5.value;
           var shader_attribute = attributes.get(attribute.attribute);
           if (shader_attribute) {
             vertex_array.setBuffer(shader_attribute.location, descriptor.vertexBuffer);
           }
         }
       } catch (err) {
-        _iterator4.e(err);
+        _iterator5.e(err);
       } finally {
-        _iterator4.f();
+        _iterator5.f();
       }
-      var _iterator5 = _createForOfIteratorHelper(descriptor.staticAttributes),
-        _step5;
+      var _iterator6 = _createForOfIteratorHelper(descriptor.staticAttributes),
+        _step6;
       try {
-        for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
-          var _attribute = _step5.value;
+        for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
+          var _attribute = _step6.value;
           var _shader_attribute = attributes.get(_attribute.attribute);
           if (_shader_attribute) {
             if (this.device.type === 'webgpu') {
@@ -36717,9 +36834,9 @@ var LumaDeviceRenderer = /*#__PURE__*/function () {
           }
         }
       } catch (err) {
-        _iterator5.e(err);
+        _iterator6.e(err);
       } finally {
-        _iterator5.f();
+        _iterator6.f();
       }
       if (descriptor.indexBuffer) {
         vertex_array.setIndexBuffer(descriptor.indexBuffer);
@@ -36736,11 +36853,11 @@ function validateDevice(device) {
   }
 }
 function assertPipelineBindings(pipeline, bindings) {
-  var _iterator6 = _createForOfIteratorHelper(pipeline.shaderLayout.bindings),
-    _step6;
+  var _iterator7 = _createForOfIteratorHelper(pipeline.shaderLayout.bindings),
+    _step7;
   try {
-    for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
-      var binding = _step6.value;
+    for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
+      var binding = _step7.value;
       if (binding.type === 'sampler' && binding.name.endsWith('Sampler')) {
         var texture_name = binding.name.slice(0, -'Sampler'.length);
         if (bindings[texture_name]) {
@@ -36755,9 +36872,9 @@ function assertPipelineBindings(pipeline, bindings) {
       }
     }
   } catch (err) {
-    _iterator6.e(err);
+    _iterator7.e(err);
   } finally {
-    _iterator6.f();
+    _iterator7.f();
   }
 }
 
@@ -36915,7 +37032,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = '412be0dbc053242836cafe21d8fe3d2166bf95dc';
+	Tangram.debug.SHA = '202ff5d2229f32fd609975e4fdcf99b9f567f431';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

@@ -32,6 +32,45 @@ Object.assign(Lines, {
         return buildLinesWGSL({ animated: this.animated === true });
     },
 
+    setGL(gl_context, uniform_blocks = {}, options = {}) {
+        if (Object.prototype.hasOwnProperty.call(this, 'line_uniform_buffer') &&
+            this.line_uniform_buffer) {
+            this.line_uniform_buffer.destroy();
+            this.line_uniform_buffer = null;
+        }
+        Style.setGL.call(this, gl_context, uniform_blocks, options);
+        if (this.shader_language === 'wgsl') {
+            if (typeof this.uniform_block_factory !== 'function') {
+                throw new Error('portable line styles require a uniform block factory');
+            }
+            this.line_uniform_buffer = this.uniform_block_factory({
+                id: `${this.name}-line-style`,
+                name: 'TangramLine',
+                binding: 5,
+                snapshotPerMesh: true,
+                uniforms: {
+                    u_has_line_texture: 'bool',
+                    u_texture_ratio: 'float',
+                    u_v_scale_adjust: 'float',
+                    u_has_dash: 'float',
+                    u_dash_background_color: 'vec4'
+                }
+            });
+            this.uniform_blocks = Object.assign({}, this.uniform_blocks, {
+                TangramLine: this.line_uniform_buffer
+            });
+        }
+    },
+
+    destroy() {
+        Style.destroy.call(this);
+        if (Object.prototype.hasOwnProperty.call(this, 'line_uniform_buffer') &&
+            this.line_uniform_buffer) {
+            this.line_uniform_buffer.destroy();
+            this.line_uniform_buffer = null;
+        }
+    },
+
     init() {
         Style.init.apply(this, arguments);
 
@@ -389,7 +428,10 @@ Object.assign(Lines, {
         if (tile_data) {
             tile_data.uniforms.u_has_line_texture = false;
             tile_data.uniforms.u_texture = Texture.default;
+            tile_data.uniforms.u_texture_ratio = 1;
             tile_data.uniforms.u_v_scale_adjust = Geo.tile_scale;
+            tile_data.uniforms.u_has_dash = 0;
+            tile_data.uniforms.u_dash_background_color = [0, 0, 0, 0];
 
             let pending = [];
             for (let m in tile_data.meshes) {
@@ -500,7 +542,7 @@ Object.assign(Lines, {
                     size: 2,
                     type: this.shader_language === 'wgsl' ? gl.FLOAT : gl.UNSIGNED_SHORT,
                     normalized: this.shader_language !== 'wgsl',
-                    static: (variant.texcoords ? null : [0, 0])
+                    static: ((portable || variant.texcoords) ? null : [0, 0])
                 },
                 { name: 'a_color', size: 4, type: gl.UNSIGNED_BYTE, normalized: true },
                 { name: 'a_selection_color', size: 4, type: gl.UNSIGNED_BYTE, normalized: true, static: (variant.selection ? null : [0, 0, 0, 0]) }
@@ -551,7 +593,7 @@ Object.assign(Lines, {
         }
 
         // a_texcoord.uv - texture coordinates
-        if (mesh.variant.texcoords) {
+        if (portable || mesh.variant.texcoords) {
             this.vertex_template[i++] = 0;
             this.vertex_template[i++] = 0;
         }
@@ -590,12 +632,15 @@ Object.assign(Lines, {
         let vertex_data = mesh.vertex_data;
         let vertex_layout = vertex_data.vertex_layout;
         let vertex_template = this.makeVertexTemplate(style, mesh);
+        const vertex_layout_index = this.shader_language === 'wgsl' && !mesh.variant.texcoords ?
+            Object.assign({}, vertex_layout.index, { a_texcoord: null }) :
+            vertex_layout.index;
         return buildPolylines(
             lines,
             style,
             vertex_data,
             vertex_template,
-            vertex_layout.index,
+            vertex_layout_index,
             (options && options.closed_polygon), // closed_polygon
             (!style.tile_edges && options && options.remove_tile_edges), // remove_tile_edges
             (Geo.tile_scale * context.tile.pad_scale * 2) // tile_edge_tolerance

@@ -100,6 +100,7 @@ export var Style = {
         this.gl = null;
         this.resource_context = null;
         this.uniform_blocks = null;
+        this.uniform_block_factory = null;
         this.initialized = false;
     },
 
@@ -411,6 +412,7 @@ export var Style = {
         this.uniform_blocks = uniform_blocks;
         this.shader_language = options.shaderLanguage || 'glsl';
         this.shader_factory = options.shaderFactory;
+        this.uniform_block_factory = options.uniformBlockFactory;
         this.mesh_buffer_factory = options.meshBufferFactory;
         this.texture_factory = options.textureFactory;
         this.defer_uniform_blocks = options.deferUniformBlocks === true;

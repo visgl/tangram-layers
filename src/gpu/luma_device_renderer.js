@@ -184,25 +184,36 @@ export default class LumaDeviceRenderer {
         this.pipelines.clear();
     }
 
-    /** Copies per-tile uniform state into storage unique to the encoded mesh draw. */
+    /** Copies mutable uniform blocks into storage unique to the encoded mesh draw. */
     snapshotMeshUniformBindings(mesh, program, bindings) {
-        const uniform_buffer = program.uniform_blocks && program.uniform_blocks.TangramTile;
-        if (!uniform_buffer || !uniform_buffer.data) {
+        const uniform_blocks = program.uniform_blocks || {};
+        const snapshot_blocks = Object.entries(uniform_blocks)
+            .filter(([, uniform_buffer]) =>
+                uniform_buffer.snapshot_per_mesh && uniform_buffer.data
+            );
+        if (snapshot_blocks.length === 0) {
             return;
         }
 
-        let buffer = this.mesh_uniform_buffer_cache.get(mesh);
-        if (!buffer) {
-            buffer = this.device.createBuffer({
-                id: `tangram-mesh-${mesh.id}-tile-uniforms`,
-                byteLength: uniform_buffer.byteLength,
-                usage: Buffer.UNIFORM | Buffer.COPY_DST
-            });
-            this.mesh_uniform_buffer_cache.set(mesh, buffer);
-            this.mesh_uniform_buffers.add(buffer);
+        let mesh_buffers = this.mesh_uniform_buffer_cache.get(mesh);
+        if (!mesh_buffers) {
+            mesh_buffers = new Map();
+            this.mesh_uniform_buffer_cache.set(mesh, mesh_buffers);
         }
-        buffer.write(new Uint8Array(uniform_buffer.data));
-        bindings.TangramTile = buffer;
+        for (const [name, uniform_buffer] of snapshot_blocks) {
+            let buffer = mesh_buffers.get(name);
+            if (!buffer) {
+                buffer = this.device.createBuffer({
+                    id: `tangram-mesh-${mesh.id}-${name}-uniforms`,
+                    byteLength: uniform_buffer.byteLength,
+                    usage: Buffer.UNIFORM | Buffer.COPY_DST
+                });
+                mesh_buffers.set(name, buffer);
+                this.mesh_uniform_buffers.add(buffer);
+            }
+            buffer.write(new Uint8Array(uniform_buffer.data));
+            bindings[name] = buffer;
+        }
     }
 
     getPipeline(program, vertex_layout, descriptor, render_state) {

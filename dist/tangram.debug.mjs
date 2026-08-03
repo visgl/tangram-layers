@@ -2687,6 +2687,13 @@ class ShaderProgram {
         uniform.saved_value = uniform.value;
       }
     }
+    this.saved_uniform_block_data = new Map();
+    for (const uniform_buffer of Object.values(this.uniform_blocks)) {
+      const block_uniforms = uniform_buffer.layout && uniform_buffer.layout.uniforms;
+      if (uniform_buffer.data && block_uniforms && Object.keys(uniforms).some(name => block_uniforms[name])) {
+        this.saved_uniform_block_data.set(uniform_buffer, new Uint8Array(uniform_buffer.data).slice());
+      }
+    }
     this.saved_texture_unit = this.texture_unit || 0;
     this.saved_texture_uniforms = Object.assign({}, this.texture_uniforms);
   }
@@ -2696,11 +2703,16 @@ class ShaderProgram {
     let uniforms = subset || this.uniforms;
     for (let u in uniforms) {
       let uniform = this.uniforms[u];
-      if (uniform && uniform.saved_value) {
+      if (uniform && uniform.saved_value !== undefined) {
         uniform.value = uniform.saved_value;
         this.updateUniform(uniform);
       }
     }
+    for (const [uniform_buffer, data] of this.saved_uniform_block_data || []) {
+      new Uint8Array(uniform_buffer.data).set(data);
+      uniform_buffer.dirty = true;
+    }
+    this.saved_uniform_block_data = null;
     this.texture_unit = this.saved_texture_unit || 0;
     this.texture_uniforms = this.saved_texture_uniforms || {};
   }
@@ -2726,6 +2738,12 @@ class ShaderProgram {
     // 'value' is a method-appropriate arguments list
     if (!this.compiled) {
       return;
+    }
+    for (const uniform_buffer of Object.values(this.uniform_blocks)) {
+      if (uniform_buffer.layout && uniform_buffer.layout.uniforms[name]) {
+        uniform_buffer.setUniform(name, value);
+        return;
+      }
     }
     this.uniforms[name] = this.uniforms[name] || {};
     let uniform = this.uniforms[name];
@@ -7140,6 +7158,7 @@ var Style = {
     this.gl = null;
     this.resource_context = null;
     this.uniform_blocks = null;
+    this.uniform_block_factory = null;
     this.initialized = false;
   },
   reset() {},
@@ -7433,6 +7452,7 @@ var Style = {
     this.uniform_blocks = uniform_blocks;
     this.shader_language = options.shaderLanguage || 'glsl';
     this.shader_factory = options.shaderFactory;
+    this.uniform_block_factory = options.uniformBlockFactory;
     this.mesh_buffer_factory = options.meshBufferFactory;
     this.texture_factory = options.textureFactory;
     this.defer_uniform_blocks = options.deferUniformBlocks === true;
@@ -10409,10 +10429,11 @@ const ATTRIBUTE_SCALE = 1024;
  * vector and its fractional-zoom scaling are therefore applied before the
  * host-provided tile and camera matrices. Buffered offsets and elevation use
  * the same zoom interpolation and height packing as Tangram's GLSL renderer.
- * Animated styles use the generated line texture coordinates and Tangram's
- * frame time to produce portable compact repeating vehicles without additive
- * blending. Textures, arbitrary custom shader blocks, and selection remain
- * follow-up tranches.
+ * Textured and dashed styles sample luma-owned textures using per-mesh state
+ * from a std140 uniform block. Animated styles reuse the generated line
+ * texture coordinates and Tangram's frame time to produce portable compact
+ * repeating vehicles without additive blending. Arbitrary custom shader
+ * blocks and selection remain follow-up tranches.
  *
  * @param {object} options Shader options.
  * @param {boolean} options.animated Enables the portable traffic vehicles.
@@ -10421,9 +10442,6 @@ const ATTRIBUTE_SCALE = 1024;
 function buildLinesWGSL({
   animated = false
 } = {}) {
-  const animated_attribute = animated ? '\n    @location(4) a_texcoord: vec2<f32>,' : '';
-  const animated_varying = animated ? '\n    @location(1) texcoord: vec2<f32>,' : '';
-  const animated_vertex = animated ? '\n    output.texcoord = attributes.a_texcoord / 65535.0;' : '';
   const animated_fragment = animated ? `
 
     let direction = select(-1.0, 1.0, input.texcoord.x < 0.5);
@@ -10431,7 +10449,7 @@ function buildLinesWGSL({
     // Keep the pattern continuous along the buffered road distance. The
     // derivative-aware body below remains a few pixels long at every zoom
     // instead of collapsing to a sub-pixel flash or stretching into a trail.
-    let traffic_coordinate = input.texcoord.y * 512.0 -
+    let traffic_coordinate = input.texcoord.y * 0.125 -
         TangramView.u_time * 1.8 * direction + lane_phase;
     let vehicle_position = fract(traffic_coordinate / 6.0);
     let longitudinal_distance = abs(vehicle_position - 0.5);
@@ -10460,24 +10478,29 @@ function buildLinesWGSL({
     let vehicle = max(vehicle_body, vehicle_halo * 0.35) * lane_mask;
     let vehicle_color = vec3<f32>(0.62, 1.0, 0.98);
     let animated_color = mix(
-        input.color.rgb,
+        color.rgb,
         vehicle_color,
         vehicle * 0.98
     );
-    return vec4<f32>(animated_color, input.color.a);
-` : '    return input.color;\n';
+    color = vec4<f32>(animated_color, color.a);
+` : '';
   return `
+@group(0) @binding(3) var u_texture: texture_2d<f32>;
+@group(0) @binding(4) var u_textureSampler: sampler;
+
 struct LineAttributes {
     @location(0) a_position: vec4<i32>,
     @location(1) a_extrude: vec2<i32>,
     @location(2) a_offset: vec2<i32>,
-    @location(3) a_z_and_offset_scale: vec2<i32>,${animated_attribute}
+    @location(3) a_z_and_offset_scale: vec2<i32>,
+    @location(4) a_texcoord: vec2<f32>,
     @location(5) a_color: vec4<f32>,
 };
 
 struct LineVaryings {
     @builtin(position) position: vec4<f32>,
-    @location(0) color: vec4<f32>,${animated_varying}
+    @location(0) color: vec4<f32>,
+    @location(1) texcoord: vec2<f32>,
 };
 
 @vertex
@@ -10525,13 +10548,37 @@ fn vertexMain(attributes: LineAttributes) -> LineVaryings {
 
     output.position = clip_position;
     output.color = attributes.a_color;
-${animated_vertex}
+    output.texcoord = attributes.a_texcoord / 65535.0;
+    output.texcoord.y *= TangramLine.u_v_scale_adjust;
     return output;
 }
 
 @fragment
 fn fragmentMain(input: LineVaryings) -> @location(0) vec4<f32> {
+    var color = input.color;
+    if (TangramLine.u_has_line_texture != 0u) {
+        let line_texcoord = vec2<f32>(
+            input.texcoord.x,
+            fract(input.texcoord.y / TangramLine.u_texture_ratio)
+        );
+        let line_color = textureSample(u_texture, u_textureSampler, line_texcoord);
+        let textured_color = color * line_color;
+        let dashed_color = mix(
+            TangramLine.u_dash_background_color,
+            color,
+            line_color.a
+        );
+        color = mix(
+            textured_color,
+            dashed_color,
+            clamp(TangramLine.u_has_dash, 0.0, 1.0)
+        );
+        if (color.a < 0.001) {
+            discard;
+        }
+    }
 ${animated_fragment}
+    return color;
 }
 `;
 }
@@ -10553,6 +10600,41 @@ Object.assign(Lines, {
     return buildLinesWGSL({
       animated: this.animated === true
     });
+  },
+  setGL(gl_context, uniform_blocks = {}, options = {}) {
+    if (Object.prototype.hasOwnProperty.call(this, 'line_uniform_buffer') && this.line_uniform_buffer) {
+      this.line_uniform_buffer.destroy();
+      this.line_uniform_buffer = null;
+    }
+    Style.setGL.call(this, gl_context, uniform_blocks, options);
+    if (this.shader_language === 'wgsl') {
+      if (typeof this.uniform_block_factory !== 'function') {
+        throw new Error('portable line styles require a uniform block factory');
+      }
+      this.line_uniform_buffer = this.uniform_block_factory({
+        id: `${this.name}-line-style`,
+        name: 'TangramLine',
+        binding: 5,
+        snapshotPerMesh: true,
+        uniforms: {
+          u_has_line_texture: 'bool',
+          u_texture_ratio: 'float',
+          u_v_scale_adjust: 'float',
+          u_has_dash: 'float',
+          u_dash_background_color: 'vec4'
+        }
+      });
+      this.uniform_blocks = Object.assign({}, this.uniform_blocks, {
+        TangramLine: this.line_uniform_buffer
+      });
+    }
+  },
+  destroy() {
+    Style.destroy.call(this);
+    if (Object.prototype.hasOwnProperty.call(this, 'line_uniform_buffer') && this.line_uniform_buffer) {
+      this.line_uniform_buffer.destroy();
+      this.line_uniform_buffer = null;
+    }
   },
   init() {
     Style.init.apply(this, arguments);
@@ -10878,7 +10960,10 @@ Object.assign(Lines, {
     if (tile_data) {
       tile_data.uniforms.u_has_line_texture = false;
       tile_data.uniforms.u_texture = Texture.default;
+      tile_data.uniforms.u_texture_ratio = 1;
       tile_data.uniforms.u_v_scale_adjust = Geo$1.tile_scale;
+      tile_data.uniforms.u_has_dash = 0;
+      tile_data.uniforms.u_dash_background_color = [0, 0, 0, 0];
       let pending = [];
       for (let m in tile_data.meshes) {
         let variant = tile_data.meshes[m].variant;
@@ -10996,7 +11081,7 @@ Object.assign(Lines, {
         size: 2,
         type: this.shader_language === 'wgsl' ? gl$1.FLOAT : gl$1.UNSIGNED_SHORT,
         normalized: this.shader_language !== 'wgsl',
-        static: variant.texcoords ? null : [0, 0]
+        static: portable || variant.texcoords ? null : [0, 0]
       }, {
         name: 'a_color',
         size: 4,
@@ -11052,7 +11137,7 @@ Object.assign(Lines, {
     }
 
     // a_texcoord.uv - texture coordinates
-    if (mesh.variant.texcoords) {
+    if (portable || mesh.variant.texcoords) {
       this.vertex_template[i++] = 0;
       this.vertex_template[i++] = 0;
     }
@@ -11089,7 +11174,10 @@ Object.assign(Lines, {
     let vertex_data = mesh.vertex_data;
     let vertex_layout = vertex_data.vertex_layout;
     let vertex_template = this.makeVertexTemplate(style, mesh);
-    return buildPolylines(lines, style, vertex_data, vertex_template, vertex_layout.index, options && options.closed_polygon,
+    const vertex_layout_index = this.shader_language === 'wgsl' && !mesh.variant.texcoords ? Object.assign({}, vertex_layout.index, {
+      a_texcoord: null
+    }) : vertex_layout.index;
+    return buildPolylines(lines, style, vertex_data, vertex_template, vertex_layout_index, options && options.closed_polygon,
     // closed_polygon
     !style.tile_edges && options && options.remove_tile_edges,
     // remove_tile_edges
@@ -22675,14 +22763,16 @@ class UniformBuffer {
       throw new Error('UniformBuffer requires a uniform block name');
     }
     this.gl = gl;
+    this.id = options.id || options.name;
     this.name = options.name;
     this.binding = options.binding || 0;
+    this.snapshot_per_mesh = options.snapshotPerMesh === true;
     this.usage = options.usage || (has_buffer_factory ? null : gl.DYNAMIC_DRAW);
     this.layout = UniformBuffer.createLayout(options.uniforms || {});
     this.data = new ArrayBuffer(this.layout.byte_length);
     this.data_view = new DataView(this.data);
     this.buffer_resource = has_buffer_factory && options.bufferFactory({
-      id: this.name,
+      id: this.id,
       byteLength: this.layout.byte_length,
       usage: 'uniform'
     });
@@ -30245,11 +30335,9 @@ class Scene {
     if (!this.enable_uniform_buffers || !UniformBuffer.isSupported(this.gl) && !this.uniform_buffer_factory) {
       return;
     }
-    const gl = this.portable_rendering ? null : this.gl;
-    this.uniform_buffers.TangramView = new UniformBuffer(gl, {
+    this.uniform_buffers.TangramView = this.createUniformBuffer({
       name: 'TangramView',
       binding: 0,
-      bufferFactory: this.uniform_buffer_factory,
       uniforms: {
         u_resolution: 'vec2',
         u_time: 'float',
@@ -30260,20 +30348,19 @@ class Scene {
         u_view_panning: 'bool'
       }
     });
-    this.uniform_buffers.TangramCamera = new UniformBuffer(gl, {
+    this.uniform_buffers.TangramCamera = this.createUniformBuffer({
       name: 'TangramCamera',
       binding: 1,
-      bufferFactory: this.uniform_buffer_factory,
       uniforms: {
         u_projection: 'mat4',
         u_eye: 'vec3',
         u_vanishing_point: 'vec2'
       }
     });
-    this.uniform_buffers.TangramTile = new UniformBuffer(gl, {
+    this.uniform_buffers.TangramTile = this.createUniformBuffer({
       name: 'TangramTile',
       binding: 2,
-      bufferFactory: this.uniform_buffer_factory,
+      snapshotPerMesh: true,
       uniforms: {
         u_tile_origin: 'vec4',
         u_tile_proxy_order_offset: 'float',
@@ -30284,6 +30371,11 @@ class Scene {
         u_tile_fade_in: 'bool'
       }
     });
+  }
+  createUniformBuffer(options) {
+    return new UniformBuffer(this.portable_rendering ? null : this.gl, Object.assign({}, options, {
+      bufferFactory: this.uniform_buffer_factory
+    }));
   }
   destroyUniformBuffers() {
     for (const uniform_buffer of Object.values(this.uniform_buffers)) {
@@ -31306,6 +31398,7 @@ class Scene {
         resourceContext: this.portable_rendering ? this.resource_context : this.gl,
         shaderFactory: this.shader_factory,
         shaderLanguage: this.shader_language,
+        uniformBlockFactory: options => this.createUniformBuffer(options),
         meshBufferFactory: this.mesh_buffer_factory,
         textureFactory: this.texture_factory,
         deferUniformBlocks: Boolean(this.mesh_renderer),
@@ -34621,24 +34714,32 @@ class LumaDeviceRenderer {
     this.pipelines.clear();
   }
 
-  /** Copies per-tile uniform state into storage unique to the encoded mesh draw. */
+  /** Copies mutable uniform blocks into storage unique to the encoded mesh draw. */
   snapshotMeshUniformBindings(mesh, program, bindings) {
-    const uniform_buffer = program.uniform_blocks && program.uniform_blocks.TangramTile;
-    if (!uniform_buffer || !uniform_buffer.data) {
+    const uniform_blocks = program.uniform_blocks || {};
+    const snapshot_blocks = Object.entries(uniform_blocks).filter(([, uniform_buffer]) => uniform_buffer.snapshot_per_mesh && uniform_buffer.data);
+    if (snapshot_blocks.length === 0) {
       return;
     }
-    let buffer = this.mesh_uniform_buffer_cache.get(mesh);
-    if (!buffer) {
-      buffer = this.device.createBuffer({
-        id: `tangram-mesh-${mesh.id}-tile-uniforms`,
-        byteLength: uniform_buffer.byteLength,
-        usage: Buffer.UNIFORM | Buffer.COPY_DST
-      });
-      this.mesh_uniform_buffer_cache.set(mesh, buffer);
-      this.mesh_uniform_buffers.add(buffer);
+    let mesh_buffers = this.mesh_uniform_buffer_cache.get(mesh);
+    if (!mesh_buffers) {
+      mesh_buffers = new Map();
+      this.mesh_uniform_buffer_cache.set(mesh, mesh_buffers);
     }
-    buffer.write(new Uint8Array(uniform_buffer.data));
-    bindings.TangramTile = buffer;
+    for (const [name, uniform_buffer] of snapshot_blocks) {
+      let buffer = mesh_buffers.get(name);
+      if (!buffer) {
+        buffer = this.device.createBuffer({
+          id: `tangram-mesh-${mesh.id}-${name}-uniforms`,
+          byteLength: uniform_buffer.byteLength,
+          usage: Buffer.UNIFORM | Buffer.COPY_DST
+        });
+        mesh_buffers.set(name, buffer);
+        this.mesh_uniform_buffers.add(buffer);
+      }
+      buffer.write(new Uint8Array(uniform_buffer.data));
+      bindings[name] = buffer;
+    }
   }
   getPipeline(program, vertex_layout, descriptor, render_state) {
     let layouts = this.pipeline_cache.get(program);
@@ -34871,7 +34972,7 @@ return index;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = '412be0dbc053242836cafe21d8fe3d2166bf95dc';
+	Tangram.debug.SHA = '202ff5d2229f32fd609975e4fdcf99b9f567f431';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

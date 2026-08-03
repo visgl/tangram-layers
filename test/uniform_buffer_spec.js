@@ -308,6 +308,66 @@ describe('UniformBuffer', function () {
         assert.lengthOf(raw_calls, 0);
     });
 
+    it('routes and restores mesh scalars through a per-mesh uniform block', function () {
+        const resource = {
+            write() {},
+            destroy() {}
+        };
+        const line_uniforms = new UniformBuffer(null, {
+            name: 'TangramLine',
+            binding: 5,
+            snapshotPerMesh: true,
+            bufferFactory: () => resource,
+            uniforms: {
+                u_has_line_texture: 'bool',
+                u_texture_ratio: 'float',
+                u_dash_background_color: 'vec4'
+            }
+        });
+        const program = new ShaderProgram(null, '', '', {
+            shaderLanguage: 'wgsl',
+            deferUniformUpdates: true,
+            uniform_blocks: { TangramLine: line_uniforms }
+        });
+        program.compiled = true;
+        line_uniforms.setUniforms({
+            u_has_line_texture: false,
+            u_texture_ratio: 1,
+            u_dash_background_color: [0, 0, 0, 0]
+        });
+
+        program.saveUniforms({
+            u_has_line_texture: true,
+            u_texture_ratio: 2,
+            u_dash_background_color: [1, 0, 0, 1]
+        });
+        program.setUniforms({
+            u_has_line_texture: true,
+            u_texture_ratio: 4,
+            u_dash_background_color: [1, 0, 0, 1]
+        });
+
+        let integers = new Uint32Array(line_uniforms.data);
+        let floats = new Float32Array(line_uniforms.data);
+        assert.strictEqual(integers[0], 1);
+        assert.strictEqual(floats[1], 4);
+        assert.deepEqual(Array.from(floats.slice(4, 8)), [1, 0, 0, 1]);
+        assert.isTrue(line_uniforms.snapshot_per_mesh);
+
+        program.restoreUniforms({
+            u_has_line_texture: true,
+            u_texture_ratio: 2,
+            u_dash_background_color: [1, 0, 0, 1]
+        });
+        integers = new Uint32Array(line_uniforms.data);
+        floats = new Float32Array(line_uniforms.data);
+        assert.strictEqual(integers[0], 0);
+        assert.strictEqual(floats[1], 1);
+        assert.deepEqual(Array.from(floats.slice(4, 8)), [0, 0, 0, 0]);
+
+        line_uniforms.destroy();
+    });
+
     it('defers texture uniforms and exposes luma texture bindings to an injected renderer', function () {
         const resource = { handle: {} };
         const first_texture = {
