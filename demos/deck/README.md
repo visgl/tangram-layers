@@ -39,7 +39,10 @@ portable polygon and line shaders, including a non-additive WGSL translation
 of the two-way highway traffic pulses. More general custom shader blocks remain
 WebGL-only. The exact Nextzen scene currently selects WebGL because its
 point/text styles are also unported.
-It loads the pinned deck.gl browser bundle from unpkg.
+The demo loads pinned deck.gl and luma.gl ESM builds from esm.sh. Both deck's
+standard overlay layers and Tangram's renderer resolve one shared
+`@luma.gl/core` module, so every resource and render pass belongs to the same
+luma runtime.
 The prototype supports one Web Mercator view. deck.gl remains authoritative for
 longitude, latitude, zoom, bearing, and pitch; Tangram receives the deck camera
 matrices so vector and raster basemaps remain aligned with deck layers while the

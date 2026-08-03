@@ -1,8 +1,13 @@
-import Tangram from '../../dist/tangram.debug.mjs?bridge=webgpu-line-textures';
+import {
+    Deck,
+    Layer,
+    PathLayer,
+    ScatterplotLayer
+} from 'https://esm.sh/deck.gl@9.4.0-alpha.2?bundle&external=@luma.gl/core';
+import {webgpuAdapter} from 'https://esm.sh/@luma.gl/webgpu@9.4.0-alpha.1?bundle&external=@luma.gl/core';
+import Tangram from '../../dist/tangram.debug.mjs?bridge=webgpu-shared-luma';
 import createTangramLayerClass from './tangram-layer.js?bridge=std140-fix';
-import {webgpuAdapter} from 'https://esm.sh/@luma.gl/webgpu@9.4.0-alpha.1?bundle&deps=@luma.gl/core@9.4.0-alpha.1';
 
-const { Deck, Layer, PathLayer, ScatterplotLayer } = window.deck;
 const searchParams = new URLSearchParams(window.location.search);
 const requestedBackend = searchParams.get('device');
 const defaultDeviceType = 'webgpu';
