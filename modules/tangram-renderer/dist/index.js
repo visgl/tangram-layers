@@ -1,6 +1,7 @@
 import Tangram from './tangram.debug.mjs';
 
-const {leafletLayer, Scene, Renderer, LumaDeviceRenderer, debug, version} = Tangram;
+const {leafletLayer, Scene, ClassicWebGLRenderer, LumaDeviceRenderer, debug, version} = Tangram;
+const Renderer = ClassicWebGLRenderer;
 
-export {leafletLayer, Scene, Renderer, LumaDeviceRenderer, debug, version};
+export {leafletLayer, Scene, ClassicWebGLRenderer, Renderer, LumaDeviceRenderer, debug, version};
 export default Tangram;

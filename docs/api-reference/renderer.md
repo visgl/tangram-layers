@@ -4,9 +4,9 @@
 integration primitives:
 
 ```js
-import {Renderer} from '@vis.gl/tangram-renderer';
+import {ClassicWebGLRenderer} from '@vis.gl/tangram-renderer';
 
-const renderer = Renderer.create(scene, {
+const renderer = ClassicWebGLRenderer.create(scene, {
   device,
   canvas,
   requestRedraw: () => deck.redraw()

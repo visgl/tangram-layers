@@ -9,7 +9,28 @@
 }
 
 .hero--primary {
-  background: linear-gradient(135deg, #07111f 0%, #123b61 55%, #27184d 100%);
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(90deg, rgba(2, 8, 18, 0.78), rgba(7, 25, 44, 0.5)),
+    url('../../static/img/tron-map.svg') center / cover;
+  overflow: hidden;
+}
+
+.hero--primary::after {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(105deg, transparent 35%, rgba(69, 217, 255, 0.14), transparent 63%);
+  content: '';
+  transform: translateX(-100%);
+  animation: tron-scan 8s linear infinite;
+}
+
+@keyframes tron-scan {
+  to {
+    transform: translateX(100%);
+  }
 }
 
 .hero__title {

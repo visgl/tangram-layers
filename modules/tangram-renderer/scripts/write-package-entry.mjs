@@ -9,7 +9,8 @@ await mkdir(dirname(outputPath), {recursive: true});
 await writeFile(
   outputPath,
   `import Tangram from './tangram.debug.mjs';\n\n` +
-    `const {leafletLayer, Scene, Renderer, LumaDeviceRenderer, debug, version} = Tangram;\n\n` +
-    `export {leafletLayer, Scene, Renderer, LumaDeviceRenderer, debug, version};\n` +
+    `const {leafletLayer, Scene, ClassicWebGLRenderer, LumaDeviceRenderer, debug, version} = Tangram;\n` +
+    `const Renderer = ClassicWebGLRenderer;\n\n` +
+    `export {leafletLayer, Scene, ClassicWebGLRenderer, Renderer, LumaDeviceRenderer, debug, version};\n` +
     `export default Tangram;\n`
 );

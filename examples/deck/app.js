@@ -22,17 +22,17 @@ if (searchParams.has('api_key')) {
 }
 const BASEMAPS = {
   streetsVector: {
-    label: 'CARTO Streets vector tiles',
+    label: 'Streets vector tiles',
     scene: createVectorScene({labels: enablePortableText}),
     deviceTypes: ['webgl', 'webgpu']
   },
   positronRaster: {
-    label: 'CARTO Positron raster tiles',
+    label: 'Positron raster tiles',
     scene: createRasterScene('https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'),
     deviceTypes: ['webgl', 'webgpu']
   },
   tron: {
-    label: 'TRON 2.0 shaders on CARTO vector tiles',
+    label: 'TRON 2.0 shaders on vector tiles',
     scene: createTronCartoScene({
       portable: useWebGPU,
       labels: enablePortableText,

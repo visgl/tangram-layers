@@ -10,6 +10,6 @@ and staged into the documentation site during the website build.
   </a>
 </div>
 
-The example defaults to WebGPU and the CARTO-backed TRON style when available.
-It also supports WebGL, CARTO vector and raster styles, deck.gl camera controls,
+The example defaults to WebGPU and the vector-backed TRON style when available.
+It also supports WebGL, vector and raster styles, deck.gl camera controls,
 and runtime `?api_key=...` handling for the original Nextzen style.

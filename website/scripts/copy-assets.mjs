@@ -12,17 +12,9 @@ await mkdir(resolve(staticDirectory, 'examples'), {recursive: true});
 await mkdir(resolve(staticDirectory, 'modules/tangram-renderer/dist'), {recursive: true});
 await mkdir(resolve(staticDirectory, 'modules/tangram-layers/dist'), {recursive: true});
 
-await cp(resolve(repositoryDirectory, 'examples/deck'), resolve(staticDirectory, 'examples/deck'), {
+await cp(resolve(repositoryDirectory, 'examples'), resolve(staticDirectory, 'examples'), {
   recursive: true
 });
-await cp(
-  resolve(repositoryDirectory, 'examples/fonts/montserrat.woff'),
-  resolve(staticDirectory, 'examples/fonts/montserrat.woff')
-);
-await cp(
-  resolve(repositoryDirectory, 'examples/images/wheel.png'),
-  resolve(staticDirectory, 'examples/images/wheel.png')
-);
 await cp(
   resolve(repositoryDirectory, 'modules/tangram-renderer/dist/tangram.debug.mjs'),
   resolve(staticDirectory, 'modules/tangram-renderer/dist/tangram.debug.mjs')

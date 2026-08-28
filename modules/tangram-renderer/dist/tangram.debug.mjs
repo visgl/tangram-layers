@@ -37533,7 +37533,7 @@ const debug = {
   Material: topojson.Material,
   Light: topojson.Light,
   Scene,
-  Renderer,
+  ClassicWebGLRenderer: Renderer,
   LumaDeviceRenderer,
   WorkerBroker: topojson.WorkerBroker,
   Task: topojson.Task,
@@ -37548,7 +37548,8 @@ const debug = {
 const Tangram$1 = {
   leafletLayer,
   Scene,
-  Renderer,
+  ClassicWebGLRenderer: Renderer,
+  Renderer: Renderer,
   LumaDeviceRenderer,
   debug,
   version: topojson.version
@@ -37568,7 +37569,7 @@ return Tangram$1;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = '0bee66370489df43d25ea49db6d7292881d2c73e';
+	Tangram.debug.SHA = 'cf8d53e9702cb220f38efe67e810a3ac58fea645';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

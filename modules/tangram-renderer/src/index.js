@@ -3,7 +3,7 @@
 // The leaflet layer plugin is currently the primary public API
 import {leafletLayer} from './leaflet_layer';
 import Scene from './scene/scene';
-import Renderer from './scene/renderer';
+import ClassicWebGLRenderer from './scene/renderer';
 import LumaDeviceRenderer from './gpu/luma_device_renderer';
 
 // Additional modules are exposed for debugging
@@ -48,7 +48,7 @@ const debug = {
     Material,
     Light,
     Scene,
-    Renderer,
+    ClassicWebGLRenderer,
     LumaDeviceRenderer,
     WorkerBroker,
     Task,
@@ -64,7 +64,8 @@ const debug = {
 const Tangram = {
     leafletLayer,
     Scene,
-    Renderer,
+    ClassicWebGLRenderer,
+    Renderer: ClassicWebGLRenderer,
     LumaDeviceRenderer,
     debug,
     version

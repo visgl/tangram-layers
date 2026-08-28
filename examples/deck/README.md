@@ -23,18 +23,18 @@ http://localhost:8000/examples/deck/
 ```
 
 The zero-parameter demo defaults to WebGPU when the browser exposes it and to
-the CARTO-backed TRON style. Use the selectors or `?device=webgl` and
+the vector-backed TRON style. Use the selectors or `?device=webgl` and
 `?basemap=streetsVector` to exercise the compatibility paths.
 
-The demo can switch between CARTO Streets vector tiles, styled locally by
-Tangram, CARTO Positron raster tiles, and the canonical animated TRON 2.0
+The demo can switch between Streets vector tiles, styled locally by
+Tangram, Positron raster tiles, and the canonical animated TRON 2.0
 vector style from [`tangrams/tron-style`](https://github.com/tangrams/tron-style).
-The CARTO-backed TRON adaptation reuses the original open-source style bundle,
+The vector-backed TRON adaptation reuses the original open-source style bundle,
 palette, glow, and animation shaders without requiring an API key. The exact
 original TRON scene uses Nextzen vector and terrain-normal tiles. Nextzen no
 longer accepts new signups, but an existing key can be entered in the demo's
 password field. It is retained only in that browser tab's session storage and
-is never written to source. The CARTO-backed adaptation stays on WebGPU using
+is never written to source. The vector-backed adaptation stays on WebGPU using
 portable polygon and line shaders, including a non-additive WGSL translation
 of the two-way highway traffic pulses. More general custom shader blocks remain
 WebGL-only. The exact Nextzen scene currently selects WebGL because its
@@ -60,7 +60,7 @@ host-provided frame containing viewport dimensions, geographic view state,
 camera matrices, tile padding, and the active render pass. Standalone Tangram
 continues to use `Scene` for canvas construction and frame scheduling.
 
-On WebGPU, the default CARTO-backed TRON scene exercises portable polygon and
+On WebGPU, the default vector-backed TRON scene exercises portable polygon and
 expanded-line WGSL pipelines. Extruded polygons carry buffered normals for
 stable directional side lighting while flat ground colors remain unchanged.
 Standalone labels retain Tangram's collision and canvas-atlas pipeline and

@@ -79,12 +79,14 @@ export function getExternalCameraFrame(viewport) {
  *
  * @param {object} dependencies Bridge dependencies.
  * @param {typeof import('@deck.gl/core').Layer} dependencies.Layer deck.gl Layer class.
- * @param {object} dependencies.Renderer Embeddable Tangram Renderer class.
+ * @param {object} dependencies.ClassicWebGLRenderer Embeddable Tangram renderer class.
+ * @param {object} dependencies.Renderer Legacy alias for ClassicWebGLRenderer.
  * @returns {typeof import('@deck.gl/core').Layer} TangramLayer class.
  */
-export function createTangramLayerClass({Layer, Renderer}) {
-  if (!Layer || !Renderer) {
-    throw new Error('createTangramLayerClass requires Layer and Renderer');
+export function createTangramLayerClass({Layer, ClassicWebGLRenderer, Renderer}) {
+  const rendererClass = ClassicWebGLRenderer || Renderer;
+  if (!Layer || !rendererClass) {
+    throw new Error('createTangramLayerClass requires Layer and ClassicWebGLRenderer');
   }
 
   class TangramLayer extends Layer {
@@ -251,7 +253,7 @@ export function createTangramLayerClass({Layer, Renderer}) {
           renderer_options.webGLContextScope = (callback) =>
             this._withDeviceState(record, callback);
         }
-        renderer = Renderer.create(props.scene, renderer_options);
+        renderer = rendererClass.create(props.scene, renderer_options);
       } catch (error) {
         this._raiseBridgeError(normalizeError(error));
         return null;

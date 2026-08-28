@@ -15,8 +15,9 @@ const basemap = new TangramLayer({
 ## Exports
 
 - `TangramLayer` — the ready-to-use deck.gl layer class.
-- `createTangramLayerClass({Layer, Renderer})` — dependency-injected factory
-  for hosts that provide compatible layer and renderer classes.
+- `createTangramLayerClass({Layer, ClassicWebGLRenderer})` — dependency-injected
+  factory for hosts that provide compatible layer and renderer classes. The
+  `Renderer` dependency name remains accepted as a compatibility alias.
 - `getExternalCameraFrame(viewport)` — converts a deck Web Mercator viewport
   into Tangram camera matrices.
 - `injectNextzenApiKey(config, apiKey)` — injects a runtime key into Nextzen

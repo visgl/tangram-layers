@@ -25,6 +25,10 @@ export default function Home() {
           <div className="row">
             <div className="col col--6">
               <h2>Two focused packages</h2>
+              <ul>
+                <li>deck.gl basemaps with wicked styling</li>
+                <li>a luma.gl powered basemap renderer</li>
+              </ul>
               <p>
                 The renderer owns Tangram scenes and GPU resources. The layer package adapts it to
                 deck.gl’s device, viewport, and render-pass lifecycle.
@@ -33,8 +37,8 @@ export default function Home() {
             <div className="col col--6">
               <h2>One runnable integration</h2>
               <p>
-                Explore CARTO vector basemaps, the animated TRON style, and deck.gl overlays on
-                WebGL or WebGPU.
+                Explore vector basemaps, the animated TRON style, and deck.gl overlays on WebGL or
+                WebGPU.
               </p>
             </div>
           </div>

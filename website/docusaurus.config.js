@@ -11,6 +11,15 @@ const config = {
   organizationName: 'visgl',
   projectName: 'tangram-layers',
   onBrokenLinks: 'warn',
+  headTags: [
+    {
+      tagName: 'meta',
+      attributes: {
+        name: 'robots',
+        content: 'noindex, nofollow, noarchive'
+      }
+    }
+  ],
   markdown: {
     hooks: {
       onBrokenMarkdownLinks: 'warn'
@@ -42,6 +51,12 @@ const config = {
       items: [
         {to: '/docs', label: 'Docs', position: 'left'},
         {
+          type: 'docSidebar',
+          sidebarId: 'examplesSidebar',
+          label: 'Examples',
+          position: 'left'
+        },
+        {
           href: '/tangram-layers/examples/deck/',
           label: 'Live deck example',
           position: 'left'
@@ -67,6 +82,8 @@ const config = {
           title: 'Project',
           items: [
             {label: 'GitHub', href: 'https://github.com/visgl/tangram-layers'},
+            {label: 'Original Tangram repository', href: 'https://github.com/tangrams/tangram'},
+            {label: 'Mapzen organization', href: 'https://github.com/mapzen'},
             {label: 'vis.gl', href: 'https://vis.gl/'}
           ]
         }

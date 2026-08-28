@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 700" role="img" aria-label="Abstract neon map">
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#020812"/>
+      <stop offset="0.55" stop-color="#061b2b"/>
+      <stop offset="1" stop-color="#120b28"/>
+    </linearGradient>
+    <filter id="glow-blue" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-purple" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1600" height="700" fill="url(#background)"/>
+  <g opacity="0.16" stroke="#45d9ff" stroke-width="1">
+    <path d="M0 90H1600M0 210H1600M0 340H1600M0 475H1600M0 610H1600"/>
+    <path d="M110 0V700M330 0V700M590 0V700M850 0V700M1120 0V700M1380 0V700"/>
+  </g>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M-40 580 240 510 420 535 630 420 790 450 980 315 1210 350 1640 120" stroke="#1385b5" stroke-width="18" opacity="0.35"/>
+    <path d="M-40 580 240 510 420 535 630 420 790 450 980 315 1210 350 1640 120" stroke="#45d9ff" stroke-width="3" filter="url(#glow-blue)"/>
+    <path d="M60 60 280 210 470 170 650 285 890 205 1070 260 1300 160 1640 260" stroke="#8b4dff" stroke-width="22" opacity="0.27"/>
+    <path d="M60 60 280 210 470 170 650 285 890 205 1070 260 1300 160 1640 260" stroke="#b66cff" stroke-width="4" filter="url(#glow-purple)"/>
+    <path d="M340 -20 420 130 400 300 520 430 500 730M1030 -20 980 120 1080 260 1030 440 1150 730" stroke="#2cc7e8" stroke-width="2" opacity="0.75"/>
+    <path d="M155 350 360 300 580 335 745 250 920 290 1090 180 1280 230 1480 170" stroke="#3b9eff" stroke-width="2" opacity="0.7"/>
+  </g>
+  <g fill="#d6f8ff" filter="url(#glow-blue)">
+    <circle cx="240" cy="510" r="4"/><circle cx="630" cy="420" r="4"/><circle cx="980" cy="315" r="4"/><circle cx="1210" cy="350" r="4"/>
+  </g>
+</svg>

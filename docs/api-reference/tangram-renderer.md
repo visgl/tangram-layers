@@ -7,8 +7,8 @@ management, and luma.gl draw submission. It has no deck.gl dependency.
 
 ```js
 import Tangram, {
+  ClassicWebGLRenderer,
   LumaDeviceRenderer,
-  Renderer,
   Scene
 } from '@vis.gl/tangram-renderer';
 ```
@@ -17,7 +17,9 @@ The default export preserves the legacy Tangram API. Named exports are the
 host-integration boundary:
 
 - `Scene` loads scene configuration and owns camera/tile state.
-- `Renderer` drives scene traversal and submits work to a host device/render pass.
+- `ClassicWebGLRenderer` drives classic scene traversal and submits work to a
+  host device/render pass. The historical named `Renderer` alias remains for
+  compatibility.
 - `LumaDeviceRenderer` provides the luma.gl resource backend used by WebGL and
   WebGPU paths.
 - `leafletLayer`, `debug`, and `version` remain available for legacy consumers.
