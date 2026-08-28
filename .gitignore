@@ -19,6 +19,7 @@ website/static/examples
 website/static/modules
 website/static/robots.txt
 modules/tangram-layers/dist
+examples/classic/dist
 
 # OS misc
 .DS_Store

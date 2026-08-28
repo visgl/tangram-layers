@@ -45,95 +45,33 @@
         // NOTE: using previous version of Mapzen/Nextzen basemaps, until some issues are
         // resolved in current versions (syntax errors on shields, etc.)
         var scenes = {
+            // Offline preview that does not require a tile service or API key
+            'Local streets (offline)': 'styles/local-basemap.yaml',
+            'TRON preview (offline)': 'styles/local-tron.yaml',
+            // Open raster basemaps that do not require a tile-service API key
+            'Light raster basemap': 'styles/open-light-raster.yaml',
+            'Street map raster': 'styles/open-streets-raster.yaml',
+            'Albers projection morph': 'styles/projection-morph.yaml',
+
             // Default style
             'Simple': 'scene.yaml',
 
             // Nextzen (nee Mapzen) basemaps
-            'Bubble Wrap': {
-                import: [
-                    'https://www.nextzen.org/carto/bubble-wrap-style/10/bubble-wrap-style.zip',
-                    'https://www.nextzen.org/carto/bubble-wrap-style/10/themes/label-10.zip',
-                    'https://www.nextzen.org/carto/bubble-wrap-style/10/themes/bubble-wrap-road-shields-usa.zip',
-                    'https://www.nextzen.org/carto/bubble-wrap-style/10/themes/bubble-wrap-road-shields-international.zip'
-                ]
-            },
-
-            'Walkabout': {
-                import: [
-                  'https://www.nextzen.org/carto/walkabout-style/8/walkabout-style.zip',
-                  'https://www.nextzen.org/carto/walkabout-style/8/themes/label-10.zip',
-                  'https://www.nextzen.org/carto/walkabout-style/8/themes/walkabout-road-shields-usa.zip',
-                  'https://www.nextzen.org/carto/walkabout-style/8/themes/walkabout-road-shields-international.zip'
-                ]
-            },
-
-            'Refill': {
-                import: [
-                  'https://www.nextzen.org/carto/refill-style/12/refill-style.zip',
-                  'https://www.nextzen.org/carto/refill-style/12/themes/label-10.zip',
-                ]
-            },
-
-            'Refill Blue Terrain': {
-                import: [
-                    'https://www.nextzen.org/carto/refill-style/12/refill-style.zip',
-                    'https://www.nextzen.org/carto/refill-style/12/themes/label-10.zip',
-                    'https://www.nextzen.org/carto/refill-style/12/themes/color-blue.zip',
-                    'https://www.nextzen.org/carto/refill-style/12/themes/no-texture.zip',
-                    'https://www.nextzen.org/carto/refill-style/12/themes/terrain-pattern-dark.zip'
-                ]
-            },
-
-            'Tron': {
-                import: [
-                    'https://www.nextzen.org/carto/tron-style/6/tron-style.zip',
-                    'https://www.nextzen.org/carto/tron-style/6/themes/label-10.zip'
-                ]
-            },
+            'Bubble Wrap': 'styles/bubble-wrap.yaml',
+            'Walkabout': 'styles/walkabout.yaml',
+            'Refill': 'styles/refill.yaml',
+            'Refill Blue Terrain': 'styles/refill-blue-terrain.yaml',
+            'Tron': 'styles/tron.yaml',
 
             // Crosshatch style (texture/shader demos)
             'Crosshatch': 'styles/crosshatch.zip',
+            'Crosshatch (local preview)': 'styles/crosshatch-preview.yaml',
 
             // Fragment shader example
-            'Rainbow Buildings': {
-                import: [
-                    'scene.yaml',
-                    'styles/rainbow.yaml'
-                ],
-                layers: {
-                    buildings: {
-                        polygons: {
-                            draw: {
-                                polygons: { style: 'rainbow' }
-                            },
-                            extruded: {
-                                draw: {
-                                    polygons: { style: 'rainbow' }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
+            'Rainbow Buildings': 'styles/rainbow-buildings.yaml',
 
             // Vertex shader example
-            'Pop-up Buildings': {
-                import: [
-                    'scene.yaml',
-                    'styles/popup.yaml'
-                ],
-                layers: {
-                    buildings: {
-                        polygons: {
-                            extruded: {
-                                draw: {
-                                    polygons: { style: 'popup' }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            'Pop-up Buildings': 'styles/popup-buildings.yaml'
         };
 
         Object.keys(scenes).forEach(function (s) { scenes[s] = JSON.stringify(scenes[s]); }); // need to stringify JSON for dat.gui :(

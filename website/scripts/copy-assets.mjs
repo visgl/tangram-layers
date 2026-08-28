@@ -12,7 +12,14 @@ await mkdir(resolve(staticDirectory, 'examples'), {recursive: true});
 await mkdir(resolve(staticDirectory, 'modules/tangram-renderer/dist'), {recursive: true});
 await mkdir(resolve(staticDirectory, 'modules/tangram-layers/dist'), {recursive: true});
 
-await cp(resolve(repositoryDirectory, 'examples'), resolve(staticDirectory, 'examples'), {
+await cp(
+  resolve(repositoryDirectory, 'examples/classic/dist'),
+  resolve(staticDirectory, 'examples/classic'),
+  {
+    recursive: true
+  }
+);
+await cp(resolve(repositoryDirectory, 'examples/deck'), resolve(staticDirectory, 'examples/deck'), {
   recursive: true
 });
 await cp(

@@ -24,7 +24,6 @@
                         Tangram.workerURL = window.URL.createObjectURL(new Blob([worker_bundle], { type: 'text/javascript' }));
                     }
             }
-        
 
 define(['exports'], (function (exports) { 'use strict';
 
@@ -6387,15 +6386,9 @@ class NetworkSource extends DataSource {
     super(source, sources);
     this.response_type = ''; // use to set explicit XHR type
 
-    // Add extra URL params, and warn on duplicates
-    let [url, dupes] = addParamsToURL(source.url, source.url_params);
-    this.url = url;
-    dupes.forEach(([param, value]) => {
-      log({
-        level: 'warn',
-        once: true
-      }, `Data source '${this.name}': parameter '${param}' already present in URL '${source.url}', ` + `skipping value '${param}=${value}' specified in 'url_params'`);
-    });
+    this.tilejson = source.tilejson;
+    this.url_params = source.url_params;
+    this.url = source.url ? this.addURLParams(source.url) : null;
 
     // Optional HTTP request headers to send
     if (source.request_headers && typeof source.request_headers === 'object') {
@@ -6403,7 +6396,41 @@ class NetworkSource extends DataSource {
     }
   }
   _load(dest) {
-    let url = this.formatURL(this.url, dest);
+    return this.resolveURL().then(url => this.loadURL(dest, url)).catch(error => {
+      dest.source_data.error = error.stack;
+      return dest;
+    });
+  }
+  resolveURL() {
+    if (this.url) {
+      return Promise.resolve(this.url);
+    }
+    if (!this.tilejson_promise) {
+      this.tilejson_promise = Utils.io(this.tilejson, 60 * 1000, 'text', 'GET', this.request_headers).then(({
+        body
+      }) => {
+        const metadata = typeof body === 'string' ? JSON.parse(body) : body;
+        if (!metadata || !Array.isArray(metadata.tiles) || typeof metadata.tiles[0] !== 'string') {
+          throw Error(`Data source '${this.name}': TileJSON must provide at least one tile URL`);
+        }
+        this.url = this.addURLParams(addBaseURL(metadata.tiles[0], this.tilejson));
+        return this.url;
+      });
+    }
+    return this.tilejson_promise;
+  }
+  addURLParams(url) {
+    const [resolved_url, dupes] = addParamsToURL(url, this.url_params);
+    dupes.forEach(([param, value]) => {
+      log({
+        level: 'warn',
+        once: true
+      }, `Data source '${this.name}': parameter '${param}' already present in URL '${url}', ` + `skipping value '${param}=${value}' specified in 'url_params'`);
+    });
+    return resolved_url;
+  }
+  loadURL(dest, url_template) {
+    let url = this.formatURL(url_template, dest);
     let source_data = dest.source_data;
     source_data.url = url;
     dest.debug = dest.debug || {};
@@ -6443,8 +6470,8 @@ class NetworkSource extends DataSource {
     });
   }
   validate(source) {
-    if (typeof source.url !== 'string') {
-      throw Error('Network data source must provide a string `url` property');
+    if (typeof source.url !== 'string' && typeof source.tilejson !== 'string') {
+      throw Error('Network data source must provide a string `url` or `tilejson` property');
     }
   }
 
@@ -31060,6 +31087,7 @@ const SceneLoader = {
   },
   normalizeDataSource(source, bundle) {
     source.url = bundle.urlFor(source.url);
+    source.tilejson = bundle.urlFor(source.tilejson);
 
     // composite untiled raster sources
     if (Array.isArray(source.composite)) {
@@ -37569,7 +37597,7 @@ return Tangram$1;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = 'cf8d53e9702cb220f38efe67e810a3ac58fea645';
+	Tangram.debug.SHA = 'fc19d01442d2612e7c35bdea7a90740fb7733345';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

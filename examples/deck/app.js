@@ -323,7 +323,7 @@ function createVectorScene({labels = true} = {}) {
       background: {color: '#f5f3ef'}
     },
     fonts: {
-      Montserrat: {url: '../fonts/montserrat.woff'}
+      Montserrat: {url: '../classic/fonts/montserrat.woff'}
     },
     sources: {
       carto: {
@@ -466,7 +466,7 @@ function createTronCartoScene({
   const scene = {
     import: ['https://www.nextzen.org/carto/tron-style/6/tron-style.zip'],
     fonts: {
-      Montserrat: {url: '../fonts/montserrat.woff'}
+      Montserrat: {url: '../classic/fonts/montserrat.woff'}
     },
     global: {
       sdk_api_key: '',
@@ -686,7 +686,7 @@ function createTronCartoScene({
     };
     if (pointProbe === 'sprite') {
       scene.textures = {
-        'point-probe': {url: '../images/wheel.png'}
+        'point-probe': {url: '../classic/images/wheel.png'}
       };
       scene.layers['tron-carto-places'].draw.points.texture = 'point-probe';
       scene.layers['tron-carto-places'].draw.points.color = '#ffffff';

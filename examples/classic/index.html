@@ -6,6 +6,14 @@ http://mapzen.com/tangram
 -->
 <html lang="en-us">
   <head>
+    <script>
+      // Relative assets need the directory form of the URL on static hosts.
+      if (!window.location.pathname.endsWith('/')) {
+        const directoryUrl = new URL(window.location.href);
+        directoryUrl.pathname += '/';
+        window.location.replace(directoryUrl.href);
+      }
+    </script>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -17,14 +25,13 @@ http://mapzen.com/tangram
     <!-- 3rd party libraries -->
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.2.0/leaflet.js"></script>
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-geocoder-mapzen/1.9.4/leaflet-geocoder-mapzen.js"></script> <!-- leaflet plugin for pelias search UI -->
-    <script defer src="lib/dat.gui.min.js"></script> <!-- lightweight GUI lib -->
     <script defer src="lib/FileSaver.js"></script> <!-- used in the demo to save screenshots -->
     <script defer src="lib/keymaster.js"></script> <!-- Keymaster handles keyboard input -->
 
     <!-- Tangram library -->
     <!-- modern browsers load the optimized .mjs file, older browsers (IE11) load the transpiled .js file -->
-    <script type="module" src="../modules/tangram-renderer/dist/tangram.debug.mjs"></script>
-    <script nomodule src="../modules/tangram-renderer/dist/tangram.debug.js"></script>
+    <script type="module" src="../../modules/tangram-renderer/dist/tangram.debug.mjs"></script>
+    <script nomodule src="../../modules/tangram-renderer/dist/tangram.debug.js"></script>
 
     <!-- Tangram demo code -->
     <script defer src="main.js"></script>
@@ -32,7 +39,7 @@ http://mapzen.com/tangram
     <!-- Tangram demo extras -->
     <script defer src="app/url.js"></script> <!-- URL parsing -->
     <script defer src="app/key.js"></script> <!-- demo key setup -->
-    <script defer src="app/gui.js"></script> <!-- UI for configuring map -->
+    <script type="module" src="app/settings-panel.js"></script> <!-- deck.gl-community settings UI -->
 
     <!-- Uncomment to enable WebGL stats for debugging -->
     <!--

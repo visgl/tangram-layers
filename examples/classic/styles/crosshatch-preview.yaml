@@ -1,0 +1,65 @@
+scene:
+  background:
+    color: '#343438'
+
+cameras:
+  perspective:
+    type: perspective
+    active: true
+
+styles:
+  crosshatch:
+    base: polygons
+    lighting: false
+    shaders:
+      blocks:
+        color: |
+          vec2 hatchPosition = worldPosition().xy * 0.02;
+          float diagonalA = step(0.46, fract(hatchPosition.x + hatchPosition.y));
+          float diagonalB = step(0.46, fract(hatchPosition.x - hatchPosition.y));
+          float hatch = max(diagonalA, diagonalB);
+          color.rgb = mix(vec3(0.20, 0.20, 0.22), vec3(0.88, 0.84, 0.76), hatch);
+
+  building-crosshatch:
+    mix: crosshatch
+    shaders:
+      blocks:
+        position: |
+          position.z *= 1.0 + (u_map_position.z - 14.0) * 0.06;
+
+  ink-lines:
+    base: lines
+    lighting: false
+    shaders:
+      blocks:
+        color: |
+          color.rgb = vec3(0.08, 0.08, 0.10);
+
+sources:
+  preview:
+    type: GeoJSON
+    url: ../data/crosshatch-preview.geojson
+
+layers:
+  land:
+    data: {source: preview}
+    filter: {kind: land}
+    draw:
+      crosshatch:
+        order: 0
+
+  buildings:
+    data: {source: preview}
+    filter: {kind: building}
+    draw:
+      building-crosshatch:
+        order: 1
+        extrude: true
+
+  roads:
+    data: {source: preview}
+    filter: {kind: road}
+    draw:
+      ink-lines:
+        order: 2
+        width: 8px

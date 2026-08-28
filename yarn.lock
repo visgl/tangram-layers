@@ -6112,6 +6112,14 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@vis.gl/tangram-classic@workspace:examples/classic":
+  version: 0.0.0-use.local
+  resolution: "@vis.gl/tangram-classic@workspace:examples/classic"
+  dependencies:
+    "@vis.gl/tangram-renderer": "workspace:^"
+  languageName: unknown
+  linkType: soft
+
 "@vis.gl/tangram-layers@workspace:modules/tangram-layers":
   version: 0.0.0-use.local
   resolution: "@vis.gl/tangram-layers@workspace:modules/tangram-layers"

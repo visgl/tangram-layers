@@ -7,6 +7,7 @@
   "packageManager": "yarn@4.18.0",
   "workspaces": [
     "modules/*",
+    "examples/*",
     "website"
   ],
   "repository": {
@@ -21,7 +22,7 @@
     "website:start": "yarn workspace tangram-layers-website start",
     "website:build": "yarn workspace tangram-layers-website build",
     "website:deploy": "yarn workspace tangram-layers-website deploy",
-    "build": "yarn clean && yarn workspace @vis.gl/tangram-renderer build && yarn workspace @vis.gl/tangram-layers build",
+    "build": "yarn clean && yarn workspace @vis.gl/tangram-renderer build && yarn workspace @vis.gl/tangram-layers build && yarn workspace @vis.gl/tangram-classic build",
     "lint": "ocular-lint && yarn workspace @vis.gl/tangram-renderer lint",
     "lint:fix": "ocular-lint fix && yarn workspace @vis.gl/tangram-renderer lint",
     "test": "yarn lint && yarn test-run",

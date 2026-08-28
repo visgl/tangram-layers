@@ -1,0 +1,3 @@
+import:
+  - ../scene.yaml
+  - openmaptiles-mapzen-compat.yaml

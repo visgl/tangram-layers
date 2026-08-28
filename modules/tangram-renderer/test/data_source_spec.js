@@ -135,11 +135,56 @@ describe('DataSource', () => {
 
     describe('NetworkSource', () => {
 
+        afterEach(() => {
+            if (Utils.io.restore) {
+                Utils.io.restore();
+            }
+        });
+
         describe('when creating an instance of a subclass of NetworkSource', () => {
             let subject = DataSource.create(Object.assign({}, {type: 'GeoJSON'}, options));
             it('sets the url', () => {
                 assert.equal(subject.url, url);
             });
+        });
+
+        it('resolves and caches a tile template from TileJSON', async () => {
+            sinon.stub(Utils, 'io').returns(Promise.resolve({
+                status: 200,
+                body: JSON.stringify({ tiles: ['tiles/{z}/{x}/{y}.mvt'] })
+            }));
+            const subject = new MVTSource({
+                name: 'tilejson-source',
+                tilejson: 'https://tiles.example.com/planet'
+            });
+
+            const first = await subject.resolveURL();
+            const second = await subject.resolveURL();
+
+            assert.equal(first, 'https://tiles.example.com/tiles/{z}/{x}/{y}.mvt');
+            assert.equal(second, first);
+            sinon.assert.calledOnce(Utils.io);
+        });
+
+        it('rejects TileJSON without a tile template', async () => {
+            sinon.stub(Utils, 'io').returns(Promise.resolve({
+                status: 200,
+                body: JSON.stringify({ tiles: [] })
+            }));
+            const subject = new MVTSource({
+                name: 'invalid-tilejson-source',
+                tilejson: 'https://tiles.example.com/planet'
+            });
+
+            let error;
+            try {
+                await subject.resolveURL();
+            }
+            catch (caught) {
+                error = caught;
+            }
+
+            assert.include(error.message, 'must provide at least one tile URL');
         });
 
     });

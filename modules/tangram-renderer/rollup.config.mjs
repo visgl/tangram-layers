@@ -103,7 +103,7 @@ const config = [{
                         Tangram.workerURL = window.URL.createObjectURL(new Blob([worker_bundle], { type: 'text/javascript' }));
                     }
             }
-        `
+        `.trim()
     },
     treeshake: false,
     plugins: [

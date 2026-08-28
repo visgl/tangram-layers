@@ -28,15 +28,16 @@ uses its dedicated Rollup pipeline because it emits both the browser runtime
 and the worker bundle; the package entrypoint is generated as part of that
 build. `yarn lint:fix` applies the shared formatter and safe fixes.
 
-To serve the examples locally:
+To serve the deck example locally:
 
 ```sh
 yarn start
 ```
 
 Then open [`http://localhost:8000/examples/deck/`](http://localhost:8000/examples/deck/).
-The deck demo defaults to WebGPU with the CARTO-backed TRON style when the
+The deck demo defaults to WebGPU with the animated TRON style when the
 browser supports WebGPU. Use `?device=webgl` to exercise the WebGL path.
 
 The full documentation is in [`docs/`](docs/), and the runnable examples are
-in [`examples/`](examples/).
+in [`examples/`](examples/). The classic style gallery is a workspace package
+at [`examples/classic`](examples/classic) and is built before the website.

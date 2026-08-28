@@ -1,0 +1,97 @@
+body {
+    margin: 0px;
+    border: 0px;
+    padding: 0px;
+    height: 100%;
+}
+
+html {
+    height: 100%;
+}
+
+#map {
+    background: rgba(0, 0, 0, 0);
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+div > .leaflet-pelias-control {
+    clear: right;
+}
+
+.featureTable {
+    display: table;
+    background: white;
+    opacity: 0.85;
+}
+
+.featureRow {
+    display: table-row;
+    text-align: left;
+}
+
+.featureCell {
+    display: table-cell;
+    padding: 2px 4px;
+}
+
+/* The deck.gl-community panel host overlays the map without blocking map input. */
+.classic-settings-host {
+    position: absolute;
+    z-index: 10000;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.classic-settings-host .top-left,
+.classic-settings-host .bottom-left {
+    pointer-events: auto;
+}
+
+/* PanelManager creates a root placement container before its first redraw.
+   Give that container a viewport-sized fallback for the standalone demo. */
+.classic-settings-host > div {
+    width: 100%;
+    height: 100%;
+}
+
+.classic-settings-host .top-left [class~="deck-widget-panel"] {
+    width: min(360px, calc(100vw - 24px));
+}
+
+.classic-settings-host .bottom-left [class~="deck-widget-panel"] {
+    width: min(560px, calc(100vw - 24px));
+    max-height: min(360px, 48vh);
+}
+
+/* The standalone host does not inherit Deck's widget surface, so provide the
+   same readable floating treatment while retaining the community theme vars. */
+.classic-settings-host [class~="deck-widget-panel"] {
+    box-sizing: border-box;
+    border: 1px solid var(--menu-border, rgba(148, 163, 184, 0.35));
+    border-radius: var(--button-corner-radius, 8px);
+    background: var(--menu-background, rgba(255, 255, 255, 0.96));
+    color: var(--menu-text, #18181b);
+    box-shadow: var(--menu-shadow, 0 2px 12px rgba(0, 0, 0, 0.22));
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    overflow: hidden;
+}
+
+/* Monaco's current native-edit-context runtime leaves its hidden IME
+   textarea visible when the legacy editor stylesheet is loaded from the CDN.
+   It is an accessibility/input bridge, not the rendered document surface. */
+.classic-settings-host .monaco-editor .ime-text-area {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+    resize: none;
+}

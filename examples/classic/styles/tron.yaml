@@ -1,0 +1,4 @@
+import:
+  - https://www.nextzen.org/carto/tron-style/6/tron-style.zip
+  - https://www.nextzen.org/carto/tron-style/6/themes/label-10.zip
+  - openmaptiles-mapzen-compat.yaml

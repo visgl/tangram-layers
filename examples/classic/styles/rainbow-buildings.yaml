@@ -1,0 +1,12 @@
+import:
+  - ../scene.yaml
+  - openmaptiles-mapzen-compat.yaml
+  - rainbow.yaml
+
+layers:
+  buildings:
+    polygons:
+      extruded:
+        draw:
+          polygons:
+            style: rainbow

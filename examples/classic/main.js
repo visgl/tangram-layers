@@ -5,7 +5,11 @@
 */
 
 (function () {
-    var scene_url = 'scene.yaml';
+    var scene_url = 'styles/local-basemap.yaml';
+    var nextzen_scenes = [
+        'scene.yaml',
+        'styles/crosshatch.zip'
+    ];
 
     // optionally override scene URL
     if ('URLSearchParams' in window) {
@@ -15,6 +19,13 @@
             if (scene_url[0] === '{') {
                 scene_url = JSON.parse(scene_url); // parse JSON-encoded scenes
             }
+        }
+
+        // Keep direct links usable when they target a historical scene whose
+        // vector or terrain sources require a caller-provided Nextzen key.
+        if (!params.get('api_key') && nextzen_scenes.indexOf(scene_url) > -1) {
+            window.tangramRequestedSceneWithoutKey = scene_url;
+            scene_url = 'styles/local-basemap.yaml';
         }
     }
 

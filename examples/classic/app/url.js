@@ -6,7 +6,9 @@
     // URL hash pattern #[zoom]/[lat]/[lng]
     function getValuesFromUrl() {
         var url_hash = window.location.hash.slice(1, window.location.hash.length).split('/');
-        if (url_hash.length < 3 || parseFloat(url_hash[0]) === 'number') {
+        if (url_hash.length < 3 || url_hash.slice(0, 3).some(function(value) {
+            return !Number.isFinite(parseFloat(value));
+        })) {
             url_hash = false;
         }
         return url_hash;

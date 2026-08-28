@@ -1,6 +1,14 @@
 <!doctype html>
 <html lang="en-us">
   <head>
+    <script>
+      // Relative assets need the directory form of the URL on static hosts.
+      if (!window.location.pathname.endsWith('/')) {
+        const directoryUrl = new URL(window.location.href);
+        directoryUrl.pathname += '/';
+        window.location.replace(directoryUrl.href);
+      }
+    </script>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow, noarchive">

@@ -105,6 +105,7 @@ const SceneLoader = {
 
     normalizeDataSource(source, bundle) {
         source.url = bundle.urlFor(source.url);
+        source.tilejson = bundle.urlFor(source.tilejson);
 
         // composite untiled raster sources
         if (Array.isArray(source.composite)) {

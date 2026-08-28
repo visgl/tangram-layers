@@ -30,7 +30,6 @@ typeof define === 'function' && define.amd ? define(factory) :
                         Tangram.workerURL = window.URL.createObjectURL(new Blob([worker_bundle], { type: 'text/javascript' }));
                     }
             }
-        
 
 define(['exports'], (function (exports) { 'use strict';
 
@@ -7015,21 +7014,9 @@ var NetworkSource = /*#__PURE__*/function (_DataSource) {
     _this3 = _callSuper$8(this, NetworkSource, [source, sources]);
     _this3.response_type = ''; // use to set explicit XHR type
 
-    // Add extra URL params, and warn on duplicates
-    var _URLs$addParamsToURL = addParamsToURL(source.url, source.url_params),
-      _URLs$addParamsToURL2 = _slicedToArray(_URLs$addParamsToURL, 2),
-      url = _URLs$addParamsToURL2[0],
-      dupes = _URLs$addParamsToURL2[1];
-    _this3.url = url;
-    dupes.forEach(function (_ref3) {
-      var _ref4 = _slicedToArray(_ref3, 2),
-        param = _ref4[0],
-        value = _ref4[1];
-      log({
-        level: 'warn',
-        once: true
-      }, "Data source '".concat(_this3.name, "': parameter '").concat(param, "' already present in URL '").concat(source.url, "', ") + "skipping value '".concat(param, "=").concat(value, "' specified in 'url_params'"));
-    });
+    _this3.tilejson = source.tilejson;
+    _this3.url_params = source.url_params;
+    _this3.url = source.url ? _this3.addURLParams(source.url) : null;
 
     // Optional HTTP request headers to send
     if (source.request_headers && _typeof(source.request_headers) === 'object') {
@@ -7042,32 +7029,82 @@ var NetworkSource = /*#__PURE__*/function (_DataSource) {
     key: "_load",
     value: function _load(dest) {
       var _this4 = this;
-      var url = this.formatURL(this.url, dest);
+      return this.resolveURL().then(function (url) {
+        return _this4.loadURL(dest, url);
+      }).catch(function (error) {
+        dest.source_data.error = error.stack;
+        return dest;
+      });
+    }
+  }, {
+    key: "resolveURL",
+    value: function resolveURL() {
+      var _this5 = this;
+      if (this.url) {
+        return Promise.resolve(this.url);
+      }
+      if (!this.tilejson_promise) {
+        this.tilejson_promise = Utils.io(this.tilejson, 60 * 1000, 'text', 'GET', this.request_headers).then(function (_ref3) {
+          var body = _ref3.body;
+          var metadata = typeof body === 'string' ? JSON.parse(body) : body;
+          if (!metadata || !Array.isArray(metadata.tiles) || typeof metadata.tiles[0] !== 'string') {
+            throw Error("Data source '".concat(_this5.name, "': TileJSON must provide at least one tile URL"));
+          }
+          _this5.url = _this5.addURLParams(addBaseURL(metadata.tiles[0], _this5.tilejson));
+          return _this5.url;
+        });
+      }
+      return this.tilejson_promise;
+    }
+  }, {
+    key: "addURLParams",
+    value: function addURLParams(url) {
+      var _this6 = this;
+      var _URLs$addParamsToURL = addParamsToURL(url, this.url_params),
+        _URLs$addParamsToURL2 = _slicedToArray(_URLs$addParamsToURL, 2),
+        resolved_url = _URLs$addParamsToURL2[0],
+        dupes = _URLs$addParamsToURL2[1];
+      dupes.forEach(function (_ref4) {
+        var _ref5 = _slicedToArray(_ref4, 2),
+          param = _ref5[0],
+          value = _ref5[1];
+        log({
+          level: 'warn',
+          once: true
+        }, "Data source '".concat(_this6.name, "': parameter '").concat(param, "' already present in URL '").concat(url, "', ") + "skipping value '".concat(param, "=").concat(value, "' specified in 'url_params'"));
+      });
+      return resolved_url;
+    }
+  }, {
+    key: "loadURL",
+    value: function loadURL(dest, url_template) {
+      var _this7 = this;
+      var url = this.formatURL(url_template, dest);
       var source_data = dest.source_data;
       source_data.url = url;
       dest.debug = dest.debug || {};
       dest.debug.network = +new Date();
       return new Promise(function (resolve) {
         var request_id = network_request_id++ + '-' + url;
-        var promise = Utils.io(url, 60 * 1000, _this4.response_type, 'GET', _this4.request_headers, request_id);
+        var promise = Utils.io(url, 60 * 1000, _this7.response_type, 'GET', _this7.request_headers, request_id);
         source_data.request_id = request_id;
         source_data.error = null;
-        promise.then(function (_ref5) {
-          var body = _ref5.body;
+        promise.then(function (_ref6) {
+          var body = _ref6.body;
           dest.debug.response_size = body && (body.length || body.byteLength);
           dest.debug.network = +new Date() - dest.debug.network;
           dest.debug.parsing = +new Date();
 
           // Apply optional data transform on raw network response
-          if (body != null && typeof _this4.preprocess === 'function') {
-            body = _this4.preprocess(body);
+          if (body != null && typeof _this7.preprocess === 'function') {
+            body = _this7.preprocess(body);
           }
 
           // Return data immediately, or after user-returned promise resolves
           body = body instanceof Promise ? body : Promise.resolve(body);
           body.then(function (body) {
             if (body != null) {
-              _this4.parseSourceData(dest, source_data, body);
+              _this7.parseSourceData(dest, source_data, body);
             } else {
               source_data.layers = {}; // for cases where server returned no content (e.g. 204 response)
             }
@@ -7083,8 +7120,8 @@ var NetworkSource = /*#__PURE__*/function (_DataSource) {
   }, {
     key: "validate",
     value: function validate(source) {
-      if (typeof source.url !== 'string') {
-        throw Error('Network data source must provide a string `url` property');
+      if (typeof source.url !== 'string' && typeof source.tilejson !== 'string') {
+        throw Error('Network data source must provide a string `url` or `tilejson` property');
       }
     }
 
@@ -7108,39 +7145,39 @@ var NetworkSource = /*#__PURE__*/function (_DataSource) {
 
 var NetworkTileSource = /*#__PURE__*/function (_NetworkSource) {
   function NetworkTileSource(source, sources) {
-    var _this5;
+    var _this8;
     _classCallCheck(this, NetworkTileSource);
-    _this5 = _callSuper$8(this, NetworkTileSource, [source, sources]);
-    _this5.tiled = true;
-    _this5.bounds = _this5.parseBounds(source);
+    _this8 = _callSuper$8(this, NetworkTileSource, [source, sources]);
+    _this8.tiled = true;
+    _this8.bounds = _this8.parseBounds(source);
 
     // indicates if source should build geometry tiles, enabled for sources referenced in the scene's layers,
     // and left disabled for sources that are never referenced, or only used as raster textures
-    _this5.builds_geometry_tiles = false;
-    _this5.tms = source.tms === true; // optionally flip tile coords for TMS
+    _this8.builds_geometry_tiles = false;
+    _this8.tms = source.tms === true; // optionally flip tile coords for TMS
 
     // optional list of subdomains to round-robin through
-    if (_this5.url && _this5.url.search('{s}') > -1) {
+    if (_this8.url && _this8.url.search('{s}') > -1) {
       if (Array.isArray(source.url_subdomains) && source.url_subdomains.length > 0) {
-        _this5.url_subdomains = source.url_subdomains;
-        _this5.next_url_subdomain = 0;
+        _this8.url_subdomains = source.url_subdomains;
+        _this8.next_url_subdomain = 0;
       } else {
         log({
           level: 'warn',
           once: true
-        }, "Data source '".concat(_this5.name, "': source URL includes '{s}' subdomain marker ('").concat(_this5.url, "'), but no subdomains ") + 'were specified in \'url_subdomains\' parameter');
+        }, "Data source '".concat(_this8.name, "': source URL includes '{s}' subdomain marker ('").concat(_this8.url, "'), but no subdomains ") + 'were specified in \'url_subdomains\' parameter');
       }
     }
 
     // optional list of pixel density scale modifiers
-    if (_this5.url && _this5.url.search('{r}') > -1) {
+    if (_this8.url && _this8.url.search('{r}') > -1) {
       if (Array.isArray(source.url_density_scales) && source.url_density_scales.length > 0) {
-        _this5.url_density_scales = source.url_density_scales;
+        _this8.url_density_scales = source.url_density_scales;
       } else {
-        _this5.url_density_scales = [1, 2]; // default to supporting 1x and 2x display densities
+        _this8.url_density_scales = [1, 2]; // default to supporting 1x and 2x display densities
       }
     }
-    return _this5;
+    return _this8;
   }
 
   // Get bounds from source config parameters
@@ -7263,10 +7300,10 @@ var NetworkTileSource = /*#__PURE__*/function (_NetworkSource) {
     }
   }, {
     key: "toQuadKey",
-    value: function toQuadKey(_ref6) {
-      var x = _ref6.x,
-        y = _ref6.y,
-        z = _ref6.z;
+    value: function toQuadKey(_ref7) {
+      var x = _ref7.x,
+        y = _ref7.y,
+        z = _ref7.z;
       var quadkey = '';
       for (var i = z; i > 0; i--) {
         var b = 0;
@@ -32458,6 +32495,7 @@ var SceneLoader = {
   },
   normalizeDataSource: function normalizeDataSource(source, bundle) {
     source.url = bundle.urlFor(source.url);
+    source.tilejson = bundle.urlFor(source.tilejson);
 
     // composite untiled raster sources
     if (Array.isArray(source.composite)) {
@@ -39991,7 +40029,7 @@ return Tangram$1;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = 'cf8d53e9702cb220f38efe67e810a3ac58fea645';
+	Tangram.debug.SHA = 'fc19d01442d2612e7c35bdea7a90740fb7733345';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}
