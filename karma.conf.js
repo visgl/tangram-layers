@@ -14,25 +14,25 @@ export default function (config) {
         files: [
             'https://unpkg.com/leaflet@1.3.4/dist/leaflet.js', // TODO: update leaflet version
             {
-                pattern : 'test/fixtures/*',
+                pattern : 'modules/tangram-renderer/test/fixtures/*',
                 watched : false,
                 included : false,
                 served : true
             },
             {
-                pattern: 'build/worker.test.js',
+                pattern: 'modules/tangram-renderer/build/worker.test.js',
                 watched : false,
                 included: false,
                 served: true
             },
             {
-                pattern: 'test/**/*.js'
+                pattern: 'modules/*/test/**/*.js'
             }
         ],
 
-        exclude: ['test/rollup.config.worker.js'], // skip rollup config for building worker
+        exclude: ['modules/tangram-renderer/test/rollup.config.worker.js'], // skip worker build config
         preprocessors: {
-            'test/**/*.js' : ['rollup']
+            'modules/*/test/**/*.js' : ['rollup']
         },
 
         rollupPreprocessor: {
@@ -49,7 +49,7 @@ export default function (config) {
                 commonjs(),
 
                 json({
-                    exclude: ['node_modules/**', 'src/**'] // import JSON files
+                    exclude: ['node_modules/**', 'modules/*/src/**'] // import JSON files
                 }),
                 importAsString({
                     include: ['**/*.glsl'] // inline shader files

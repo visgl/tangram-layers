@@ -1,75 +1,40 @@
-# Contributing to Tangram
+# Contributing to Tangram layers
 
-The easiest way to help out is to submit bug reports and feature requests on our [issues](http://github.com/tangrams/tangram/issues) page.
-
-When submitting a bug report, please list:
-
-- your specific browser and operating system versions
-- steps required to recreate the issue
-- what happened
-- what you expected to happen
-
-Thanks, and happy mapping!
+This repository is organized as a Yarn workspace monorepo. The renderer lives
+in `modules/tangram-renderer`, the deck.gl adapter lives in
+`modules/tangram-layers`, and runnable applications live in `examples/`.
 
 ## Quickstart
 
-To get Tangram up and running locally:
-
-1. Clone or download this repository:
-  	- clone in a terminal window with `git clone https://github.com/tangrams/tangram.git`
-  	- or download a zip directly: https://github.com/tangrams/tangram/archive/master.zip
-  	- or use [Bower](http://bower.io/): `bower install tangram`
-2. Start a webserver in the repository's directory:
-  	- in a terminal window, enter: `python -m SimpleHTTPServer 8000`
-  	- if that doesn't work, try: `python -m http.server`
-3. View the map at http://localhost:8000 (or whatever port you started the server on)
-
-### Building
-
-If you'd like to contribute to the project or just make changes to the source code for fun, you'll need to install the development requirements and build the library:
-
-```shell
-npm install
-npm run build
+```sh
+yarn install
+yarn bootstrap
+yarn build
+yarn start
 ```
 
-The library will be minified in `dist/`, and `index.html` provides an example for rendering from different sources and simple Leaflet integration.
+Open `http://localhost:8000/examples/deck/` to run the deck.gl integration.
 
-### Incremental Building and Live Reloading
+## Testing
 
-For more rapid development of Tangram we provide a watcher with incremental building and live reloading, simply run
+Run the full lint and browser test suite with:
 
-```shell
-npm start
+```sh
+yarn test
 ```
 
-and point your browser to http://localhost:8000
+`yarn clean` and `yarn lint` are provided by `@vis.gl/dev-tools`. Use
+`yarn lint:fix` while developing to apply the repository's shared Biome
+configuration. The renderer's Rollup build remains the package-specific build
+step invoked by the root `yarn build` command.
 
-Any changes you make to the the source files (including shader code) will rebuild and reload on save.
+The renderer worker bundle is built automatically before Karma starts. For an
+interactive Karma session, use `yarn karma-start` and then `yarn karma-run`.
 
-### Testing
+## Pull requests
 
-Tests are included to ensure that the code functions as expected. To run all of the tests:
-
-```shell
-npm test
-```
-
-Every time this runs, a new browser instance is created. If you wish to have a single browser instance and run the test suite against that instance do the following,
-
-```shell
-npm run karma-start
-```
-
-And then run the tests with,
-
-```shell
-npm run karma-run
-```
-
-### Lint
-We're using jshint to maintain code quality.
-
-```shell
-npm run lint
-```
+Keep renderer changes independent from deck.gl adapter changes when possible.
+Add or update tests with each behavioral change, and include documentation for
+new public exports. The deck example is intentionally an integration fixture:
+it should continue to exercise both WebGL and WebGPU devices with one shared
+luma.gl runtime.
