@@ -14,6 +14,8 @@ export default class Camera {
     // Create a camera by type name, factory-style
     static create(name, view, config) {
         switch (config.type) {
+        case 'external':
+            return new ExternalCamera(name, view, config);
         case 'isometric':
             return new IsometricCamera(name, view, config);
         case 'flat':
@@ -48,18 +50,114 @@ export default class Camera {
     }
 
     // Set model-view and normal matrices
-    setupMatrices (matrices, program) {
+    setupMatrices (matrices, program, uniform_buffer) {
         // Model view matrix - transform tile space into view space (meters, relative to camera)
         mat4.multiply(matrices.model_view32, this.view_matrix, matrices.model);
-        program.uniform('Matrix4fv', 'u_modelView', matrices.model_view32);
 
         // Normal matrices - transforms surface normals into view space
         mat3.normalFromMat4(matrices.normal32, matrices.model_view32);
         mat3.invert(matrices.inverse_normal32, matrices.normal32);
-        program.uniform('Matrix3fv', 'u_normalMatrix', matrices.normal32);
-        program.uniform('Matrix3fv', 'u_inverseNormalMatrix', matrices.inverse_normal32);
+        if (uniform_buffer) {
+            uniform_buffer.setUniforms({
+                u_modelView: matrices.model_view32,
+                u_normalMatrix: matrices.normal32,
+                u_inverseNormalMatrix: matrices.inverse_normal32
+            });
+        }
+        else {
+            program.uniform('Matrix4fv', 'u_modelView', matrices.model_view32);
+            program.uniform('Matrix3fv', 'u_normalMatrix', matrices.normal32);
+            program.uniform('Matrix3fv', 'u_inverseNormalMatrix', matrices.inverse_normal32);
+        }
     }
 
+}
+
+/**
+    Camera whose view and projection matrices are supplied by an embedding renderer.
+
+    This lets hosts such as deck.gl remain authoritative for camera projection while
+    Tangram continues to manage scene loading, tile selection, and drawing.
+*/
+class ExternalCamera extends Camera {
+
+    constructor(name, view, options = {}) {
+        super(name, view, options);
+        this.type = 'external';
+        this.position_meters = [0, 0, 0];
+        this.vanishing_point = [0, 0];
+        this.view_matrix = new Float64Array(16);
+        this.projection_matrix = new Float32Array(16);
+        mat4.identity(this.view_matrix);
+        mat4.identity(this.projection_matrix);
+
+        ShaderProgram.replaceBlock('camera', `
+            uniform mat4 u_projection;
+            uniform vec3 u_eye;
+            uniform vec2 u_vanishing_point;
+
+            void cameraProjection (inout vec4 position) {
+                position = u_projection * position;
+            }`
+        );
+    }
+
+    setMatrices({ view, projection, position = [0, 0, 0] }) {
+        if (!view || view.length !== 16 || !projection || projection.length !== 16) {
+            throw new Error('ExternalCamera requires 4x4 view and projection matrices');
+        }
+        const changed = !matrixEquals(this.view_matrix, view) ||
+            !matrixEquals(this.projection_matrix, projection) ||
+            !vectorEquals(this.position_meters, position);
+        if (!changed) {
+            return false;
+        }
+        this.view_matrix.set(view);
+        this.projection_matrix.set(projection);
+        this.position_meters = Array.from(position);
+        this.view.scene.requestRedraw();
+        return true;
+    }
+
+    setupProgram(program, uniform_buffer) {
+        if (uniform_buffer) {
+            uniform_buffer.setUniforms({
+                u_projection: this.projection_matrix,
+                u_eye: this.position_meters,
+                u_vanishing_point: this.vanishing_point
+            });
+        }
+        else {
+            program.uniform('Matrix4fv', 'u_projection', this.projection_matrix);
+            program.uniform('3fv', 'u_eye', this.position_meters);
+            program.uniform('2fv', 'u_vanishing_point', this.vanishing_point);
+        }
+    }
+
+    transformVector(vector) {
+        const matrix = this.view_matrix;
+        const transformed = [
+            matrix[0] * vector[0] + matrix[4] * vector[1] + matrix[8] * vector[2],
+            matrix[1] * vector[0] + matrix[5] * vector[1] + matrix[9] * vector[2],
+            matrix[2] * vector[0] + matrix[6] * vector[1] + matrix[10] * vector[2]
+        ];
+        const length = Math.hypot(...transformed);
+        return length === 0 ? transformed : transformed.map(value => value / length);
+    }
+
+}
+
+function matrixEquals(left, right) {
+    for (let index = 0; index < 16; index++) {
+        if (left[index] !== right[index]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function vectorEquals(left, right) {
+    return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
 /**
@@ -198,10 +296,19 @@ class PerspectiveCamera extends Camera {
         this.updateMatrices();
     }
 
-    setupProgram(program) {
-        program.uniform('Matrix4fv', 'u_projection', this.projection_matrix);
-        program.uniform('3f', 'u_eye', [0, 0, this.position_meters[2]]);
-        program.uniform('2fv', 'u_vanishing_point', this.vanishing_point_skew);
+    setupProgram(program, uniform_buffer) {
+        if (uniform_buffer) {
+            uniform_buffer.setUniforms({
+                u_projection: this.projection_matrix,
+                u_eye: [0, 0, this.position_meters[2]],
+                u_vanishing_point: this.vanishing_point_skew
+            });
+        }
+        else {
+            program.uniform('Matrix4fv', 'u_projection', this.projection_matrix);
+            program.uniform('3f', 'u_eye', [0, 0, this.position_meters[2]]);
+            program.uniform('2fv', 'u_vanishing_point', this.vanishing_point_skew);
+        }
     }
 
 }
@@ -273,12 +380,20 @@ class IsometricCamera extends Camera {
         );
     }
 
-    setupProgram(program) {
-        program.uniform('Matrix4fv', 'u_projection', this.projection_matrix);
-
-        program.uniform('3fv', 'u_eye', [0, 0, this.viewport_height]);
-        // program.uniform('3f', 'u_eye', this.viewport_height * this.axis.x, this.viewport_height * this.axis.y, this.viewport_height);
-        program.uniform('2fv', 'u_vanishing_point', [0, 0]);
+    setupProgram(program, uniform_buffer) {
+        if (uniform_buffer) {
+            uniform_buffer.setUniforms({
+                u_projection: this.projection_matrix,
+                u_eye: [0, 0, this.viewport_height],
+                u_vanishing_point: [0, 0]
+            });
+        }
+        else {
+            program.uniform('Matrix4fv', 'u_projection', this.projection_matrix);
+            program.uniform('3fv', 'u_eye', [0, 0, this.viewport_height]);
+            // program.uniform('3f', 'u_eye', this.viewport_height * this.axis.x, this.viewport_height * this.axis.y, this.viewport_height);
+            program.uniform('2fv', 'u_vanishing_point', [0, 0]);
+        }
     }
 
 }

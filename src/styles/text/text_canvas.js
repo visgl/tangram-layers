@@ -316,7 +316,7 @@ export default class TextCanvas {
         }
     }
 
-    rasterize (texts, textures, tile_id, texture_prefix, gl) {
+    rasterize (texts, textures, tile_id, texture_prefix, resource_context) {
         return Task.add({
             type: 'rasterizeLabels',
             run: this.processRasterizeTask.bind(this),
@@ -326,7 +326,7 @@ export default class TextCanvas {
             texts,
             textures,
             texture_prefix,
-            gl,
+            resource_context,
             tile_id,
             cursor: {
                 styles: Object.keys(texts),
@@ -503,7 +503,7 @@ export default class TextCanvas {
 
             // Create GL texture (canvas element will be reused for next texture)
             let tname = task.texture_prefix + cursor.texture_idx;
-            Texture.create(task.gl, tname, {
+            Texture.create(task.resource_context, tname, {
                 element: this.canvas,
                 filtering: 'linear',
                 UNPACK_PREMULTIPLY_ALPHA_WEBGL: true
@@ -731,4 +731,3 @@ TextCanvas.cache = {
     segment_count_max: 2000,    // prune cache when it exceeds this size
     stats: { text_hits: 0, text_misses: 0, segment_hits: 0, segment_misses: 0 }
 };
-

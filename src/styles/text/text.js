@@ -8,6 +8,7 @@ import LabelPoint from '../../labels/label_point';
 import LabelLine from '../../labels/label_line';
 import gl from '../../gl/constants'; // web workers don't have access to GL context, so import all GL constants
 import VertexLayout from '../../gl/vertex_layout';
+import {buildTextWGSL} from './text_wgsl';
 
 export let TextStyle = Object.create(Points);
 
@@ -15,6 +16,10 @@ Object.assign(TextStyle, {
     name: 'text',
     super: Points,
     built_in: true,
+
+    getWGSLShaderSource() {
+        return buildTextWGSL();
+    },
 
     init(options = {}) {
         Style.init.call(this, options);

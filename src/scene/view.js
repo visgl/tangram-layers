@@ -38,6 +38,7 @@ export default class View {
         this.aspect = null;
 
         this.buffer = 0;
+        this.external_camera = options.externalCamera === true;
         this.continuous_zoom = (typeof options.continuousZoom === 'boolean') ? options.continuousZoom : true;
         this.wrap = (options.wrapView === false) ? false : true;
         this.preserve_tiles_within_zoom = 1;
@@ -52,11 +53,23 @@ export default class View {
 
     // Create camera
     createCamera () {
+        if (this.external_camera) {
+            this.camera = Camera.create('external', this, { type: 'external' });
+            return;
+        }
         let active_camera = this.getActiveCamera();
         if (active_camera) {
             this.camera = Camera.create(active_camera, this, this.scene.config.cameras[active_camera]);
             this.camera.updateView();
         }
+    }
+
+    // Supply camera matrices from an embedding renderer
+    setCameraMatrices (matrices) {
+        if (!this.camera || this.camera.type !== 'external') {
+            throw new Error('View must be constructed with externalCamera to accept camera matrices');
+        }
+        this.camera.setMatrices(matrices);
     }
 
     // Get active camera - for public API
@@ -321,24 +334,41 @@ export default class View {
 
     // Calculate and set model/view and normal matrices for a tile
     setupTile (tile, program) {
+        const uniform_buffer = this.scene.uniform_buffers && this.scene.uniform_buffers.TangramTile;
+
         // Tile-specific state
         // TODO: calc these once per tile (currently being needlessly re-calculated per-tile-per-style)
-        tile.setupProgram(this.matrices, program);
+        tile.setupProgram(this.matrices, program, uniform_buffer);
 
         // Model-view and normal matrices
-        this.camera.setupMatrices(this.matrices, program);
+        this.camera.setupMatrices(this.matrices, program, uniform_buffer);
+        if (uniform_buffer) {
+            program.bindUniformBlocks();
+        }
     }
 
     // Set general uniforms that must be updated once per program
-    setupProgram (program) {
-        program.uniform('2fv', 'u_resolution', [this.size.device.width, this.size.device.height]);
-        program.uniform('3fv', 'u_map_position', [this.center.meters.x, this.center.meters.y, this.zoom]);
-        program.uniform('1f', 'u_meters_per_pixel', this.meters_per_pixel);
-        program.uniform('1f', 'u_device_pixel_ratio', Utils.device_pixel_ratio);
-        program.uniform('1f', 'u_view_pan_snap_timer', this.pan_snap_timer);
-        program.uniform('1i', 'u_view_panning', this.panning);
+    setupProgram (program, uniform_buffers = {}) {
+        if (uniform_buffers.TangramView) {
+            uniform_buffers.TangramView.setUniforms({
+                u_resolution: [this.size.device.width, this.size.device.height],
+                u_map_position: [this.center.meters.x, this.center.meters.y, this.zoom],
+                u_meters_per_pixel: this.meters_per_pixel,
+                u_device_pixel_ratio: Utils.device_pixel_ratio,
+                u_view_pan_snap_timer: this.pan_snap_timer,
+                u_view_panning: this.panning
+            });
+        }
+        else {
+            program.uniform('2fv', 'u_resolution', [this.size.device.width, this.size.device.height]);
+            program.uniform('3fv', 'u_map_position', [this.center.meters.x, this.center.meters.y, this.zoom]);
+            program.uniform('1f', 'u_meters_per_pixel', this.meters_per_pixel);
+            program.uniform('1f', 'u_device_pixel_ratio', Utils.device_pixel_ratio);
+            program.uniform('1f', 'u_view_pan_snap_timer', this.pan_snap_timer);
+            program.uniform('1i', 'u_view_panning', this.panning);
+        }
 
-        this.camera.setupProgram(program);
+        this.camera.setupProgram(program, uniform_buffers.TangramCamera);
     }
 
     // View requires some animation, such as after panning stops

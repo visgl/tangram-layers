@@ -41,4 +41,39 @@ describe('VertexLayout', () => {
         });
     });
 
+    describe('.getBufferLayout()', () => {
+        it('describes interleaved dynamic attributes with luma.gl vertex formats', () => {
+            const subject = new VertexLayout(attribs);
+
+            assert.deepEqual(subject.getBufferLayout(), {
+                name: 'vertices',
+                byteStride: 20,
+                attributes: [
+                    { attribute: 'a_position', format: 'float32x3', byteOffset: 0 },
+                    { attribute: 'a_color', format: 'unorm8x3-webgl', byteOffset: 12 },
+                    { attribute: 'a_layer', format: 'float32', byteOffset: 16 }
+                ]
+            });
+        });
+
+        it('reports static attributes separately from the vertex buffer', () => {
+            const subject = new VertexLayout([
+                { name: 'a_position', size: 2, type: gl.SHORT, normalized: false },
+                { name: 'a_color', size: 4, type: gl.UNSIGNED_BYTE, normalized: true, static: [1, 0, 1, 1] }
+            ]);
+
+            assert.deepEqual(subject.getBufferLayout('mesh'), {
+                name: 'mesh',
+                byteStride: 4,
+                attributes: [
+                    { attribute: 'a_position', format: 'sint16x2', byteOffset: 0 }
+                ]
+            });
+            assert.deepEqual(subject.getStaticAttributes(), [{
+                attribute: 'a_color',
+                value: [1, 0, 1, 1]
+            }]);
+        });
+    });
+
 });

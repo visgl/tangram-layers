@@ -6,7 +6,7 @@ import builtins from 'rollup-plugin-node-builtins';
 import json from '@rollup/plugin-json';
 import { importAsString } from 'rollup-plugin-string-import';
 
-export default {
+export default function (config) {
 
     config.set({
         basePath: '',
@@ -62,7 +62,13 @@ export default {
 
                 // These are needed for jszip node-environment compatibility,
                 // previously provided by browserify
-                globals(),
+                globals({
+                    exclude: [
+                        '**/node_modules/@luma.gl/**',
+                        '**/node_modules/@math.gl/**',
+                        '**/node_modules/@probe.gl/**'
+                    ]
+                }),
                 builtins()
             ]
         },

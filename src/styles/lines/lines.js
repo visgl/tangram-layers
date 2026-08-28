@@ -15,6 +15,7 @@ import hashString from '../../utils/hash';
 
 import polygons_vs from '../polygons/polygons_vertex.glsl';
 import polygons_fs from '../polygons/polygons_fragment.glsl';
+import {buildLinesWGSL} from './lines_wgsl';
 
 export const Lines = Object.create(Style);
 
@@ -26,6 +27,49 @@ Object.assign(Lines, {
     vertex_shader_src: polygons_vs,
     fragment_shader_src: polygons_fs,
     selection: true, // enable feature selection
+
+    getWGSLShaderSource() {
+        return buildLinesWGSL({ animated: this.animated === true });
+    },
+
+    setGL(gl_context, uniform_blocks = {}, options = {}) {
+        if (Object.prototype.hasOwnProperty.call(this, 'line_uniform_buffer') &&
+            this.line_uniform_buffer) {
+            this.line_uniform_buffer.destroy();
+            this.line_uniform_buffer = null;
+        }
+        Style.setGL.call(this, gl_context, uniform_blocks, options);
+        if (this.shader_language === 'wgsl') {
+            if (typeof this.uniform_block_factory !== 'function') {
+                throw new Error('portable line styles require a uniform block factory');
+            }
+            this.line_uniform_buffer = this.uniform_block_factory({
+                id: `${this.name}-line-style`,
+                name: 'TangramLine',
+                binding: 5,
+                snapshotPerMesh: true,
+                uniforms: {
+                    u_has_line_texture: 'bool',
+                    u_texture_ratio: 'float',
+                    u_v_scale_adjust: 'float',
+                    u_has_dash: 'float',
+                    u_dash_background_color: 'vec4'
+                }
+            });
+            this.uniform_blocks = Object.assign({}, this.uniform_blocks, {
+                TangramLine: this.line_uniform_buffer
+            });
+        }
+    },
+
+    destroy() {
+        Style.destroy.call(this);
+        if (Object.prototype.hasOwnProperty.call(this, 'line_uniform_buffer') &&
+            this.line_uniform_buffer) {
+            this.line_uniform_buffer.destroy();
+            this.line_uniform_buffer = null;
+        }
+    },
 
     init() {
         Style.init.apply(this, arguments);
@@ -369,7 +413,7 @@ Object.assign(Lines, {
             this.dash_textures[dash_key] = true;
             // Render line pattern
             const dash_texture = renderDashArray(dash, { scale: DASH_SCALE });
-            Texture.create(this.gl, dash_key, {
+            Texture.create(this.resource_context, dash_key, {
                 data: dash_texture.pixels,
                 height: dash_texture.length,
                 width: 1,
@@ -384,7 +428,10 @@ Object.assign(Lines, {
         if (tile_data) {
             tile_data.uniforms.u_has_line_texture = false;
             tile_data.uniforms.u_texture = Texture.default;
+            tile_data.uniforms.u_texture_ratio = 1;
             tile_data.uniforms.u_v_scale_adjust = Geo.tile_scale;
+            tile_data.uniforms.u_has_dash = 0;
+            tile_data.uniforms.u_dash_background_color = [0, 0, 0, 0];
 
             let pending = [];
             for (let m in tile_data.meshes) {
@@ -480,14 +527,23 @@ Object.assign(Lines, {
     // Create or return desired vertex layout permutation based on flags
     vertexLayoutForMeshVariant (variant) {
         if (this.vertex_layouts[variant.key] == null) {
+            const portable = this.shader_language === 'wgsl';
             // Attributes for this mesh variant
-            // Optional attributes have placeholder values assigned with `static` parameter
+            // WebGL can provide optional fields as constant vertex attributes. WebGPU
+            // requires every shader-declared input to be backed by a vertex buffer, so
+            // portable layouts write explicit zero values for unused line fields.
             const attribs = [
                 { name: 'a_position', size: 4, type: gl.SHORT, normalized: false },
                 { name: 'a_extrude', size: 2, type: gl.SHORT, normalized: false },
-                { name: 'a_offset', size: 2, type: gl.SHORT, normalized: false, static: (variant.offset ? null : [0, 0]) },
-                { name: 'a_z_and_offset_scale', size: 2, type: gl.SHORT, normalized: false, static: (variant.z_or_offset ? null : [0, 0]) },
-                { name: 'a_texcoord', size: 2, type: gl.UNSIGNED_SHORT, normalized: true, static: (variant.texcoords ? null : [0, 0]) },
+                { name: 'a_offset', size: 2, type: gl.SHORT, normalized: false, static: ((portable || variant.offset) ? null : [0, 0]) },
+                { name: 'a_z_and_offset_scale', size: 2, type: gl.SHORT, normalized: false, static: ((portable || variant.z_or_offset) ? null : [0, 0]) },
+                {
+                    name: 'a_texcoord',
+                    size: 2,
+                    type: this.shader_language === 'wgsl' ? gl.FLOAT : gl.UNSIGNED_SHORT,
+                    normalized: this.shader_language !== 'wgsl',
+                    static: ((portable || variant.texcoords) ? null : [0, 0])
+                },
                 { name: 'a_color', size: 4, type: gl.UNSIGNED_BYTE, normalized: true },
                 { name: 'a_selection_color', size: 4, type: gl.UNSIGNED_BYTE, normalized: true, static: (variant.selection ? null : [0, 0, 0, 0]) }
             ];
@@ -509,6 +565,7 @@ Object.assign(Lines, {
      */
     makeVertexTemplate(style, mesh) {
         let i = 0;
+        const portable = this.shader_language === 'wgsl';
 
         // a_position.xy - vertex position
         // a_position.z - line width scaling factor
@@ -524,19 +581,19 @@ Object.assign(Lines, {
 
         // a_offset.xy - normal vector
         // offset can be static or dynamic depending on style
-        if (mesh.variant.offset) {
+        if (portable || mesh.variant.offset) {
             this.vertex_template[i++] = 0;
             this.vertex_template[i++] = 0;
         }
 
         // a_z_and_offset_scale.xy
-        if (mesh.variant.z_or_offset) {
+        if (portable || mesh.variant.z_or_offset) {
             this.vertex_template[i++] = style.z || 0; // feature z position
             this.vertex_template[i++] = style.offset_scale * 1024; // line offset scaling factor
         }
 
         // a_texcoord.uv - texture coordinates
-        if (mesh.variant.texcoords) {
+        if (portable || mesh.variant.texcoords) {
             this.vertex_template[i++] = 0;
             this.vertex_template[i++] = 0;
         }
@@ -575,12 +632,15 @@ Object.assign(Lines, {
         let vertex_data = mesh.vertex_data;
         let vertex_layout = vertex_data.vertex_layout;
         let vertex_template = this.makeVertexTemplate(style, mesh);
+        const vertex_layout_index = this.shader_language === 'wgsl' && !mesh.variant.texcoords ?
+            Object.assign({}, vertex_layout.index, { a_texcoord: null }) :
+            vertex_layout.index;
         return buildPolylines(
             lines,
             style,
             vertex_data,
             vertex_template,
-            vertex_layout.index,
+            vertex_layout_index,
             (options && options.closed_polygon), // closed_polygon
             (!style.tile_edges && options && options.remove_tile_edges), // remove_tile_edges
             (Geo.tile_scale * context.tile.pad_scale * 2) // tile_edge_tolerance

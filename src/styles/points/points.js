@@ -17,6 +17,7 @@ import debugSettings from '../../utils/debug_settings';
 
 import points_vs from './points_vertex.glsl';
 import points_fs from './points_fragment.glsl';
+import {buildPointsWGSL} from './points_wgsl';
 
 const PLACEMENT = LabelPoint.PLACEMENT;
 
@@ -43,6 +44,10 @@ Object.assign(Points, {
     selection: true,  // enable feature selection
     collision: true,  // style includes a collision pass
     blend: 'overlay', // overlays drawn on top of all other styles, with blending
+
+    getWGSLShaderSource() {
+        return buildPointsWGSL();
+    },
 
     init(options = {}) {
         Style.init.call(this, options);
@@ -612,6 +617,7 @@ Object.assign(Points, {
      * A plain JS array matching the order of the vertex layout.
      */
     makeVertexTemplate(style, mesh, add_custom_attribs = true) {
+        const portable = mesh.vertex_data.vertex_layout.index.a_point_type != null;
         let i = 0;
 
         // a_position.xyz - vertex position
@@ -630,7 +636,7 @@ Object.assign(Points, {
         this.vertex_template[i++] = style.label.layout.collide ? 0 : 1; // set initial label hide/show state
 
         // a_texcoord.xy - texture coords
-        if (!mesh.variant.shader_point) {
+        if (!mesh.variant.shader_point || portable) {
             this.vertex_template[i++] = 0;
             this.vertex_template[i++] = 0;
         }
@@ -655,7 +661,7 @@ Object.assign(Points, {
         }
 
         // point outline
-        if (mesh.variant.shader_point) {
+        if (mesh.variant.shader_point || portable) {
             // a_outline_color.rgba - outline color
             const outline_color = style.outline_color || StyleParser.defaults.outline.color;
             this.vertex_template[i++] = outline_color[0] * 255;
@@ -665,6 +671,10 @@ Object.assign(Points, {
 
             // a_outline_edge - point outline edge (as % of point size where outline begins)
             this.vertex_template[i++] = style.outline_edge_pct || StyleParser.defaults.outline.width;
+        }
+
+        if (portable) {
+            this.vertex_template[i++] = mesh.variant.point_type;
         }
 
         if (add_custom_attribs) {
@@ -901,6 +911,23 @@ Object.assign(Points, {
     // Override
     // Create or return desired vertex layout permutation based on flags
     vertexLayoutForMeshVariant (variant) {
+        if (this.shader_language === 'wgsl') {
+            if (this.vertex_layouts.portable == null) {
+                this.vertex_layouts.portable = new VertexLayout([
+                    { name: 'a_position', size: 4, type: gl.SHORT, normalized: false },
+                    { name: 'a_shape', size: 4, type: gl.SHORT, normalized: false },
+                    { name: 'a_texcoord', size: 2, type: gl.UNSIGNED_SHORT, normalized: true },
+                    { name: 'a_offset', size: 2, type: gl.SHORT, normalized: false },
+                    { name: 'a_color', size: 4, type: gl.UNSIGNED_BYTE, normalized: true },
+                    { name: 'a_selection_color', size: 4, type: gl.UNSIGNED_BYTE, normalized: true },
+                    { name: 'a_outline_color', size: 4, type: gl.UNSIGNED_BYTE, normalized: true },
+                    { name: 'a_outline_edge', size: 1, type: gl.FLOAT, normalized: false },
+                    { name: 'a_point_type', size: 1, type: gl.FLOAT, normalized: false }
+                ]);
+            }
+            return this.vertex_layouts.portable;
+        }
+
         // Vertex layout only depends on shader point flag, so using it as layout key to avoid duplicate layouts
         if (this.vertex_layouts[variant.shader_point] == null) {
             // Attributes for this mesh variant
@@ -934,6 +961,8 @@ Object.assign(Points, {
                 key,
                 selection: 1, // TODO: make this vary by draw params
                 shader_point: (texture === SHADER_POINT_VARIANT), // is shader point
+                point_type: draw.label_texture ? TANGRAM_POINT_TYPE_LABEL :
+                    draw.texture ? TANGRAM_POINT_TYPE_TEXTURE : TANGRAM_POINT_TYPE_SHADER,
                 blend_order: draw.blend_order,
                 mesh_order: (draw.label_texture ? 1 : 0) // put text on top of points (e.g. for highway shields, etc.)
             };

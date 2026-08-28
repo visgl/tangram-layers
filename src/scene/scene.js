@@ -9,6 +9,7 @@ import sliceObject from '../utils/slice';
 import Context from '../gl/context';
 import Texture from '../gl/texture';
 import ShaderProgram from '../gl/shader_program';
+import UniformBuffer from '../gl/uniform_buffer';
 import VertexArrayObject from '../gl/vao';
 import {StyleManager} from '../styles/style_manager';
 import {Style} from '../styles/style';
@@ -88,8 +89,26 @@ export default class Scene {
         this.resetTime();
 
         this.container = options.container;
-        this.canvas = null;
+        this.canvas = options.canvas || null;
         this.contextOptions = options.webGLContextOptions;
+        this.external_gl = options.webGLContext || null;
+        this.gl = null;
+        this.device = options.device || null;
+        this.shader_language = options.shaderLanguage || 'glsl';
+        this.portable_rendering = Boolean(this.device && this.shader_language !== 'glsl');
+        this.resource_context = this.portable_rendering ? this.device : null;
+        this.resources_initialized = false;
+        this.owns_gl = !this.external_gl && !this.portable_rendering;
+        this.webgl_context_scope = options.webGLContextScope;
+        this.redraw_callback = options.requestRedraw;
+        this.enable_uniform_buffers = options.enableUniformBuffers === true;
+        this.uniform_buffer_factory = options.uniformBufferFactory;
+        this.shader_factory = options.shaderFactory;
+        this.mesh_buffer_factory = options.meshBufferFactory;
+        this.mesh_renderer = options.meshRenderer;
+        this.texture_factory = options.textureFactory;
+        this.max_texture_size = options.maxTextureSize;
+        this.uniform_buffers = {};
 
         this.lights = null;
         this.background = null;
@@ -107,6 +126,11 @@ export default class Scene {
 
     static create (config, options = {}) {
         return new Scene(config, options);
+    }
+
+    // Supply camera matrices from an embedding renderer
+    setCameraMatrices (matrices) {
+        this.view.setCameraMatrices(matrices);
     }
 
     // Load scene (or reload existing scene if no new source specified)
@@ -200,33 +224,43 @@ export default class Scene {
     }
 
     destroy() {
+        return this.withWebGLContext(() => this.destroyScene());
+    }
+
+    destroyScene() {
         this.initialized = false;
         this.render_loop_stop = true; // schedule render loop to stop
 
         this.destroyListeners();
         this.destroyFeatureSelection();
 
-        if (this.canvas && this.canvas.parentNode) {
+        if (this.owns_gl && this.canvas && this.canvas.parentNode) {
             this.canvas.parentNode.removeChild(this.canvas);
-            this.canvas = null;
         }
+        this.canvas = null;
         this.container = null;
 
-        if (this.gl) {
-            Texture.destroy(this.gl);
-            this.style_manager.destroy(this.gl);
+        const resource_context = this.portable_rendering ? this.resource_context : this.gl;
+        if (resource_context) {
+            Texture.destroy(resource_context);
+            Texture.clearResourceFactory(resource_context);
+            this.style_manager.destroy(resource_context);
             this.styles = {};
+            this.destroyUniformBuffers();
 
             ShaderProgram.reset();
 
-            // Force context loss
-            let ext = this.gl.getExtension('WEBGL_lose_context');
-            if (ext) {
-                ext.loseContext();
+            if (this.owns_gl) {
+                // Force context loss only when Tangram created and owns it
+                let ext = this.gl.getExtension('WEBGL_lose_context');
+                if (ext) {
+                    ext.loseContext();
+                }
             }
 
             this.gl = null;
         }
+        this.resources_initialized = false;
 
         this.sources = {};
 
@@ -237,40 +271,117 @@ export default class Scene {
     }
 
     createCanvas() {
-        if (this.canvas) {
+        if (this.gl || (this.portable_rendering && this.resources_initialized)) {
             return;
         }
 
-        this.container = this.container || document.body;
-        this.canvas = document.createElement('canvas');
-        this.canvas.style.position = 'absolute';
-        this.canvas.style.top = 0;
-        this.canvas.style.left = 0;
+        return this.withWebGLContext(() => this.createCanvasContext());
+    }
 
-        // Force tangram canvas underneath all leaflet layers, and set background to transparent
-        this.container.style.backgroundColor = 'transparent';
-        this.container.appendChild(this.canvas);
-
-        try {
-            this.gl = Context.getContext(this.canvas, Object.assign({
-                alpha: true, premultipliedAlpha: true,
-                stencil: true,
-                device_pixel_ratio: Utils.device_pixel_ratio,
-                powerPreference: 'high-performance'
-            }, this.contextOptions));
+    createCanvasContext() {
+        if (this.portable_rendering) {
+            Texture.setResourceFactory(this.resource_context, this.texture_factory);
+            this.media_capture.setCanvas(this.canvas, null);
+            this.createUniformBuffers();
+            this.resources_initialized = true;
+            return;
         }
-        catch(e) {
-            throw new Error(
-                'Couldn\'t create WebGL context. ' +
-                'Your browser may not support WebGL, or it\'s turned off? ' +
-                'Visit http://webglreport.com/ for more info.'
-            );
+        else if (this.external_gl) {
+            this.gl = Context.configure(this.external_gl, this.webgl_context_scope);
+            this.canvas = this.gl.canvas;
+        }
+        else {
+            this.container = this.container || document.body;
+            this.canvas = document.createElement('canvas');
+            this.canvas.style.position = 'absolute';
+            this.canvas.style.top = 0;
+            this.canvas.style.left = 0;
+
+            // Force tangram canvas underneath all leaflet layers, and set background to transparent
+            this.container.style.backgroundColor = 'transparent';
+            this.container.appendChild(this.canvas);
+
+            try {
+                this.gl = Context.getContext(this.canvas, Object.assign({
+                    alpha: true, premultipliedAlpha: true,
+                    stencil: true,
+                    device_pixel_ratio: Utils.device_pixel_ratio,
+                    powerPreference: 'high-performance'
+                }, this.contextOptions));
+            }
+            catch(e) {
+                throw new Error(
+                    'Couldn\'t create WebGL context. ' +
+                    'Your browser may not support WebGL, or it\'s turned off? ' +
+                    'Visit http://webglreport.com/ for more info.'
+                );
+            }
         }
 
-        this.resizeMap(this.container.clientWidth, this.container.clientHeight);
+        if (this.owns_gl) {
+            this.resizeMap(this.container.clientWidth, this.container.clientHeight);
+        }
+        Texture.setResourceFactory(this.gl, this.texture_factory);
         VertexArrayObject.init(this.gl);
         this.render_states = new RenderStateManager(this.gl);
         this.media_capture.setCanvas(this.canvas, this.gl);
+        this.createUniformBuffers();
+    }
+
+    createUniformBuffers() {
+        if (!this.enable_uniform_buffers ||
+            (!UniformBuffer.isSupported(this.gl) && !this.uniform_buffer_factory)) {
+            return;
+        }
+        this.uniform_buffers.TangramView = this.createUniformBuffer({
+            name: 'TangramView',
+            binding: 0,
+            uniforms: {
+                u_resolution: 'vec2',
+                u_time: 'float',
+                u_map_position: 'vec3',
+                u_meters_per_pixel: 'float',
+                u_device_pixel_ratio: 'float',
+                u_view_pan_snap_timer: 'float',
+                u_view_panning: 'bool'
+            }
+        });
+        this.uniform_buffers.TangramCamera = this.createUniformBuffer({
+            name: 'TangramCamera',
+            binding: 1,
+            uniforms: {
+                u_projection: 'mat4',
+                u_eye: 'vec3',
+                u_vanishing_point: 'vec2'
+            }
+        });
+        this.uniform_buffers.TangramTile = this.createUniformBuffer({
+            name: 'TangramTile',
+            binding: 2,
+            snapshotPerMesh: true,
+            uniforms: {
+                u_tile_origin: 'vec4',
+                u_tile_proxy_order_offset: 'float',
+                u_model: 'mat4',
+                u_modelView: 'mat4',
+                u_normalMatrix: 'mat3',
+                u_inverseNormalMatrix: 'mat3',
+                u_tile_fade_in: 'bool'
+            }
+        });
+    }
+
+    createUniformBuffer(options) {
+        return new UniformBuffer(this.portable_rendering ? null : this.gl, Object.assign({}, options, {
+            bufferFactory: this.uniform_buffer_factory
+        }));
+    }
+
+    destroyUniformBuffers() {
+        for (const uniform_buffer of Object.values(this.uniform_buffers)) {
+            uniform_buffer.destroy();
+        }
+        this.uniform_buffers = {};
     }
 
     // Update list of any custom scripts (either at scene-level or data-source-level)
@@ -322,7 +433,8 @@ export default class Scene {
     // Instantiate workers from URL, init event handlers
     makeWorkers() {
         // Let VertexElements know if 32 bit indices for element arrays are available
-        let has_element_index_uint = this.gl.getExtension('OES_element_index_uint') ? true : false;
+        let has_element_index_uint = this.portable_rendering ||
+            (this.gl.getExtension('OES_element_index_uint') ? true : false);
 
         let queue = [];
         this.workers = [];
@@ -387,14 +499,29 @@ export default class Scene {
 
         this.dirty = true;
         this.view.setViewportSize(width, height);
-        if (this.gl) {
+        if (this.gl && this.owns_gl) {
             Context.resize(this.gl, width, height, Utils.device_pixel_ratio);
+        }
+    }
+
+    withWebGLContext(callback) {
+        return this.webgl_context_scope ? this.webgl_context_scope(callback) : callback();
+    }
+
+    resetWebGLState() {
+        ShaderProgram.resetCurrent();
+        Texture.resetBindings();
+        if (this.render_states) {
+            this.render_states.invalidate();
         }
     }
 
     // Request scene be redrawn at next animation loop
     requestRedraw() {
         this.dirty = true;
+        if (this.render_loop === false && this.redraw_callback) {
+            this.redraw_callback();
+        }
     }
 
     // Redraw scene immediately - don't wait for animation loop
@@ -411,9 +538,7 @@ export default class Scene {
         // Update and render the scene
         this.update();
 
-        // Pending background tasks
-        Task.setState({ user_moving_view: this.view.user_input_active });
-        Task.processAll();
+        this.processTasks();
 
         // Request the next frame if not scheduled to stop
         if (!this.render_loop_stop) {
@@ -425,6 +550,14 @@ export default class Scene {
         }
     }
 
+    // Advance background work normally serviced by Tangram's animation loop.
+    // Host-driven renderers must call this once per frame so tile labels and
+    // other incremental work can complete without a standalone render loop.
+    processTasks () {
+        Task.setState({ user_moving_view: this.view.user_input_active });
+        Task.processAll();
+    }
+
     // Setup the render loop
     setupRenderLoop() {
         if (!this.render_loop_active) {
@@ -432,7 +565,19 @@ export default class Scene {
         }
     }
 
-    update() {
+    update({ force = false, renderPass = null } = {}) {
+        return this.withWebGLContext(() => {
+            if (force) {
+                this.dirty = true;
+            }
+            if (this.external_gl) {
+                this.resetWebGLState();
+            }
+            return this.updateScene({ renderPass });
+        });
+    }
+
+    updateScene({ renderPass = null } = {}) {
         // Determine which passes (if any) to render
         let main = this.dirty;
         let selection = this.selection ? this.selection.hasPendingRequests() : false;
@@ -457,7 +602,7 @@ export default class Scene {
 
         // Render the scene
         this.updateDevicePixelRatio();
-        this.render({ main, selection });
+        this.render({ main, selection, renderPass });
         this.updateViewComplete(); // fires event when rendered tile set or style changes
         this.media_capture.completeScreenshot(); // completes screenshot capture if requested
 
@@ -475,7 +620,7 @@ export default class Scene {
     }
 
     // Accepts flags indicating which render passes should be made
-    render({ main, selection }) {
+    render({ main, selection, renderPass = null }) {
         var gl = this.gl;
 
         this.updateBackground();
@@ -484,7 +629,7 @@ export default class Scene {
         // Render main pass
         this.render_count_changed = false;
         if (main) {
-            this.render_count = this.renderPass();
+            this.render_count = this.renderPass('program', { renderPass });
             this.last_main_render = this.frame;
 
             // Update feature selection map if necessary
@@ -530,9 +675,13 @@ export default class Scene {
 
     // Render all active styles, grouped by blend/depth type (opaque, overlay, etc.) and by program (style)
     // Called both for main render pass, and for secondary passes like selection buffer
-    renderPass(program_key = 'program', { allow_blend } = {}) {
+    renderPass(program_key = 'program', { allow_blend, renderPass = null } = {}) {
         // optionally force alpha off (e.g. for selection pass)
         allow_blend = (allow_blend == null) ? true : allow_blend;
+
+        if (this.portable_rendering) {
+            return this.renderPortablePass(program_key, { allow_blend, renderPass });
+        }
 
         this.clearFrame();
 
@@ -562,7 +711,7 @@ export default class Scene {
                 if (blend === 'translucent') {
                     // Depth pre-pass for translucency
                     this.gl.colorMask(false, false, false, false);
-                    this.renderStyle(style.name, program_key, blend_order);
+                    this.renderStyle(style.name, program_key, blend_order, null, renderPass);
 
                     this.gl.colorMask(true, true, true, true);
                     this.gl.depthFunc(this.gl.EQUAL);
@@ -575,7 +724,7 @@ export default class Scene {
                     this.gl.stencilOp(this.gl.KEEP, this.gl.KEEP, this.gl.INCR);
 
                     // Main render pass
-                    count += this.renderStyle(style.name, program_key, blend_order);
+                    count += this.renderStyle(style.name, program_key, blend_order, null, renderPass);
 
                     // Disable translucency-specific settings
                     this.gl.disable(this.gl.STENCIL_TEST);
@@ -607,19 +756,19 @@ export default class Scene {
                             // stencil test passes either for zero (not-yet-rendered),
                             // or for other pixels at this proxy level (but not previous proxy levels)
                             this.gl.stencilFunc(this.gl.GEQUAL, proxy_levels.length - i, 0xFF);
-                            count += this.renderStyle(style.name, program_key, blend_order, proxy_levels[i]);
+                            count += this.renderStyle(style.name, program_key, blend_order, proxy_levels[i], renderPass);
                         }
                         this.gl.disable(this.gl.STENCIL_TEST);
                     }
                     else {
                         // No special render handling needed when there are no proxy tiles,
                         // or if there is ONLY a single proxy tile level (e.g. with no non-proxy tiles)
-                        count += this.renderStyle(style.name, program_key, blend_order);
+                        count += this.renderStyle(style.name, program_key, blend_order, null, renderPass);
                     }
                 }
                 else {
                     // Regular render pass (no special blend handling, or selection buffer pass)
-                    count += this.renderStyle(style.name, program_key, blend_order);
+                    count += this.renderStyle(style.name, program_key, blend_order, null, renderPass);
                 }
 
                 last_blend = style.blend;
@@ -629,7 +778,30 @@ export default class Scene {
         return count;
     }
 
-    renderStyle(style_name, program_key, blend_order, proxy_level = null) {
+    // Render styles through luma pipelines without mutating a raw WebGL state machine.
+    renderPortablePass(program_key, { allow_blend, renderPass }) {
+        let count = 0;
+        let last_blend;
+        const blend_orders = this.style_manager.getActiveBlendOrders();
+        for (const { blend_order, styles } of blend_orders) {
+            for (const style_name of styles) {
+                const style = this.styles[style_name];
+                if (!style) {
+                    continue;
+                }
+                if (style.blend !== last_blend) {
+                    this.setRenderState(Object.assign({}, Style.render_states[style.blend], {
+                        blend: allow_blend && style.blend
+                    }));
+                    last_blend = style.blend;
+                }
+                count += this.renderStyle(style.name, program_key, blend_order, null, renderPass);
+            }
+        }
+        return count;
+    }
+
+    renderStyle(style_name, program_key, blend_order, proxy_level = null, renderPass = null) {
         let style = this.styles[style_name];
         let first_for_style = true; // TODO: allow this state to be passed in (for multilpe blend orders, stencil tests, etc)
         let render_count = 0;
@@ -695,7 +867,11 @@ export default class Scene {
                     }
 
                     // Render this mesh variant
-                    if (style.render(mesh)) {
+                    if (style.render(mesh, {
+                        renderPass,
+                        meshRenderer: this.mesh_renderer,
+                        renderState: this.mesh_render_state
+                    })) {
                         this.requestRedraw();
                     }
                     render_count += mesh.geometry_count;
@@ -728,8 +904,16 @@ export default class Scene {
         program.use();
         style.setup();
 
-        program.uniform('1f', 'u_time', this.animated ? (((+new Date()) - this.start_time) / 1000) : 0);
-        this.view.setupProgram(program);
+        const time = this.animated ? (((+new Date()) - this.start_time) / 1000) : 0;
+        if (this.uniform_buffers.TangramView) {
+            this.uniform_buffers.TangramView.setUniform('u_time', time);
+            this.view.setupProgram(program, this.uniform_buffers);
+            program.bindUniformBlocks();
+        }
+        else {
+            program.uniform('1f', 'u_time', time);
+            this.view.setupProgram(program);
+        }
 
         for (let i in this.lights) {
             this.lights[i].setupProgram(program);
@@ -740,6 +924,9 @@ export default class Scene {
 
     clearFrame() {
         if (!this.initialized) {
+            return;
+        }
+        if (this.portable_rendering) {
             return;
         }
         this.render_states.depth_write.set({ depth_write: true });
@@ -754,10 +941,26 @@ export default class Scene {
         // Defaults
         // TODO: when we abstract out support for multiple render passes, these can be per-pass config options
         let render_states = this.render_states;
-        depth_test = (depth_test === false) ? false : render_states.defaults.depth_test;      // default true
-        depth_write = (depth_write === false) ? false : render_states.defaults.depth_write;   // default true
-        cull_face = (cull_face === false) ? false : render_states.defaults.culling;           // default true
-        blend = (blend != null) ? blend : render_states.defaults.blending;                    // default false
+        const defaults = this.portable_rendering ? {
+            depth_test: true,
+            depth_write: true,
+            culling: true,
+            blending: false
+        } : render_states.defaults;
+        depth_test = (depth_test === false) ? false : defaults.depth_test;      // default true
+        depth_write = (depth_write === false) ? false : defaults.depth_write;   // default true
+        cull_face = (cull_face === false) ? false : defaults.culling;           // default true
+        blend = (blend != null) ? blend : defaults.blending;                    // default false
+        this.mesh_render_state = getMeshRenderState({
+            depth_test,
+            depth_write,
+            cull_face,
+            blend
+        });
+
+        if (this.portable_rendering) {
+            return;
+        }
 
         // Reset frame state
         let gl = this.gl;
@@ -806,6 +1009,9 @@ export default class Scene {
 
     // Request feature selection at given pixel. Runs async and returns results via a promise.
     getFeatureAt(pixel, { radius } = {}) {
+        if (this.portable_rendering) {
+            return Promise.resolve();
+        }
         if (!this.initialized) {
             log('debug', 'Scene.getFeatureAt() called before scene was initialized');
             return Promise.resolve();
@@ -1104,8 +1310,9 @@ export default class Scene {
 
     // Load all textures in the scene definition
     loadTextures() {
-        return Texture.createFromObject(this.gl, this.config.textures)
-            .then(() => Texture.createDefault(this.gl)); // create a 'default' texture for placeholders
+        const resource_context = this.portable_rendering ? this.resource_context : this.gl;
+        return Texture.createFromObject(resource_context, this.config.textures)
+            .then(() => Texture.createDefault(resource_context)); // create a 'default' texture for placeholders
     }
 
     // Free textures from previously loaded scene
@@ -1135,7 +1342,18 @@ export default class Scene {
 
         // Optionally set GL context (used when initializing or re-initializing GL resources)
         for (let style in this.styles) {
-            this.styles[style].setGL(this.gl);
+            this.styles[style].setGL(this.portable_rendering ? null : this.gl, this.uniform_buffers, {
+                resourceContext: this.portable_rendering ? this.resource_context : this.gl,
+                shaderFactory: this.shader_factory,
+                shaderLanguage: this.shader_language,
+                uniformBlockFactory: options => this.createUniformBuffer(options),
+                meshBufferFactory: this.mesh_buffer_factory,
+                textureFactory: this.texture_factory,
+                deferUniformBlocks: Boolean(this.mesh_renderer),
+                deferTextureBindings: Boolean(this.mesh_renderer),
+                deferUniformUpdates: Boolean(this.mesh_renderer),
+                maxTextureSize: this.max_texture_size
+            });
         }
 
         this.dirty = true;
@@ -1202,15 +1420,19 @@ export default class Scene {
         // update GL/canvas if color has changed
         if (!last_color || color.some((v, i) => last_color[i] !== v)) {
             // if background is fully opaque, set canvas background to match
-            if (color[3] === 1) {
-                this.canvas.style.backgroundColor =
-                    `rgba(${color.map(c => Math.floor(c * 255)).join(', ')})`;
-            }
-            else {
-                this.canvas.style.backgroundColor = 'transparent';
+            if (this.owns_gl) {
+                if (color[3] === 1) {
+                    this.canvas.style.backgroundColor =
+                        `rgba(${color.map(c => Math.floor(c * 255)).join(', ')})`;
+                }
+                else {
+                    this.canvas.style.backgroundColor = 'transparent';
+                }
             }
 
-            this.gl.clearColor(...color);
+            if (!this.portable_rendering) {
+                this.gl.clearColor(...color);
+            }
         }
     }
 
@@ -1240,16 +1462,18 @@ export default class Scene {
 
         this.trigger(loading ? 'load' : 'update', { config: this.config });
 
-        this.style_manager.init();
-        this.view.reset();
-        this.createLights();
-        this.createDataSources(loading);
-        this.loadTextures();
-        this.setBackground();
-        FontManager.loadFonts(this.config.fonts);
+        this.withWebGLContext(() => {
+            this.style_manager.init();
+            this.view.reset();
+            this.createLights();
+            this.createDataSources(loading);
+            this.loadTextures();
+            this.setBackground();
+            FontManager.loadFonts(this.config.fonts);
 
-        // TODO: detect changes to styles? already (currently) need to recompile anyway when camera or lights change
-        this.updateStyles();
+            // TODO: detect changes to styles? already (currently) need to recompile anyway when camera or lights change
+            this.updateStyles();
+        });
 
         // Optionally rebuild geometry
         let done = rebuild ?
@@ -1275,7 +1499,8 @@ export default class Scene {
         return WorkerBroker.postMessage(this.workers, 'self.updateConfig', {
             config: config_serialized,
             generation: this.generation,
-            introspection: this.introspection
+            introspection: this.introspection,
+            shader_language: this.shader_language
         }, debugSettings);
     }
 
@@ -1316,6 +1541,9 @@ export default class Scene {
     }
 
     resetFeatureSelection() {
+        if (this.portable_rendering) {
+            return;
+        }
         this.selection = new FeatureSelection(this.gl, this.workers, () => this.building);
         this.last_render_count = 0; // force re-evaluation of selection map
     }
@@ -1394,6 +1622,48 @@ export default class Scene {
         }
     }
 
+}
+
+function getMeshRenderState({ depth_test, depth_write, cull_face, blend }) {
+    const parameters = {
+        cullMode: cull_face ? 'back' : 'none',
+        depthCompare: depth_test ? 'less' : 'always',
+        depthWriteEnabled: depth_write,
+        blend: Boolean(blend && blend !== 'opaque')
+    };
+
+    if (blend === 'overlay' || blend === 'inlay' || blend === 'translucent') {
+        Object.assign(parameters, {
+            blendColorOperation: 'add',
+            blendColorSrcFactor: 'src-alpha',
+            blendColorDstFactor: 'one-minus-src-alpha',
+            blendAlphaOperation: 'add',
+            blendAlphaSrcFactor: 'one',
+            blendAlphaDstFactor: 'one-minus-src-alpha'
+        });
+    }
+    else if (blend === 'add') {
+        Object.assign(parameters, {
+            blendColorOperation: 'add',
+            blendColorSrcFactor: 'one',
+            blendColorDstFactor: 'one',
+            blendAlphaOperation: 'add',
+            blendAlphaSrcFactor: 'one',
+            blendAlphaDstFactor: 'one'
+        });
+    }
+    else if (blend === 'multiply') {
+        Object.assign(parameters, {
+            blendColorOperation: 'add',
+            blendColorSrcFactor: 'zero',
+            blendColorDstFactor: 'src',
+            blendAlphaOperation: 'add',
+            blendAlphaSrcFactor: 'one',
+            blendAlphaDstFactor: 'one-minus-src-alpha'
+        });
+    }
+
+    return parameters;
 }
 
 Scene.id = 0;         // unique id for a scene instance

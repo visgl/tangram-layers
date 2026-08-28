@@ -22,10 +22,11 @@ import rasters_source from './raster/raster_globals.glsl';
 // Base class
 
 export var Style = {
-    init ({ generation, styles, sources = {}, introspection } = {}) {
+    init ({ generation, styles, sources = {}, introspection, shader_language = 'glsl' } = {}) {
         this.setGeneration(generation);
         this.styles = styles;                       // styles for scene
         this.sources = sources;                     // data sources for scene
+        this.shader_language = shader_language;     // keeps worker-built vertex layouts aligned with the renderer
         this.defines = (Object.prototype.hasOwnProperty.call(this, 'defines') && this.defines) || {}; // #defines to be injected into the shaders
         this.shaders = (Object.prototype.hasOwnProperty.call(this, 'shaders') && this.shaders) || {}; // shader customization (uniforms, defines, blocks, etc.)
         this.introspection = introspection || false;
@@ -97,6 +98,9 @@ export var Style = {
 
         WorkerBroker.removeTarget(this.main_thread_target);
         this.gl = null;
+        this.resource_context = null;
+        this.uniform_blocks = null;
+        this.uniform_block_factory = null;
         this.initialized = false;
     },
 
@@ -402,26 +406,37 @@ export var Style = {
 
     /*** GL state and rendering ***/
 
-    setGL (gl) {
+    setGL (gl, uniform_blocks = {}, options = {}) {
         this.gl = gl;
-        this.max_texture_size = Texture.getMaxTextureSize(this.gl);
+        this.resource_context = options.resourceContext || gl;
+        this.uniform_blocks = uniform_blocks;
+        this.shader_language = options.shaderLanguage || 'glsl';
+        this.shader_factory = options.shaderFactory;
+        this.uniform_block_factory = options.uniformBlockFactory;
+        this.mesh_buffer_factory = options.meshBufferFactory;
+        this.texture_factory = options.textureFactory;
+        this.defer_uniform_blocks = options.deferUniformBlocks === true;
+        this.defer_texture_bindings = options.deferTextureBindings === true;
+        this.defer_uniform_updates = options.deferUniformUpdates === true;
+        this.max_texture_size = options.maxTextureSize || Texture.getMaxTextureSize(this.gl);
     },
 
     makeMesh (vertex_data, vertex_elements, options = {}) {
+        options = { ...options, bufferFactory: this.mesh_buffer_factory };
         let vertex_layout = this.vertexLayoutForMeshVariant(options.variant);
 
         if (debugSettings.wireframe) {
             // In wireframe debug mode, transform mesh into lines
             vertex_elements = makeWireframeForTriangleElementData(vertex_elements);
             return new VBOMesh(this.gl, vertex_data, vertex_elements, vertex_layout,
-                { ...options, draw_mode: this.gl.LINES });
+                { ...options, draw_mode: gl.LINES });
         }
 
         return new VBOMesh(this.gl, vertex_data, vertex_elements, vertex_layout, options);
     },
 
-    render (mesh) {
-        return mesh.render();
+    render (mesh, options) {
+        return mesh.render(options);
     },
 
     // Get a specific program, compiling if necessary
@@ -453,8 +468,8 @@ export var Style = {
             return;
         }
 
-        if (!this.gl) {
-            throw(new Error(`style.compile(): skipping for ${this.name} because no GL context`));
+        if (!this.gl && !this.shader_factory) {
+            throw(new Error(`style.compile(): skipping for ${this.name} because no rendering backend is configured`));
         }
 
         // Build defines & for selection (need to create a new object since the first is stored as a reference by the program)
@@ -482,22 +497,37 @@ export var Style = {
             extensions = [extensions];
         }
 
+        let vertex_shader_src = this.vertex_shader_src;
+        let fragment_shader_src = this.fragment_shader_src;
+        if (this.shader_language === 'wgsl') {
+            if (typeof this.getWGSLShaderSource !== 'function') {
+                throw new Error(`style '${this.name}' does not have a portable WGSL shader`);
+            }
+            vertex_shader_src = fragment_shader_src = this.getWGSLShaderSource();
+        }
+
         // Create shaders
         this.program = new ShaderProgram(
             this.gl,
-            this.vertex_shader_src,
-            this.fragment_shader_src,
+            vertex_shader_src,
+            fragment_shader_src,
             {
                 name: this.name,
                 defines,
                 uniforms,
+                uniform_blocks: this.uniform_blocks,
+                shaderLanguage: this.shader_language,
+                deferUniformBlocks: this.defer_uniform_blocks,
+                deferTextureBindings: this.defer_texture_bindings,
+                deferUniformUpdates: this.defer_uniform_updates,
+                shaderFactory: this.shader_factory,
                 blocks,
                 block_scopes,
                 extensions
             }
         );
 
-        if (this.selection) {
+        if (this.selection && this.shader_language === 'glsl') {
             this.selection_program = new ShaderProgram(
                 this.gl,
                 this.vertex_shader_src,
@@ -506,6 +536,12 @@ export var Style = {
                     name: (this.name + ' (selection)'),
                     defines: selection_defines,
                     uniforms,
+                    uniform_blocks: this.uniform_blocks,
+                    shaderLanguage: this.shader_language,
+                    deferUniformBlocks: this.defer_uniform_blocks,
+                    deferTextureBindings: this.defer_texture_bindings,
+                    deferUniformUpdates: this.defer_uniform_updates,
+                    shaderFactory: this.shader_factory,
                     blocks,
                     block_scopes,
                     extensions
@@ -704,7 +740,7 @@ export var Style = {
         await Promise.all(queue);
 
         // Create and load raster textures
-        await Texture.createFromObject(this.gl, configs);
+        await Texture.createFromObject(this.resource_context, configs);
         let textures = await Promise.all(Object.keys(configs)
             .map(t => Texture.textures[t] && Texture.textures[t].load())
             .filter(x => x)

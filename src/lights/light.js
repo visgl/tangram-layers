@@ -233,7 +233,10 @@ class DirectionalLight extends Light {
 
     setupProgram (_program) {
         super.setupProgram(_program);
-        _program.uniform('3fv', `u_${this.name}.direction`, this.direction);
+        const camera = this.view.camera;
+        const direction = camera && typeof camera.transformVector === 'function' ?
+            camera.transformVector(this.direction) : this.direction;
+        _program.uniform('3fv', `u_${this.name}.direction`, direction);
     }
 
 }

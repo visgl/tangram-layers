@@ -13,10 +13,17 @@ export default class VBOMesh  {
         this.vertex_data = vertex_data; // typed array
         this.element_data = element_data; // typed array
         this.vertex_layout = vertex_layout;
-        this.vertex_buffer = this.gl.createBuffer();
+        this.id = options.id != null ? options.id : VBOMesh.id++;
+        this.buffer_factory = options.bufferFactory;
+        this.vertex_buffer_resource = createBufferResource(this.buffer_factory, {
+            id: `mesh-${this.id}-vertices`,
+            usage: 'vertex',
+            data: this.vertex_data
+        });
+        this.vertex_buffer = this.vertex_buffer_resource || this.gl.createBuffer();
         this.buffer_size = this.vertex_data.byteLength;
-        this.draw_mode = options.draw_mode || this.gl.TRIANGLES;
-        this.data_usage = options.data_usage || this.gl.STATIC_DRAW;
+        this.draw_mode = options.draw_mode || 0x0004;
+        this.data_usage = options.data_usage || (this.vertex_buffer_resource ? null : this.gl.STATIC_DRAW);
         this.vertices_per_geometry = 3; // TODO: support lines, strip, fan, etc.
         this.uniforms = options.uniforms;
         this.textures = options.textures; // any textures owned by this mesh
@@ -33,17 +40,36 @@ export default class VBOMesh  {
             this.toggle_element_array = true;
             this.element_count = this.element_data.length;
             this.geometry_count = this.element_count / this.vertices_per_geometry;
-            this.element_type = (this.element_data.constructor === Uint16Array) ? this.gl.UNSIGNED_SHORT: this.gl.UNSIGNED_INT;
-            this.element_buffer = this.gl.createBuffer();
+            this.element_type = (this.element_data.constructor === Uint16Array) ? 0x1403 : 0x1405;
+            try {
+                this.element_buffer_resource = createBufferResource(this.buffer_factory, {
+                    id: `mesh-${this.id}-indices`,
+                    usage: 'index',
+                    indexType: this.element_data.constructor === Uint16Array ? 'uint16' : 'uint32',
+                    data: this.element_data
+                });
+            }
+            catch (error) {
+                if (this.vertex_buffer_resource) {
+                    this.vertex_buffer_resource.destroy();
+                    this.vertex_buffer_resource = null;
+                }
+                throw error;
+            }
+            this.element_buffer = this.element_buffer_resource || this.gl.createBuffer();
             this.buffer_size += this.element_data.byteLength;
-            this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.element_buffer);
-            this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.element_data, this.data_usage);
+            if (!this.element_buffer_resource) {
+                this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.element_buffer);
+                this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.element_data, this.data_usage);
+            }
         }
         else {
             this.geometry_count = this.vertex_count / this.vertices_per_geometry;
         }
 
-        this.upload();
+        if (!this.vertex_buffer_resource) {
+            this.upload();
+        }
 
         if (!this.retain) {
             delete this.vertex_data;
@@ -60,14 +86,27 @@ export default class VBOMesh  {
         }
 
         var program = options.program || ShaderProgram.current;
-        program.use();
+        let visible_time = (+new Date() - this.created_at) / 1000;
+        if (options.meshRenderer && typeof options.meshRenderer.drawMesh === 'function') {
+            const needs_redraw = options.meshRenderer.drawMesh({
+                mesh: this,
+                program,
+                renderPass: options.renderPass,
+                renderState: options.renderState,
+                visibleTime: visible_time
+            });
+            if (needs_redraw !== null) {
+                return Boolean(needs_redraw) || visible_time < this.fade_in_time;
+            }
+        }
+
+        program.use(options.meshRenderer ? { bindUniformBlocks: true } : undefined);
 
         if (this.uniforms) {
             program.saveUniforms(this.uniforms);
             program.setUniforms(this.uniforms, false); // don't reset texture unit
         }
 
-        let visible_time = (+new Date() - this.created_at) / 1000;
         program.uniform('1f', 'u_visible_time', visible_time);
 
         this.bind(program);
@@ -87,6 +126,21 @@ export default class VBOMesh  {
 
         // Request next render if mesh is fading in
         return (visible_time < this.fade_in_time);
+    }
+
+    // Return the renderer-independent resources and draw parameters for this mesh.
+    getDrawDescriptor() {
+        return {
+            topology: getTopology(this.draw_mode),
+            vertexCount: this.vertex_count,
+            indexCount: this.element_count,
+            indexType: this.toggle_element_array ?
+                (this.element_type === 0x1403 ? 'uint16' : 'uint32') : null,
+            vertexBuffer: this.vertex_buffer_resource,
+            indexBuffer: this.element_buffer_resource || null,
+            bufferLayout: this.vertex_layout.getBufferLayout(),
+            staticAttributes: this.vertex_layout.getStaticAttributes()
+        };
     }
 
     // Bind buffers and vertex attributes to prepare for rendering
@@ -111,6 +165,13 @@ export default class VBOMesh  {
 
     // Upload buffer data to GPU
     upload() {
+        if (this.vertex_buffer_resource) {
+            if (typeof this.vertex_buffer_resource.write !== 'function') {
+                throw new Error('VBOMesh: portable vertex buffers must support write');
+            }
+            this.vertex_buffer_resource.write(this.vertex_data);
+            return;
+        }
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertex_buffer);
         this.gl.bufferData(this.gl.ARRAY_BUFFER, this.vertex_data, this.data_usage);
     }
@@ -125,11 +186,23 @@ export default class VBOMesh  {
             VertexArrayObject.destroy(this.gl, this.vaos[v]);
         }
 
-        this.gl.deleteBuffer(this.vertex_buffer);
+        if (this.vertex_buffer_resource) {
+            this.vertex_buffer_resource.destroy();
+            this.vertex_buffer_resource = null;
+        }
+        else {
+            this.gl.deleteBuffer(this.vertex_buffer);
+        }
         this.vertex_buffer = null;
 
         if (this.element_buffer) {
-            this.gl.deleteBuffer(this.element_buffer);
+            if (this.element_buffer_resource) {
+                this.element_buffer_resource.destroy();
+                this.element_buffer_resource = null;
+            }
+            else {
+                this.gl.deleteBuffer(this.element_buffer);
+            }
             this.element_buffer = null;
         }
 
@@ -143,4 +216,34 @@ export default class VBOMesh  {
         return true;
     }
 
+}
+
+VBOMesh.id = 0;
+
+function createBufferResource(buffer_factory, options) {
+    if (typeof buffer_factory !== 'function') {
+        return null;
+    }
+    const resource = buffer_factory(options);
+    if (!resource || typeof resource.destroy !== 'function') {
+        throw new Error('VBOMesh: bufferFactory must return a GPU resource with destroy');
+    }
+    return resource;
+}
+
+function getTopology(draw_mode) {
+    switch (draw_mode) {
+    case 0x0000:
+        return 'point-list';
+    case 0x0001:
+        return 'line-list';
+    case 0x0003:
+        return 'line-strip';
+    case 0x0004:
+        return 'triangle-list';
+    case 0x0005:
+        return 'triangle-strip';
+    default:
+        throw new Error(`VBOMesh: unsupported draw mode ${draw_mode}`);
+    }
 }

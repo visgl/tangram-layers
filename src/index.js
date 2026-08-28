@@ -3,6 +3,8 @@
 // The leaflet layer plugin is currently the primary public API
 import {leafletLayer} from './leaflet_layer';
 import Scene from './scene/scene';
+import Renderer from './scene/renderer';
+import LumaDeviceRenderer from './gpu/luma_device_renderer';
 
 // Additional modules are exposed for debugging
 import version from './utils/version';
@@ -13,6 +15,7 @@ import Vector from './utils/vector';
 import DataSource from './sources/data_source';
 import GLSL from './gl/glsl';
 import ShaderProgram from './gl/shader_program';
+import UniformBuffer from './gl/uniform_buffer';
 import VertexData from './gl/vertex_data';
 import Texture from './gl/texture';
 import Material from './lights/material';
@@ -39,11 +42,14 @@ const debug = {
     DataSource,
     GLSL,
     ShaderProgram,
+    UniformBuffer,
     VertexData,
     Texture,
     Material,
     Light,
     Scene,
+    Renderer,
+    LumaDeviceRenderer,
     WorkerBroker,
     Task,
     StyleManager,

@@ -263,7 +263,13 @@ export const TextLabels = {
         let texture_prefix = ['labels', this.name, tile_key, tile_id, text_texture_id, ''].join('-');
         text_texture_id++;
 
-        textures = await canvas.rasterize(texts, textures, tile_id, texture_prefix, this.gl);
+        textures = await canvas.rasterize(
+            texts,
+            textures,
+            tile_id,
+            texture_prefix,
+            this.resource_context
+        );
         if (!textures) {
             return {};
         }

@@ -113,6 +113,28 @@ export default class VertexLayout {
         return new VertexData(this);
     }
 
+    // Return a luma.gl-compatible description of the interleaved vertex buffer.
+    // Static attributes are omitted because they are supplied independently of the buffer.
+    getBufferLayout (name = 'vertices') {
+        return {
+            name,
+            byteStride: this.stride,
+            attributes: this.dynamic_attribs.map(attrib => ({
+                attribute: attrib.name,
+                format: getVertexFormat(attrib),
+                byteOffset: attrib.offset
+            }))
+        };
+    }
+
+    // Return constant vertex attributes for renderers that don't use Tangram's VAO wrapper.
+    getStaticAttributes () {
+        return this.static_attribs.map(attrib => ({
+            attribute: attrib.name,
+            value: attrib.static.slice()
+        }));
+    }
+
     // Lazily create the add vertex function
     getAddVertexFunction () {
         if (this.addVertex == null) {
@@ -165,3 +187,42 @@ VertexLayout.enabled_attribs = {};
 
 // Functions to add plain JS vertex array to typed VBO arrays
 VertexLayout.add_vertex_funcs = {}; // keyed by unique set of attributes
+
+function getVertexFormat(attrib) {
+    let type;
+    switch (attrib.type) {
+    case gl.BYTE:
+        type = attrib.normalized ? 'snorm8' : 'sint8';
+        break;
+    case gl.UNSIGNED_BYTE:
+        type = attrib.normalized ? 'unorm8' : 'uint8';
+        break;
+    case gl.SHORT:
+        type = attrib.normalized ? 'snorm16' : 'sint16';
+        break;
+    case gl.UNSIGNED_SHORT:
+        type = attrib.normalized ? 'unorm16' : 'uint16';
+        break;
+    case gl.INT:
+        type = 'sint32';
+        break;
+    case gl.UNSIGNED_INT:
+        type = 'uint32';
+        break;
+    case gl.FLOAT:
+        type = 'float32';
+        break;
+    default:
+        throw new Error(`VertexLayout: unsupported attribute type ${attrib.type}`);
+    }
+
+    if (attrib.size === 1) {
+        return type;
+    }
+    if (attrib.size < 2 || attrib.size > 4) {
+        throw new Error(`VertexLayout: unsupported attribute size ${attrib.size}`);
+    }
+    const webgl_only = attrib.size === 3 && attrib.type !== gl.FLOAT &&
+        attrib.type !== gl.INT && attrib.type !== gl.UNSIGNED_INT;
+    return `${type}x${attrib.size}${webgl_only ? '-webgl' : ''}`;
+}

@@ -1,0 +1,164 @@
+import Geo from '../../utils/geo';
+
+const LAYER_DELTA = 1 / (1 << 14);
+const ATTRIBUTE_SCALE = 1024;
+
+/**
+ * Build the portable base-line shader used by the luma.gl WebGPU renderer.
+ *
+ * Tangram's line builder emits expanded triangle geometry. The extrusion
+ * vector and its fractional-zoom scaling are therefore applied before the
+ * host-provided tile and camera matrices. Buffered offsets and elevation use
+ * the same zoom interpolation and height packing as Tangram's GLSL renderer.
+ * Textured and dashed styles sample luma-owned textures using per-mesh state
+ * from a std140 uniform block. Animated styles reuse the generated line
+ * texture coordinates and Tangram's frame time to produce portable compact
+ * repeating vehicles without additive blending. Arbitrary custom shader
+ * blocks and selection remain follow-up tranches.
+ *
+ * @param {object} options Shader options.
+ * @param {boolean} options.animated Enables the portable traffic vehicles.
+ * @returns {string} Complete WGSL source for the line style.
+ */
+export function buildLinesWGSL({ animated = false } = {}) {
+    const animated_fragment = animated ? `
+
+    let direction = select(-1.0, 1.0, input.texcoord.x < 0.5);
+    let lane_phase = select(0.0, 2.75, direction > 0.0);
+    // Keep the pattern continuous along the buffered road distance. The
+    // derivative-aware body below remains a few pixels long at every zoom
+    // instead of collapsing to a sub-pixel flash or stretching into a trail.
+    let traffic_coordinate = input.texcoord.y * 0.125 -
+        TangramView.u_time * 1.8 * direction + lane_phase;
+    let vehicle_position = fract(traffic_coordinate / 6.0);
+    let longitudinal_distance = abs(vehicle_position - 0.5);
+    let longitudinal_derivative = max(fwidth(vehicle_position), 0.001);
+    let vehicle_half_length = max(0.022, longitudinal_derivative * 1.35);
+    let vehicle_body = 1.0 - smoothstep(
+        vehicle_half_length,
+        vehicle_half_length + longitudinal_derivative,
+        longitudinal_distance
+    );
+    let vehicle_halo = 1.0 - smoothstep(
+        vehicle_half_length + longitudinal_derivative,
+        vehicle_half_length + longitudinal_derivative * 2.5,
+        longitudinal_distance
+    );
+    let lane_center = select(0.72, 0.28, direction > 0.0);
+    let lane_distance = abs(input.texcoord.x - lane_center);
+    let lane_derivative = max(fwidth(input.texcoord.x), 0.01);
+    let lane_half_width = clamp(lane_derivative * 0.45, 0.10, 0.22);
+    let lane_edge = clamp(lane_derivative * 0.35, 0.02, 0.18);
+    let lane_mask = 1.0 - smoothstep(
+        lane_half_width,
+        lane_half_width + lane_edge,
+        lane_distance
+    );
+    let vehicle = max(vehicle_body, vehicle_halo * 0.35) * lane_mask;
+    let vehicle_color = vec3<f32>(0.62, 1.0, 0.98);
+    let animated_color = mix(
+        color.rgb,
+        vehicle_color,
+        vehicle * 0.98
+    );
+    color = vec4<f32>(animated_color, color.a);
+` : '';
+
+    return `
+@group(0) @binding(3) var u_texture: texture_2d<f32>;
+@group(0) @binding(4) var u_textureSampler: sampler;
+
+struct LineAttributes {
+    @location(0) a_position: vec4<i32>,
+    @location(1) a_extrude: vec2<i32>,
+    @location(2) a_offset: vec2<i32>,
+    @location(3) a_z_and_offset_scale: vec2<i32>,
+    @location(4) a_texcoord: vec2<f32>,
+    @location(5) a_color: vec4<f32>,
+};
+
+struct LineVaryings {
+    @builtin(position) position: vec4<f32>,
+    @location(0) color: vec4<f32>,
+    @location(1) texcoord: vec2<f32>,
+};
+
+@vertex
+fn vertexMain(attributes: LineAttributes) -> LineVaryings {
+    var output: LineVaryings;
+    var extrusion = vec2<f32>(attributes.a_extrude);
+    var offset = vec2<f32>(attributes.a_offset);
+
+    var zoom_delta = clamp(
+        TangramView.u_map_position.z - TangramTile.u_tile_origin.z,
+        0.0,
+        4.0
+    );
+    zoom_delta += step(1.0, zoom_delta) * (1.0 - zoom_delta) +
+        mix(0.0, 2.0, clamp((zoom_delta - 2.0) / 2.0, 0.0, 1.0));
+
+    let midpoint_zoom_delta = (zoom_delta - 0.5) * 2.0;
+    let width_scale = f32(attributes.a_position.z) / ${ATTRIBUTE_SCALE}.0;
+    extrusion -= extrusion * width_scale * midpoint_zoom_delta;
+
+    let offset_width_scale =
+        f32(attributes.a_z_and_offset_scale.y) / ${ATTRIBUTE_SCALE}.0;
+    let offset_scale_direction = sign(step(0.0, offset_width_scale) - 0.5);
+    offset -= offset * abs(offset_width_scale) * (
+        (1.0 - step(0.0, offset_scale_direction)) -
+        (zoom_delta * -offset_scale_direction)
+    );
+
+    let screen_space_scale = exp2(
+        -zoom_delta - (TangramTile.u_tile_origin.z - TangramTile.u_tile_origin.w)
+    );
+    extrusion *= screen_space_scale;
+    offset *= screen_space_scale;
+
+    let local_position = vec4<f32>(
+        vec2<f32>(attributes.a_position.xy) + extrusion + offset,
+        f32(attributes.a_z_and_offset_scale.x) / ${Geo.height_scale}.0,
+        1.0
+    );
+    var clip_position = TangramCamera.u_projection *
+        (TangramTile.u_modelView * local_position);
+    let layer = f32(attributes.a_position.w) +
+        TangramTile.u_tile_proxy_order_offset + 1.0;
+    clip_position.z -= layer * ${LAYER_DELTA} * clip_position.w;
+
+    output.position = clip_position;
+    output.color = attributes.a_color;
+    output.texcoord = attributes.a_texcoord / 65535.0;
+    output.texcoord.y *= TangramLine.u_v_scale_adjust;
+    return output;
+}
+
+@fragment
+fn fragmentMain(input: LineVaryings) -> @location(0) vec4<f32> {
+    var color = input.color;
+    if (TangramLine.u_has_line_texture != 0u) {
+        let line_texcoord = vec2<f32>(
+            input.texcoord.x,
+            fract(input.texcoord.y / TangramLine.u_texture_ratio)
+        );
+        let line_color = textureSample(u_texture, u_textureSampler, line_texcoord);
+        let textured_color = color * line_color;
+        let dashed_color = mix(
+            TangramLine.u_dash_background_color,
+            color,
+            line_color.a
+        );
+        color = mix(
+            textured_color,
+            dashed_color,
+            clamp(TangramLine.u_has_dash, 0.0, 1.0)
+        );
+        if (color.a < 0.001) {
+            discard;
+        }
+    }
+${animated_fragment}
+    return color;
+}
+`;
+}

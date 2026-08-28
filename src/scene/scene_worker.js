@@ -66,7 +66,7 @@ const SceneWorker = Object.assign(self, {
     },
 
     // Starts a config refresh
-    updateConfig ({ config, generation, introspection }, debug) {
+    updateConfig ({ config, generation, introspection, shader_language = 'glsl' }, debug) {
         config = JSON.parse(config);
         mergeDebugSettings(debug);
 
@@ -86,7 +86,8 @@ const SceneWorker = Object.assign(self, {
             generation: this.generation,
             styles: this.styles,
             sources: this.sources,
-            introspection: this.introspection
+            introspection: this.introspection,
+            shader_language
         });
 
         // Parse each top-level layer as a separate tree

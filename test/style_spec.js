@@ -51,6 +51,84 @@ describe('Styles:', () => {
             assert.equal(style_manager.styles.rainbow.base, 'polygons');
         });
 
+        it('uses the renderer shader language for worker-built vertex layouts', () => {
+            style_manager.build({});
+            style_manager.initStyles({ shader_language: 'wgsl' });
+            const points = style_manager.styles.points;
+            const layout = points.vertexLayoutForMeshVariant({
+                key: 'portable-points',
+                selection: 1,
+                shader_point: true
+            });
+
+            assert.strictEqual(points.shader_language, 'wgsl');
+            assert.property(layout.index, 'a_point_type');
+            const dynamic_attributes = layout.dynamic_attribs.map(attribute => attribute.name);
+            assert.include(dynamic_attributes, 'a_texcoord');
+            assert.include(dynamic_attributes, 'a_outline_color');
+
+            const lines = style_manager.styles.lines;
+            const line_layout = lines.vertexLayoutForMeshVariant({
+                key: 'portable-lines',
+                offset: 0,
+                z_or_offset: 0,
+                texcoords: 0,
+                selection: 0
+            });
+            const texcoord_attribute = line_layout.dynamic_attribs.find(
+                attribute => attribute.name === 'a_texcoord'
+            );
+            assert.strictEqual(lines.shader_language, 'wgsl');
+            assert.strictEqual(texcoord_attribute.type, gl.FLOAT);
+            assert.isFalse(texcoord_attribute.normalized);
+            for (const attribute_name of ['a_offset', 'a_z_and_offset_scale']) {
+                const attribute = line_layout.dynamic_attribs.find(
+                    candidate => candidate.name === attribute_name
+                );
+                assert.strictEqual(attribute.static, null);
+                assert.strictEqual(
+                    line_layout.getBufferLayout().attributes.find(
+                        candidate => candidate.attribute === attribute_name
+                    ).format,
+                    'sint16x2'
+                );
+            }
+
+            const line_vertex_template = lines.makeVertexTemplate({
+                width_scale: 0,
+                order: 1,
+                z: 0,
+                offset_scale: 0,
+                color: [0.25, 0.5, 0.75, 1]
+            }, { variant: {
+                offset: 0,
+                z_or_offset: 0,
+                texcoords: 0,
+                selection: 0
+            }});
+            assert.deepEqual(line_vertex_template.slice(6, 10), [0, 0, 0, 0]);
+
+            const polygons = style_manager.styles.polygons;
+            const polygon_layout = polygons.vertexLayoutForMeshVariant({
+                key: 'portable-polygons',
+                normal: 0,
+                selection: 0,
+                texcoords: 0
+            });
+            const normal_attribute = polygon_layout.dynamic_attribs.find(
+                attribute => attribute.name === 'a_normal'
+            );
+            assert.strictEqual(polygons.shader_language, 'wgsl');
+            assert.strictEqual(normal_attribute.size, 4);
+            assert.strictEqual(normal_attribute.static, null);
+            assert.strictEqual(
+                polygon_layout.getBufferLayout().attributes.find(
+                    attribute => attribute.attribute === 'a_normal'
+                ).format,
+                'snorm8x4'
+            );
+        });
+
         describe('builds custom styles w/dependencies from stylesheet', () => {
 
             beforeEach(() => {
