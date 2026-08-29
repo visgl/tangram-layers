@@ -15,15 +15,18 @@ module.exports = {
       items: [
         'get-started/getting-started',
         'developer-guide/architecture',
-        'developer-guide/development',
         'developer-guide/bundling',
-        'developer-guide/legacy-concepts'
+        {type: 'doc', id: 'developer-guide/legacy-concepts', label: 'Tangram concepts'}
       ]
     },
     {
       type: 'category',
       label: 'Contributor guide',
-      items: ['contributor-guide/monorepo', 'contributor-guide/release']
+      items: [
+        'contributor-guide/development',
+        'contributor-guide/monorepo',
+        'contributor-guide/release'
+      ]
     },
     {
       type: 'category',

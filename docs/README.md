@@ -16,13 +16,14 @@ website.
 
 - [Getting started](get-started/getting-started.md) — install, build, and run the examples.
 - [Architecture](developer-guide/architecture.md) — package boundaries and render ownership.
-- [Development workflow](developer-guide/development.md) — workspaces, dev-tools, and validation.
 - [Bundling](developer-guide/bundling.md) — measure the footprint of a small deck.gl basemap app.
-- [Legacy concepts](developer-guide/legacy-concepts.md) — scene structure,
+- [Tangram concepts](developer-guide/legacy-concepts.md) — scene structure,
   sources, layers, styles, and porting guidance.
 
 ## Contributor guide
 
+- [Development workflow](contributor-guide/development.md) — workspaces,
+  dev-tools, and validation.
 - [Monorepo guide](contributor-guide/monorepo.md) — workspaces, packages, and
   repository commands.
 - [Release workflow](contributor-guide/release.md) — versioning and publishing
