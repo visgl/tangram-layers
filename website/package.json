@@ -20,6 +20,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@docusaurus/plugin-content-docs": "^3.9.2",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0"
   },

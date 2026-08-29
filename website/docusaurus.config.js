@@ -45,20 +45,29 @@ const config = {
     ]
   ],
 
+  plugins: [
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'examples',
+        path: path.resolve(__dirname, 'src/examples'),
+        routeBasePath: 'examples',
+        sidebarPath: path.resolve(__dirname, 'src/examples-sidebar.js'),
+        breadcrumbs: true,
+        showLastUpdateTime: false,
+        showLastUpdateAuthor: false
+      }
+    ]
+  ],
+
   themeConfig: {
     navbar: {
       title: 'Tangram layers',
       items: [
         {to: '/docs', label: 'Docs', position: 'left'},
         {
-          type: 'docSidebar',
-          sidebarId: 'examplesSidebar',
+          to: '/examples',
           label: 'Examples',
-          position: 'left'
-        },
-        {
-          href: '/tangram-layers/examples/deck',
-          label: 'Live deck example',
           position: 'left'
         },
         {
