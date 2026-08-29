@@ -5,12 +5,9 @@ luma.gl-backed renderer and a deck.gl adapter that can compose it as a basemap.
 The project is an experimental custodian fork and is not the official Tangram
 website.
 
-## Getting started
-
-- [Getting started](get-started/getting-started.md) — install, build, and run the examples.
-
 ## Developer guide
 
+- [Getting started](get-started/getting-started.md) — install, build, and run the examples.
 - [Architecture](developer-guide/architecture.md) — package boundaries and render ownership.
 - [Development workflow](developer-guide/development.md) — workspaces, dev-tools, and validation.
 - [Bundling](developer-guide/bundling.md) — measure the footprint of a small deck.gl basemap app.

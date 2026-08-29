@@ -2,13 +2,9 @@ module.exports = {
   docsSidebar: [
     {
       type: 'category',
-      label: 'Getting started',
-      items: ['get-started/getting-started']
-    },
-    {
-      type: 'category',
       label: 'Developer guide',
       items: [
+        'get-started/getting-started',
         'developer-guide/architecture',
         'developer-guide/development',
         'developer-guide/bundling',
