@@ -7,11 +7,15 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'Integrated examples',
-      items: [
-        {type: 'doc', id: 'deck', label: 'Deck + TangramLayer'},
-        {type: 'doc', id: 'classic', label: 'Classic playground'}
-      ]
+      label: 'TangramLayer examples',
+      collapsed: false,
+      items: [{type: 'doc', id: 'deck', label: 'Deck + TangramLayer'}]
+    },
+    {
+      type: 'category',
+      label: 'Tangram renderer examples',
+      collapsed: false,
+      items: [{type: 'doc', id: 'classic', label: 'Classic playground'}]
     }
   ]
 };
