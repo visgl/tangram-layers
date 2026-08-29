@@ -57,7 +57,7 @@ const config = {
           position: 'left'
         },
         {
-          href: '/tangram-layers/examples/deck/',
+          href: '/tangram-layers/examples/deck',
           label: 'Live deck example',
           position: 'left'
         },
@@ -75,7 +75,7 @@ const config = {
           title: 'Resources',
           items: [
             {label: 'Documentation', to: '/docs'},
-            {label: 'Deck example', href: '/tangram-layers/examples/deck/'}
+            {label: 'Deck example', href: '/tangram-layers/examples/deck'}
           ]
         },
         {

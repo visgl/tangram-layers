@@ -20,6 +20,8 @@ function appendScript(url, type = 'text/javascript') {
   });
 }
 
+let deckExampleMountId = 0;
+
 export default function DeckExample() {
   const deckExampleBaseUrl = useBaseUrl('/examples/deck/');
   const tangramLayersUrl = useBaseUrl('/modules/tangram-layers/dist/index.js');
@@ -48,7 +50,7 @@ export default function DeckExample() {
     document.head.appendChild(importMapElement);
     scriptElements.current.push(importMapElement);
 
-    appendScript(`${deckExampleBaseUrl}app.js?embedded=1`, 'module')
+    appendScript(`${deckExampleBaseUrl}app.js?embedded=1&mount=${++deckExampleMountId}`, 'module')
       .then((scriptElement) => {
         scriptElements.current.push(scriptElement);
         if (cancelled) {

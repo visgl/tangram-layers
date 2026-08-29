@@ -3,7 +3,7 @@ import {useLocation} from '@docusaurus/router';
 
 export default function ExampleDeviceTabs() {
   const location = useLocation();
-  const deckExampleUrl = useBaseUrl('/examples/deck/');
+  const deckExampleUrl = useBaseUrl('/examples/deck');
   const requestedDevice = new URLSearchParams(location.search).get('device');
   const activeDevice = requestedDevice === 'webgl' ? 'webgl' : 'webgpu';
   const createDeviceUrl = (device) => {
