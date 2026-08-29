@@ -26,7 +26,6 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 22.15.0
-          cache: yarn
       - name: Enable Corepack
         run: corepack enable
       - name: Install workspace dependencies
@@ -43,7 +42,6 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 22.15.0
-          cache: yarn
       - name: Enable Corepack
         run: corepack enable
       - name: Install workspace dependencies
@@ -62,7 +60,6 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 22.15.0
-          cache: yarn
       - name: Enable Corepack
         run: corepack enable
       - name: Install workspace dependencies
@@ -83,7 +80,6 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 22.15.0
-          cache: yarn
       - name: Enable Corepack
         run: corepack enable
       - name: Install workspace dependencies
