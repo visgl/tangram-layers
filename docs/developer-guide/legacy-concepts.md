@@ -81,7 +81,7 @@ resource lifetime.
 
 ## Porting a historical demo
 
-When bringing one of the [original demo repositories](../resources.md) into
+When bringing one of the [original demo repositories](../README.md#original-demo-catalog) into
 this monorepo:
 
 1. Copy the scene and its local assets into a package under `/examples`.

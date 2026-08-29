@@ -1,0 +1,313 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "import": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "$ref": "#/definitions/__schema0"
+          }
+        }
+      ]
+    },
+    "global": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema0"
+      }
+    },
+    "cameras": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "$ref": "#/definitions/__schema0"
+        }
+      }
+    },
+    "scene": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema0"
+      }
+    },
+    "lights": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "$ref": "#/definitions/__schema0"
+        }
+      }
+    },
+    "fonts": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema0"
+      }
+    },
+    "textures": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema0"
+      }
+    },
+    "styles": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "base": {
+            "type": "string"
+          },
+          "mix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          },
+          "animated": {
+            "type": "boolean"
+          },
+          "lighting": {
+            "type": "boolean"
+          },
+          "blend": {
+            "type": "string"
+          },
+          "raster": {
+            "type": "boolean"
+          },
+          "texture": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/__schema0"
+              }
+            ]
+          },
+          "draw": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "$ref": "#/definitions/__schema0"
+            }
+          },
+          "shaders": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "$ref": "#/definitions/__schema0"
+            }
+          }
+        },
+        "additionalProperties": {}
+      }
+    },
+    "sources": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "urls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tilejson": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/__schema0"
+              }
+            ]
+          },
+          "url_params": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "$ref": "#/definitions/__schema0"
+            }
+          },
+          "min_zoom": {
+            "type": "number"
+          },
+          "max_zoom": {
+            "type": "number"
+          },
+          "tile_size": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "rasters": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "scripts": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/__schema0"
+              }
+            ]
+          },
+          "transform": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/__schema0"
+              }
+            ]
+          },
+          "attribution": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": {}
+      }
+    },
+    "layers": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "string"
+              },
+              "layer": {
+                "type": "string"
+              },
+              "geometry": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": {}
+          },
+          "filter": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/__schema0"
+              }
+            ]
+          },
+          "draw": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "$ref": "#/definitions/__schema0"
+            }
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "priority": {
+            "type": "number"
+          }
+        },
+        "additionalProperties": {}
+      }
+    }
+  },
+  "additionalProperties": {},
+  "definitions": {
+    "__schema0": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "items": {}
+        },
+        {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        }
+      ]
+    }
+  },
+  "$id": "https://unpkg.com/@vis.gl/tangram-renderer/tangram-style.schema.json",
+  "title": "Tangram scene style sheet"
+}

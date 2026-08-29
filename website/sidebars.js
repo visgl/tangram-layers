@@ -4,7 +4,7 @@ module.exports = {
       type: 'category',
       label: 'Overview',
       items: [
-        {type: 'doc', id: 'resources', label: 'Overview'},
+        {type: 'doc', id: 'README', label: 'Overview'},
         {type: 'doc', id: 'whats-new', label: "What's new"},
         {type: 'doc', id: 'upgrade-guide', label: 'Upgrade guide'}
       ]

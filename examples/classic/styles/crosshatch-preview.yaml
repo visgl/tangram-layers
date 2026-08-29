@@ -1,6 +1,7 @@
 scene:
   background:
-    color: '#343438'
+    # Let the Leaflet CARTO layer show through outside the preview geometry.
+    color: [0.204, 0.204, 0.22, 0]
 
 cameras:
   perspective:
@@ -19,6 +20,7 @@ styles:
           float diagonalB = step(0.46, fract(hatchPosition.x - hatchPosition.y));
           float hatch = max(diagonalA, diagonalB);
           color.rgb = mix(vec3(0.20, 0.20, 0.22), vec3(0.88, 0.84, 0.76), hatch);
+          color.a *= 0.42;
 
   building-crosshatch:
     mix: crosshatch

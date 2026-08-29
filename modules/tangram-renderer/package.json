@@ -10,7 +10,11 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./dist/*": "./dist/*"
+    "./dist/*": "./dist/*",
+    "./style-schema": {
+      "import": "./dist/style-schema.js"
+    },
+    "./tangram-style.schema.json": "./dist/tangram-style.schema.json"
   },
   "files": [
     "dist",
@@ -27,12 +31,14 @@
     "access": "public"
   },
   "scripts": {
-    "build": "yarn build:nomodule && yarn build:nomodule:minify && yarn build:module && yarn build:module:minify && yarn build:entry && yarn build:size",
+    "build": "yarn build:nomodule && yarn build:nomodule:minify && yarn build:module && yarn build:module:minify && yarn build:entry && yarn build:style-schema && yarn generate-style-schema && yarn build:size",
     "build:entry": "node scripts/write-package-entry.mjs",
     "build:module": "ESM=true rollup -c",
     "build:nomodule": "ESM=false rollup -c",
     "build:module:minify": "ESM=true MINIFY=true rollup -c",
     "build:nomodule:minify": "ESM=false MINIFY=true rollup -c",
+    "build:style-schema": "rollup src/styles/style-schema.js --file dist/style-schema.js --format esm --external zod",
+    "generate-style-schema": "node scripts/generate-style-schema.mjs",
     "build:size": "gzip dist/tangram.min.mjs -c | wc -c | awk '{kb=$1/1024; print kb}' OFMT='Module:\\t\\t%.0fk (min/gzip)' && gzip dist/tangram.min.js -c | wc -c | awk '{kb=$1/1024; print kb}' OFMT='No module:\\t%.0fk (min/gzip)'",
     "prepack": "yarn build",
     "watch": "ESM=\"${ESM:=true}\" SERVE=true rollup -cw",
@@ -73,6 +79,7 @@
     "jszip": "^3.10.1",
     "pbf": "3.1.0",
     "quickselect": "3.0.0",
-    "topojson-client": "https://github.com/tangrams/topojson-client.git#read-only"
+    "topojson-client": "https://github.com/tangrams/topojson-client.git#read-only",
+    "zod": "^4.1.12"
   }
 }

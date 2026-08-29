@@ -25,6 +25,7 @@ let classicPlaygroundMountId = 0;
 export default function ClassicPlayground() {
   const classicBaseUrl = useBaseUrl('/examples/classic/');
   const rendererUrl = useBaseUrl('/modules/tangram-renderer/dist/tangram.debug.mjs');
+  const styleSchemaUrl = useBaseUrl('/modules/tangram-renderer/dist/tangram-style.schema.json');
   const [errorMessage, setErrorMessage] = useState(null);
   const scriptElements = useRef([]);
   const stylesheetElements = useRef([]);
@@ -41,6 +42,8 @@ export default function ClassicPlayground() {
       )
     ];
     window.tangramClassicEmbedded = true;
+    window.tangramClassicBaseUrl = classicBaseUrl;
+    window.tangramStyleSchemaUrl = styleSchemaUrl;
 
     const scripts = [
       [`https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.2.0/leaflet.js`, 'text/javascript'],
@@ -92,11 +95,13 @@ export default function ClassicPlayground() {
       scriptElements.current = [];
       document.body.classList.remove('tangram-classic-embedded');
       delete window.tangramClassicEmbedded;
+      delete window.tangramClassicBaseUrl;
       delete window.tangramClassicCancelled;
       delete window.tangramClassicDestroy;
       delete window.tangramClassicSettingsCleanup;
+      delete window.tangramStyleSchemaUrl;
     };
-  }, [classicBaseUrl, rendererUrl]);
+  }, [classicBaseUrl, rendererUrl, styleSchemaUrl]);
 
   return (
     <div className="classic-playground-embed">

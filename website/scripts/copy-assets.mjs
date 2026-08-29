@@ -28,13 +28,14 @@ const websiteExampleRedirect = (target) => `<!doctype html>
   <head>
     <meta charset="utf-8">
     <meta name="robots" content="noindex, nofollow, noarchive">
-    <meta http-equiv="refresh" content="0;url=../${target}">
+    <meta http-equiv="refresh" content="0;url=../${target}.html">
     <title>Tangram layers example</title>
   </head>
   <body>
     <p>Opening the integrated example…</p>
     <script>
-      const targetUrl = new URL('../${target}', window.location.href);
+      const targetUrl = new URL(window.location.href);
+      targetUrl.pathname = targetUrl.pathname.replace(/\\/+$/, '') + '.html';
       targetUrl.search = window.location.search;
       targetUrl.hash = window.location.hash;
       window.location.replace(targetUrl.href);
@@ -43,8 +44,9 @@ const websiteExampleRedirect = (target) => `<!doctype html>
 </html>
 `;
 
-// Docusaurus owns the route without a trailing slash. Replace copied standalone
-// entrypoints with redirects so `/examples/*/` cannot bypass the embedded page.
+// Docusaurus owns the integrated `.html` route. Replace copied standalone
+// entrypoints with redirects so `/examples/*/` cannot bypass the embedded page
+// (and does not loop back to the same static directory).
 await writeFile(
   resolve(staticDirectory, 'examples/classic/index.html'),
   websiteExampleRedirect('classic')
@@ -56,6 +58,10 @@ await writeFile(
 await cp(
   resolve(repositoryDirectory, 'modules/tangram-renderer/dist/tangram.debug.mjs'),
   resolve(staticDirectory, 'modules/tangram-renderer/dist/tangram.debug.mjs')
+);
+await cp(
+  resolve(repositoryDirectory, 'modules/tangram-renderer/dist/tangram-style.schema.json'),
+  resolve(staticDirectory, 'modules/tangram-renderer/dist/tangram-style.schema.json')
 );
 await cp(
   resolve(repositoryDirectory, 'modules/tangram-renderer/dist/index.js'),

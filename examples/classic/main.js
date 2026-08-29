@@ -33,6 +33,15 @@
         }
     }
 
+    // The integrated Docusaurus route does not end with a slash, so resolve
+    // classic scene assets against the copied example directory explicitly.
+    if (typeof scene_url === 'string' && !/^[a-z][a-z\d+\-.]*:/i.test(scene_url)) {
+        scene_url = new URL(
+            scene_url,
+            new URL(window.tangramClassicBaseUrl || './', document.baseURI).href
+        ).href;
+    }
+
     // Create Tangram as a Leaflet layer
     var layer = Tangram.leafletLayer({
         scene: scene_url,
@@ -53,6 +62,34 @@
         zoomSnap: 0,
         keyboard: false
     });
+
+    // The local style previews intentionally contain only a small amount of
+    // GeoJSON. Give them a real CARTO context in the Leaflet pane underneath
+    // Tangram so the examples remain useful when the preview geometry does
+    // not cover the viewport.
+    var cartoBasemap;
+    function updateCartoBasemap(scene) {
+        var sceneName = typeof scene === 'string' ? scene : '';
+        var isDark = sceneName.indexOf('local-tron') > -1;
+        var tileUrl = isDark
+            ? 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+            : 'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+        if (cartoBasemap && cartoBasemap._url === tileUrl) {
+            return;
+        }
+        if (cartoBasemap) {
+            cartoBasemap.remove();
+        }
+        cartoBasemap = L.tileLayer(tileUrl, {
+            maxZoom: 22,
+            attribution:
+                '© <a href="https://carto.com/attributions" target="_blank">CARTO</a> ' +
+                '© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
+        });
+        cartoBasemap.addTo(map);
+    }
+
+    updateCartoBasemap(scene_url);
 
     // Useful events to subscribe to
     layer.scene.subscribe({
@@ -186,6 +223,7 @@
     window.map = map;
     window.layer = layer;
     window.scene = layer.scene;
+    window.tangramUpdateCartoBasemap = updateCartoBasemap;
 
     function initializeClassicDemo() {
         layer.addTo(map);
@@ -205,5 +243,7 @@
         window.map = null;
         window.layer = null;
         window.scene = null;
+        cartoBasemap = null;
+        window.tangramUpdateCartoBasemap = null;
     };
 }());

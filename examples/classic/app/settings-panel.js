@@ -1,10 +1,28 @@
-import {
+function configureMonacoWorkers() {
+  if (window.MonacoEnvironment) {
+    return;
+  }
+  const workerBaseUrl = new URL(
+    window.tangramClassicBaseUrl || './',
+    document.baseURI
+  ).href;
+  window.MonacoEnvironment = {
+    getWorker(_workerId, label) {
+      const workerName = label === 'json' ? 'monaco-json.worker.js' : 'monaco-editor.worker.js';
+      return new Worker(new URL(workerName, workerBaseUrl), {type: 'module'});
+    }
+  };
+}
+
+configureMonacoWorkers();
+
+const {
   AccordeonPanel,
   PanelManager,
   SettingsPanel,
   SidebarPanelContainer,
   TextEditorPanel
-} from 'https://esm.sh/@deck.gl-community/panels@9.4.0-alpha.2?bundle';
+} = await import('https://esm.sh/@deck.gl-community/panels@9.4.0-alpha.2?bundle');
 
 const SCENE_OPTIONS = [
   {label: 'Local streets', value: 'styles/local-basemap.yaml'},
@@ -24,17 +42,17 @@ const SCENE_OPTIONS = [
   {label: 'Pop-up Buildings', value: 'styles/popup-buildings.yaml'}
 ];
 
-const SETTINGS_SCHEMA = {
-  title: 'Scene settings',
+const EXAMPLE_SCHEMA = {
+  title: 'Example',
   sections: [
     {
-      id: 'scene',
-      name: 'Scene',
+      id: 'example',
+      name: 'Choose a scene',
       initiallyCollapsed: false,
       settings: [
         {
           name: 'scene',
-          label: 'Scene',
+          label: 'Select style',
           type: 'select',
           description: 'Historical styles use a keyless OpenMapTiles compatibility source.',
           options: SCENE_OPTIONS.map(option => ({
@@ -45,6 +63,19 @@ const SETTINGS_SCHEMA = {
           defaultValue: 'styles/local-basemap.yaml',
           persist: 'none'
         },
+      ]
+    }
+  ]
+};
+
+const SETTINGS_SCHEMA = {
+  title: 'Scene settings',
+  sections: [
+    {
+      id: 'scene-settings',
+      name: 'Camera and diagnostics',
+      initiallyCollapsed: false,
+      settings: [
         {
           name: 'camera',
           label: 'Camera',
@@ -76,6 +107,17 @@ function createSettings() {
   return {scene: sceneUrl, camera: 'perspective', debug: false};
 }
 
+function resolveSceneUrl(sceneUrl) {
+  if (typeof sceneUrl !== 'string' || /^[a-z][a-z\d+\-.]*:/i.test(sceneUrl)) {
+    return sceneUrl;
+  }
+  const classicBaseUrl = new URL(
+    window.tangramClassicBaseUrl || './',
+    document.baseURI
+  ).href;
+  return new URL(sceneUrl, classicBaseUrl).href;
+}
+
 function createPanelHost() {
   const host = document.createElement('div');
   host.className = 'classic-settings-host';
@@ -103,10 +145,12 @@ async function startSettingsPanel() {
   let selectedScene = settings.scene;
   let activeScene = settings.scene;
   const sceneSource = await fetchSceneSource(settings.scene);
+  const styleSchema = await fetchStyleSchema();
+  const editorSource = styleSchema ? formatSceneAsJson(sceneSource) : sceneSource;
   const panelManager = new PanelManager({parentElement: createPanelHost()});
-  const settingsPanel = new SettingsPanel({
-    id: 'tangram-settings',
-    schema: SETTINGS_SCHEMA,
+  const examplePanel = new SettingsPanel({
+    id: 'tangram-example-selector',
+    schema: EXAMPLE_SCHEMA,
     settings,
     onSettingsChange: nextSettings => {
       if (nextSettings.scene && nextSettings.scene !== selectedScene) {
@@ -114,12 +158,15 @@ async function startSettingsPanel() {
         sidebarPanel.setProps({title: 'Tangram playground'});
         settings.scene = nextSettings.scene;
         activeScene = nextSettings.scene;
-        window.scene.load(nextSettings.scene);
+        window.tangramUpdateCartoBasemap?.(nextSettings.scene);
+        window.scene.load(resolveSceneUrl(nextSettings.scene));
         fetchSceneSource(nextSettings.scene).then(nextSceneSource => {
           if (activeScene === nextSettings.scene) {
             editorPanel.setProps({
-              title: 'Scene YAML (edit to apply)',
-              defaultValue: nextSceneSource
+              title: styleSchema ? 'Scene JSON (schema validated)' : 'Scene YAML (edit to apply)',
+              language: styleSchema ? 'json' : 'plaintext',
+              jsonSchema: styleSchema || undefined,
+              defaultValue: styleSchema ? formatSceneAsJson(nextSceneSource) : nextSceneSource
             });
           }
         });
@@ -127,6 +174,13 @@ async function startSettingsPanel() {
         nextUrl.searchParams.set('scene', nextSettings.scene);
         window.history.replaceState(null, '', nextUrl);
       }
+    }
+  });
+  const settingsPanel = new SettingsPanel({
+    id: 'tangram-settings',
+    schema: SETTINGS_SCHEMA,
+    settings,
+    onSettingsChange: nextSettings => {
       if (nextSettings.camera && nextSettings.camera !== settings.camera) {
         settings.camera = nextSettings.camera;
         if (window.scene.config?.cameras?.[nextSettings.camera]) {
@@ -142,15 +196,16 @@ async function startSettingsPanel() {
 
   const editorPanel = new TextEditorPanel({
     id: 'tangram-scene-editor',
-    title: 'Scene YAML (edit to apply)',
-    language: 'plaintext',
-    defaultValue: sceneSource,
+    title: styleSchema ? 'Scene JSON (schema validated)' : 'Scene YAML (edit to apply)',
+    language: styleSchema ? 'json' : 'plaintext',
+    jsonSchema: styleSchema || undefined,
+    defaultValue: editorSource,
     onValueChange: applyEditedScene
   });
   const accordionPanel = new AccordeonPanel({
     id: 'tangram-playground-panels',
     title: 'Playground panels',
-    panels: [settingsPanel, editorPanel]
+    panels: [examplePanel, settingsPanel, editorPanel]
   });
   const sidebarPanel = new SidebarPanelContainer({
     id: 'tangram-playground-sidebar',
@@ -204,11 +259,15 @@ async function startSettingsPanel() {
     applyTimer = window.setTimeout(() => {
       try {
         const config = window.Tangram.debug.yaml.safeLoad(source);
-        const sceneUrl = new URL(activeScene, window.location.href);
+        const sceneUrl = new URL(resolveSceneUrl(activeScene), window.location.href);
         window.scene.load(config, {base_path: new URL('.', sceneUrl).href});
-        editorPanel.setProps({title: 'Scene YAML (applied)'});
+        editorPanel.setProps({
+          title: styleSchema ? 'Scene JSON (applied)' : 'Scene YAML (applied)'
+        });
       } catch (error) {
-        editorPanel.setProps({title: `Scene YAML (error: ${error.message})`});
+        editorPanel.setProps({
+          title: `${styleSchema ? 'Scene JSON' : 'Scene YAML'} (error: ${error.message})`
+        });
       }
     }, 400);
   }
@@ -224,13 +283,38 @@ async function startSettingsPanel() {
 
 async function fetchSceneSource(sceneUrl) {
   try {
-    const response = await fetch(new URL(sceneUrl, window.location.href));
+    const response = await fetch(resolveSceneUrl(sceneUrl));
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
     return await response.text();
   } catch (error) {
     return `# Unable to load scene YAML: ${error.message}`;
+  }
+}
+
+async function fetchStyleSchema() {
+  const schemaUrl =
+    window.tangramStyleSchemaUrl ||
+    new URL('../../modules/tangram-renderer/dist/tangram-style.schema.json', document.baseURI).href;
+  try {
+    const response = await fetch(schemaUrl);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.warn(`Unable to load Tangram style schema: ${error.message}`);
+    return null;
+  }
+}
+
+function formatSceneAsJson(source) {
+  try {
+    const config = window.Tangram.debug.yaml.safeLoad(source);
+    return JSON.stringify(config, null, 2);
+  } catch {
+    return source;
   }
 }
 

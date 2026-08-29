@@ -1,6 +1,7 @@
 scene:
   background:
-    color: '#060b18'
+    # Let the Leaflet CARTO layer show through outside the preview geometry.
+    color: [0.024, 0.043, 0.094, 0]
 
 cameras:
   perspective:
@@ -19,7 +20,9 @@ layers:
     draw:
       polygons:
         order: 0
-        color: '#101b31'
+        # Keep the preview geometry translucent so the real CARTO basemap
+        # remains visible underneath it.
+        color: [0.063, 0.106, 0.192, 0.28]
 
   buildings:
     data: {source: preview}
@@ -27,7 +30,7 @@ layers:
     draw:
       polygons:
         order: 1
-        color: '#172944'
+        color: [0.09, 0.161, 0.267, 0.68]
         extrude: true
 
   roads:
@@ -37,6 +40,7 @@ layers:
       lines:
         order: 2
         color: '#27d7ff'
+        alpha: 0.9
         width: 8px
         outline:
           color: '#8c3dff'

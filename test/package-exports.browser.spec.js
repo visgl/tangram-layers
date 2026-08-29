@@ -10,6 +10,8 @@ import Tangram, {
   Renderer,
   Scene
 } from '@vis.gl/tangram-renderer';
+import {TangramStyleSheetSchema} from '@vis.gl/tangram-renderer/style-schema';
+import tangramStyleJsonSchema from '@vis.gl/tangram-renderer/tangram-style.schema.json';
 
 describe('published package entrypoints', () => {
   it('exports the renderer compatibility surface', () => {
@@ -24,5 +26,13 @@ describe('published package entrypoints', () => {
     expect(TangramLayer).toBe(NamedTangramLayer);
     expect(createTangramLayerClass).toBeTypeOf('function');
     expect(getExternalCameraFrame).toBeTypeOf('function');
+  });
+
+  it('exports the Zod style schema and generated JSON Schema', () => {
+    expect(TangramStyleSheetSchema.safeParse({styles: {roads: {base: 'lines'}}}).success).toBe(
+      true
+    );
+    expect(tangramStyleJsonSchema.$schema).toBe('http://json-schema.org/draft-07/schema#');
+    expect(tangramStyleJsonSchema.$id).toContain('tangram-style.schema.json');
   });
 });
