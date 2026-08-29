@@ -1,0 +1,59 @@
+# Bundling a small deck.gl basemap app
+
+The deck example is a useful baseline for understanding the cost of adding a
+Tangram basemap to a small deck.gl application. The application source is
+[`examples/deck/app.js`](https://github.com/visgl/tangram-layers/blob/master/examples/deck/app.js).
+It creates a deck instance, adds `TangramLayer`, and renders a small overlay.
+
+## Current reference footprint
+
+Run `yarn build` followed by `yarn bundle-size` to measure the checked-out
+artifacts. The current reference build reports:
+
+| Asset | Raw | Gzip |
+| --- | ---: | ---: |
+| Deck example source | 20.8 KiB | 5.0 KiB |
+| `@vis.gl/tangram-layers` package entry | 14.9 KiB | 4.1 KiB |
+| Tangram renderer package shim | 0.3 KiB | 0.2 KiB |
+| Minified Tangram renderer ESM | 606.3 KiB | 176.9 KiB |
+| **TangramLayer + minified renderer** | **621.2 KiB** | **181.0 KiB** |
+
+The combined row is an additive package-artifact estimate, not a promise about a
+particular webpack, Rollup, or Vite output. It excludes deck.gl, luma.gl, the
+WebGPU adapter, browser polyfills, scene YAML, fonts, sprites, and downloaded
+tiles. Those dependencies and assets should be measured in the host application
+using its production bundler.
+
+The package root currently points at the debug ESM renderer entry so that the
+published-style API remains easy to inspect during this experimental phase.
+Production applications should use their bundler's minification and tree
+shaking, and should verify that the worker bundle is copied to the URL expected
+by the renderer. The renderer's `prepack` hook always rebuilds all browser and
+worker artifacts before publishing.
+
+## Minimal application shape
+
+```js
+import {Deck} from '@deck.gl/core';
+import {TangramLayer} from '@vis.gl/tangram-layers';
+
+new Deck({
+  parent: document.getElementById('map'),
+  initialViewState: {longitude: -74, latitude: 40.7, zoom: 12},
+  controller: true,
+  layers: [new TangramLayer({id: 'basemap', scene: sceneYaml})]
+});
+```
+
+For a repeatable local report:
+
+```sh
+yarn install
+yarn build
+yarn bundle-size
+```
+
+The report intentionally measures checked-in package artifacts rather than
+guessing at a host bundler's output. This keeps changes to renderer size visible
+in review while leaving deck.gl applications free to choose their own build
+pipeline.

@@ -25,6 +25,7 @@
     "website:deploy": "yarn workspace tangram-layers-website deploy",
     "build": "yarn clean && yarn workspace @vis.gl/tangram-renderer build && yarn workspace @vis.gl/tangram-layers build && yarn workspace @vis.gl/tangram-classic build",
     "build:packages": "yarn build",
+    "bundle-size": "node scripts/report-bundle-size.mjs",
     "lint": "ocular-lint && yarn workspace @vis.gl/tangram-renderer lint",
     "lint:fix": "ocular-lint fix && yarn workspace @vis.gl/tangram-renderer lint",
     "test": "yarn lint && yarn test-run && yarn test-node && yarn test-headless-legacy",
