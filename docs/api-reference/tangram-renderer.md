@@ -27,3 +27,17 @@ host-integration boundary:
 The renderer accepts an externally owned luma.gl device through its renderer
 options. Applications should use the device and render pass supplied by their
 host rather than reading a backend handle.
+
+## Style schema entrypoint
+
+Scene documents can be validated with the optional schema entrypoint:
+
+```js
+import {TangramStyleSheetSchema} from '@vis.gl/tangram-renderer/style-schema';
+
+const parsedScene = TangramStyleSheetSchema.parse(sceneDocument);
+```
+
+The generated JSON Schema is available at
+`@vis.gl/tangram-renderer/tangram-style.schema.json` for Monaco, YAML language
+servers, and other editor integrations.

@@ -73,6 +73,22 @@ layers:
 - `scene` contains global settings such as background color, camera behavior,
   and texture declarations.
 
+## Validation and editor tooling
+
+The renderer publishes a Zod schema for runtime validation and a generated
+Draft 7 JSON Schema for editors and language servers:
+
+```js
+import {TangramStyleSheetSchema} from '@vis.gl/tangram-renderer/style-schema';
+import tangramStyleJsonSchema from '@vis.gl/tangram-renderer/tangram-style.schema.json';
+
+const result = TangramStyleSheetSchema.safeParse(sceneDocument);
+console.log(tangramStyleJsonSchema.$id);
+```
+
+The schema accepts the standard scene sections while preserving Tangram's
+open-ended style, shader, and renderer-specific properties.
+
 ## Filters and zoom stops
 
 Filters and zoom-dependent values keep a style readable at every scale. The
