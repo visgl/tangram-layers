@@ -196,6 +196,7 @@ async function startSettingsPanel() {
 
   const editorPanel = new TextEditorPanel({
     id: 'tangram-scene-editor',
+    className: 'tangram-scene-editor',
     title: styleSchema ? 'Scene JSON (schema validated)' : 'Scene YAML (edit to apply)',
     language: styleSchema ? 'json' : 'plaintext',
     jsonSchema: styleSchema || undefined,
@@ -223,14 +224,13 @@ async function startSettingsPanel() {
   });
 
   panelManager.setProps({components: [sidebarPanel]});
-  // AccordeonPanel intentionally starts with all sections collapsed. Open the
-  // settings section for the playground's first visit; the user can collapse
-  // it to reach the scene editor or close the sidebar with its handle.
-  const firstAccordionButton = panelManager.parentElement.querySelector(
+  // AccordeonPanel intentionally starts with all sections collapsed. Keep the
+  // style selector visible and let the editor consume the remaining height.
+  const accordionButtons = panelManager.parentElement.querySelectorAll(
     '[data-sidebar-shell] section button'
   );
-  if (firstAccordionButton) {
-    firstAccordionButton.dispatchEvent(new PointerEvent('pointerdown', {bubbles: true}));
+  for (const button of [accordionButtons[0], accordionButtons[accordionButtons.length - 1]]) {
+    button?.dispatchEvent(new PointerEvent('pointerdown', {bubbles: true}));
   }
   // PanelManager normally receives this notification from Deck's redraw
   // lifecycle. The standalone classic example has no Deck instance, so make
