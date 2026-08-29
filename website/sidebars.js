@@ -20,11 +20,31 @@ module.exports = {
       type: 'category',
       label: 'API reference',
       items: [
-        'api-reference/tangram-renderer',
-        'api-reference/styling',
-        'api-reference/renderer',
-        'api-reference/tangram-layer',
-        'api-reference/tangram-layers'
+        {
+          type: 'category',
+          label: '@vis.gl/tangram-renderer',
+          items: [
+            {
+              type: 'doc',
+              id: 'api-reference/tangram-renderer',
+              label: 'Package overview'
+            },
+            {type: 'doc', id: 'api-reference/renderer', label: 'Renderer API'},
+            {type: 'doc', id: 'api-reference/styling', label: 'Styling reference'}
+          ]
+        },
+        {
+          type: 'category',
+          label: '@vis.gl/tangram-layers',
+          items: [
+            {
+              type: 'doc',
+              id: 'api-reference/tangram-layers',
+              label: 'Package overview'
+            },
+            {type: 'doc', id: 'api-reference/tangram-layer', label: 'TangramLayer API'}
+          ]
+        }
       ]
     },
     {

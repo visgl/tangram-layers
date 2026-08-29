@@ -23,9 +23,16 @@ website.
 
 ## API reference
 
-- [Renderer reference](api-reference/tangram-renderer.md) — `@vis.gl/tangram-renderer` exports.
+### `@vis.gl/tangram-renderer`
+
+- [Package overview](api-reference/tangram-renderer.md) — renderer exports.
+- [Renderer API](api-reference/renderer.md) — host-device integration.
 - [Styling reference](api-reference/styling.md) — scene, source, layer, draw, and filter syntax.
-- [TangramLayer reference](api-reference/tangram-layers.md) — `@vis.gl/tangram-layers` exports.
+
+### `@vis.gl/tangram-layers`
+
+- [Package overview](api-reference/tangram-layers.md) — deck.gl adapter exports.
+- [TangramLayer API](api-reference/tangram-layer.md) — layer properties and lifecycle.
 
 ## Examples and project information
 
