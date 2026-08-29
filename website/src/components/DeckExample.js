@@ -99,6 +99,15 @@ export default function DeckExample() {
               <option value="tronNextzen">Original TRON 2.0 on Nextzen</option>
             </select>
           </label>
+          <label className="control">
+            <span>deck.gl view</span>
+            <select id="view-type" defaultValue="mapPerspective">
+              <option value="mapFlat">MapView — flat</option>
+              <option value="mapPerspective">MapView — perspective</option>
+              <option value="globe">GlobeView — renderer adapter needed</option>
+              <option value="firstPerson">FirstPersonView — renderer adapter needed</option>
+            </select>
+          </label>
           <label className="control checkbox-control">
             <input id="basemap-visible" type="checkbox" defaultChecked />
             Show TangramBasemapLayer
