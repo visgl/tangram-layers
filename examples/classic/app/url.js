@@ -28,11 +28,16 @@
         }, update_url_throttle);
     }
 
-    map.on('move', updateURL);
-    map.setView(map_start_location.slice(1, 3), map_start_location[0]);
+    function initializeUrlSync() {
+        map.on('move', updateURL);
+        map.setView(map_start_location.slice(1, 3), map_start_location[0]);
+    }
 
-    layer.on('init', function(){
+    function updateInitialView(){
         updateURL();
         map.setView(map_start_location.slice(1, 3), map_start_location[0]);
-    });
+    }
+
+    initializeUrlSync();
+    layer.on('init', updateInitialView);
 })();

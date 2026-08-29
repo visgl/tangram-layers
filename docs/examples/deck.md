@@ -1,8 +1,10 @@
 # Deck.gl basemap example
 
 The live integration example is built from the
-[`examples/deck` source directory](https://github.com/visgl/tangram-layers/tree/ib/monorepo-layout/examples/deck)
-and staged into the documentation site during the website build.
+[`examples/deck` source directory](https://github.com/visgl/tangram-layers/tree/master/examples/deck)
+and staged into the documentation site during the website build. It is
+embedded in the website so the Examples sidebar remains available while you
+explore it.
 
 <div>
   <a className="button button--primary button--lg" href="/tangram-layers/examples/deck/">

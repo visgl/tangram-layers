@@ -1,17 +1,15 @@
-import {useEffect} from 'react';
-import useBaseUrl from '@docusaurus/useBaseUrl';
+import ExamplePage from '../../components/ExamplePage';
+import ClassicPlayground from '../../components/ClassicPlayground';
 
-export default function ClassicExample() {
-  const classicExampleUrl = useBaseUrl('/examples/classic/');
-
-  useEffect(() => {
-    window.location.replace(classicExampleUrl);
-  }, [classicExampleUrl]);
-
+export default function ClassicExamplePage() {
   return (
-    <main style={{padding: '3rem'}}>
-      <p>Opening the classic Tangram example…</p>
-      <a href={classicExampleUrl}>Open the classic Tangram example</a>
-    </main>
+    <ExamplePage
+      title="Classic Tangram playground"
+      description="Edit and explore Tangram scene YAML in the classic playground."
+    >
+      <h1>Classic Tangram playground</h1>
+      <p>Edit scene YAML and explore the original Tangram styling model.</p>
+      <ClassicPlayground />
+    </ExamplePage>
   );
 }

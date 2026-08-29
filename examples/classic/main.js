@@ -5,6 +5,10 @@
 */
 
 (function () {
+    if (window.tangramClassicCancelled) {
+        return;
+    }
+
     var scene_url = 'styles/local-basemap.yaml';
     var nextzen_scenes = [
         'scene.yaml',
@@ -183,8 +187,23 @@
     window.layer = layer;
     window.scene = layer.scene;
 
-    window.addEventListener('load', function() {
+    function initializeClassicDemo() {
         layer.addTo(map);
         layer.bringToFront();
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        window.addEventListener('load', initializeClassicDemo, {once: true});
+    } else {
+        initializeClassicDemo();
+    }
+
+    window.tangramClassicDestroy = function destroyClassicDemo() {
+        if (window.map) {
+            window.map.remove();
+        }
+        window.map = null;
+        window.layer = null;
+        window.scene = null;
+    };
 }());

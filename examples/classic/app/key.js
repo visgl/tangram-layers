@@ -4,7 +4,7 @@
         api_key = new URLSearchParams(window.location.search).get('api_key') || '';
     }
 
-    window.addEventListener('load', function () {
+    function initializeApiKey() {
         // Inject a caller-provided API key on load or update. Never bundle a
         // shared key in the published playground.
         layer.scene.subscribe({
@@ -15,7 +15,9 @@
                 injectAPIKey(msg.config);
             }
         });
-    });
+    }
+
+    initializeApiKey();
 
     function injectAPIKey(config) {
         if (!api_key || !config) {

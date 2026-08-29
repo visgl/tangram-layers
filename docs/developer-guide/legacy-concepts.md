@@ -1,8 +1,8 @@
-# Legacy Tangram concepts
+# Tangram concepts
 
-This page distills the parts of the original Tangram tutorials that are most
-useful when moving a scene into the current packages. For the complete legacy
-reference, see the [Tangram documentation](https://tangrams.readthedocs.io/en/latest/).
+This page distills the Tangram scene concepts that are most useful when moving
+a style into the current packages. For the complete reference, see the
+[Tangram documentation](https://tangrams.readthedocs.io/en/latest/).
 
 ## A scene is data, style, and behavior
 
@@ -14,7 +14,7 @@ Tangram scenes are YAML documents. A scene usually contains:
 - `styles`, `textures`, and `fonts` used by those draw styles; and
 - `cameras` and a `scene.background` for the view.
 
-The [classic example scene](https://github.com/visgl/tangram-layers/blob/ib/monorepo-layout/examples/classic/scene.yaml)
+The [classic example scene](https://github.com/visgl/tangram-layers/blob/master/examples/classic/scene.yaml)
 is a compact reference that exercises most of these sections.
 
 ## Sources and layers

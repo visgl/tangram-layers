@@ -2,40 +2,62 @@ module.exports = {
   docsSidebar: [
     {
       type: 'category',
-      label: 'Getting started',
-      items: ['get-started/getting-started']
+      label: 'Overview',
+      items: [
+        {type: 'doc', id: 'resources', label: 'Overview'},
+        {type: 'doc', id: 'whats-new', label: "What's new"},
+        {type: 'doc', id: 'upgrade-guide', label: 'Upgrade guide'}
+      ]
     },
     {
       type: 'category',
       label: 'Developer guide',
       items: [
+        'get-started/getting-started',
         'developer-guide/architecture',
-        'developer-guide/development',
         'developer-guide/bundling',
-        'developer-guide/legacy-concepts',
-        'developer-guide/monorepo',
-        'developer-guide/release'
+        {type: 'doc', id: 'developer-guide/legacy-concepts', label: 'Tangram concepts'}
+      ]
+    },
+    {
+      type: 'category',
+      label: 'Contributor guide',
+      items: [
+        'contributor-guide/development',
+        'contributor-guide/monorepo',
+        'contributor-guide/release'
       ]
     },
     {
       type: 'category',
       label: 'API reference',
       items: [
-        'api-reference/tangram-renderer',
-        'api-reference/renderer',
-        'api-reference/tangram-layer',
-        'api-reference/tangram-layers'
+        {
+          type: 'category',
+          label: '@vis.gl/tangram-renderer',
+          items: [
+            {
+              type: 'doc',
+              id: 'api-reference/tangram-renderer',
+              label: 'Package overview'
+            },
+            {type: 'doc', id: 'api-reference/renderer', label: 'Renderer API'},
+            {type: 'doc', id: 'api-reference/styling', label: 'Styling reference'}
+          ]
+        },
+        {
+          type: 'category',
+          label: '@vis.gl/tangram-layers',
+          items: [
+            {
+              type: 'doc',
+              id: 'api-reference/tangram-layers',
+              label: 'Package overview'
+            },
+            {type: 'doc', id: 'api-reference/tangram-layer', label: 'TangramLayer API'}
+          ]
+        }
       ]
-    },
-    {
-      type: 'category',
-      label: 'Examples',
-      items: ['examples/index', 'examples/deck', 'examples/classic']
-    },
-    {
-      type: 'category',
-      label: 'Project information',
-      items: ['resources', 'upgrade-guide', 'whats-new']
     }
   ],
   examplesSidebar: [

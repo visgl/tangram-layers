@@ -6,7 +6,7 @@ const repositoryDirectory = resolve(new URL('..', import.meta.url).pathname);
 const files = [
   ['Deck example source', 'examples/deck/app.js'],
   ['TangramLayer package entry', 'modules/tangram-layers/dist/index.js'],
-  ['Tangram renderer package shim', 'modules/tangram-renderer/dist/index.js'],
+  ['@vis.gl/tangram-renderer package entry', 'modules/tangram-renderer/dist/index.js'],
   ['Tangram renderer minified ESM', 'modules/tangram-renderer/dist/tangram.min.mjs'],
   ['Tangram renderer debug ESM', 'modules/tangram-renderer/dist/tangram.debug.mjs']
 ];
@@ -33,5 +33,5 @@ for (const measurement of [...measurements, combined]) {
 console.log('\nThe combined row is an additive upper bound; a production bundler may deduplicate and tree-shake shared dependencies.');
 
 function formatBytes(bytes) {
-  return `${(bytes / 1024).toFixed(1)} KiB`;
+  return `${(bytes / 1000).toFixed(1)} KB`;
 }

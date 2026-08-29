@@ -79,15 +79,18 @@ function createSettings() {
 function createPanelHost() {
   const host = document.createElement('div');
   host.className = 'classic-settings-host';
+  const parentElement = window.tangramClassicEmbedded
+    ? document.getElementById('classic-playground-frame')
+    : document.body;
   // The classic map is made entirely from absolutely positioned elements, so
   // the body has no normal-flow height for percentage sizing to resolve
   // against. Use the viewport as the panel host's containing block and let
   // PanelManager size its placement containers from it.
-  host.style.position = 'fixed';
+  host.style.position = window.tangramClassicEmbedded ? 'absolute' : 'fixed';
   host.style.inset = '0';
-  host.style.width = '100vw';
-  host.style.height = '100vh';
-  document.body.appendChild(host);
+  host.style.width = window.tangramClassicEmbedded ? '100%' : '100vw';
+  host.style.height = window.tangramClassicEmbedded ? '100%' : '100vh';
+  parentElement.appendChild(host);
   return host;
 }
 
@@ -112,6 +115,17 @@ async function startSettingsPanel() {
         settings.scene = nextSettings.scene;
         activeScene = nextSettings.scene;
         window.scene.load(nextSettings.scene);
+        fetchSceneSource(nextSettings.scene).then(nextSceneSource => {
+          if (activeScene === nextSettings.scene) {
+            editorPanel.setProps({
+              title: 'Scene YAML (edit to apply)',
+              defaultValue: nextSceneSource
+            });
+          }
+        });
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.set('scene', nextSettings.scene);
+        window.history.replaceState(null, '', nextUrl);
       }
       if (nextSettings.camera && nextSettings.camera !== settings.camera) {
         settings.camera = nextSettings.camera;
@@ -198,6 +212,14 @@ async function startSettingsPanel() {
       }
     }, 400);
   }
+
+  window.tangramClassicSettingsCleanup = () => {
+    window.clearTimeout(applyTimer);
+    window.removeEventListener('resize', updatePanelLayout);
+    panelManager.finalize();
+    host.remove();
+    window.tangramClassicSettingsCleanup = null;
+  };
 }
 
 async function fetchSceneSource(sceneUrl) {
@@ -212,4 +234,8 @@ async function fetchSceneSource(sceneUrl) {
   }
 }
 
-window.addEventListener('load', startSettingsPanel);
+if (document.readyState === 'loading') {
+  window.addEventListener('load', startSettingsPanel, {once: true});
+} else {
+  startSettingsPanel();
+}

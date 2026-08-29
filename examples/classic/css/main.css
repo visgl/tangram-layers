@@ -1,15 +1,12 @@
-body {
+.tangram-classic-standalone {
     margin: 0px;
     border: 0px;
     padding: 0px;
     height: 100%;
 }
 
-html {
-    height: 100%;
-}
-
-#map {
+.tangram-classic-standalone #map,
+.tangram-classic-embedded #map {
     background: rgba(0, 0, 0, 0);
     position: absolute;
     width: 100%;
