@@ -89,6 +89,12 @@ console.log(tangramStyleJsonSchema.$id);
 The schema accepts the standard scene sections while preserving Tangram's
 open-ended style, shader, and renderer-specific properties.
 
+The website playground passes this schema to the deck.gl-community
+`TextEditorPanel`, enabling Monaco diagnostics and completion for the editable
+JSON scene document. The renderer still accepts the original YAML scene files;
+the editor converts the selected YAML source to JSON for schema-aware editing
+and sends the edited object back through Tangram's normal scene loader.
+
 ## Filters and zoom stops
 
 Filters and zoom-dependent values keep a style readable at every scale. The

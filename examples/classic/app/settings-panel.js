@@ -103,6 +103,8 @@ async function startSettingsPanel() {
   let selectedScene = settings.scene;
   let activeScene = settings.scene;
   const sceneSource = await fetchSceneSource(settings.scene);
+  const styleSchema = await fetchStyleSchema();
+  const editorSource = styleSchema ? formatSceneAsJson(sceneSource) : sceneSource;
   const panelManager = new PanelManager({parentElement: createPanelHost()});
   const settingsPanel = new SettingsPanel({
     id: 'tangram-settings',
@@ -118,8 +120,10 @@ async function startSettingsPanel() {
         fetchSceneSource(nextSettings.scene).then(nextSceneSource => {
           if (activeScene === nextSettings.scene) {
             editorPanel.setProps({
-              title: 'Scene YAML (edit to apply)',
-              defaultValue: nextSceneSource
+              title: styleSchema ? 'Scene JSON (schema validated)' : 'Scene YAML (edit to apply)',
+              language: styleSchema ? 'json' : 'plaintext',
+              jsonSchema: styleSchema || undefined,
+              defaultValue: styleSchema ? formatSceneAsJson(nextSceneSource) : nextSceneSource
             });
           }
         });
@@ -142,9 +146,10 @@ async function startSettingsPanel() {
 
   const editorPanel = new TextEditorPanel({
     id: 'tangram-scene-editor',
-    title: 'Scene YAML (edit to apply)',
-    language: 'plaintext',
-    defaultValue: sceneSource,
+    title: styleSchema ? 'Scene JSON (schema validated)' : 'Scene YAML (edit to apply)',
+    language: styleSchema ? 'json' : 'plaintext',
+    jsonSchema: styleSchema || undefined,
+    defaultValue: editorSource,
     onValueChange: applyEditedScene
   });
   const accordionPanel = new AccordeonPanel({
@@ -206,9 +211,13 @@ async function startSettingsPanel() {
         const config = window.Tangram.debug.yaml.safeLoad(source);
         const sceneUrl = new URL(activeScene, window.location.href);
         window.scene.load(config, {base_path: new URL('.', sceneUrl).href});
-        editorPanel.setProps({title: 'Scene YAML (applied)'});
+        editorPanel.setProps({
+          title: styleSchema ? 'Scene JSON (applied)' : 'Scene YAML (applied)'
+        });
       } catch (error) {
-        editorPanel.setProps({title: `Scene YAML (error: ${error.message})`});
+        editorPanel.setProps({
+          title: `${styleSchema ? 'Scene JSON' : 'Scene YAML'} (error: ${error.message})`
+        });
       }
     }, 400);
   }
@@ -231,6 +240,31 @@ async function fetchSceneSource(sceneUrl) {
     return await response.text();
   } catch (error) {
     return `# Unable to load scene YAML: ${error.message}`;
+  }
+}
+
+async function fetchStyleSchema() {
+  const schemaUrl =
+    window.tangramStyleSchemaUrl ||
+    new URL('../../modules/tangram-renderer/dist/tangram-style.schema.json', document.baseURI).href;
+  try {
+    const response = await fetch(schemaUrl);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.warn(`Unable to load Tangram style schema: ${error.message}`);
+    return null;
+  }
+}
+
+function formatSceneAsJson(source) {
+  try {
+    const config = window.Tangram.debug.yaml.safeLoad(source);
+    return JSON.stringify(config, null, 2);
+  } catch {
+    return source;
   }
 }
 
