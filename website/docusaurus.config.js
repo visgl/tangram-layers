@@ -8,6 +8,7 @@ const config = {
   tagline: 'Tangram rendering and deck.gl basemap integration',
   url: 'https://visgl.github.io',
   baseUrl: '/tangram-layers/',
+  favicon: '/favicon.png',
   organizationName: 'visgl',
   projectName: 'tangram-layers',
   onBrokenLinks: 'warn',
