@@ -1,0 +1,52 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {"kind": "land"},
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-74.025, 40.69], [-73.985, 40.69], [-73.985, 40.725], [-74.025, 40.725], [-74.025, 40.69]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {"kind": "building"},
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-74.016, 40.700], [-74.011, 40.700], [-74.011, 40.711], [-74.016, 40.711], [-74.016, 40.700]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {"kind": "building"},
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-74.007, 40.701], [-74.001, 40.701], [-74.001, 40.715], [-74.007, 40.715], [-74.007, 40.701]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {"kind": "building"},
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-73.997, 40.697], [-73.991, 40.697], [-73.991, 40.708], [-73.997, 40.708], [-73.997, 40.697]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {"kind": "road"},
+      "geometry": {"type": "LineString", "coordinates": [[-74.023, 40.697], [-73.987, 40.721]]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"kind": "road"},
+      "geometry": {"type": "LineString", "coordinates": [[-74.020, 40.721], [-73.988, 40.696]]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"kind": "road"},
+      "geometry": {"type": "LineString", "coordinates": [[-74.016, 40.69], [-74.016, 40.725]]}
+    }
+  ]
+}

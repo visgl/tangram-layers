@@ -1,0 +1,43 @@
+scene:
+  background:
+    color: '#060b18'
+
+cameras:
+  perspective:
+    type: perspective
+    active: true
+
+sources:
+  preview:
+    type: GeoJSON
+    url: ../data/crosshatch-preview.geojson
+
+layers:
+  land:
+    data: {source: preview}
+    filter: {kind: land}
+    draw:
+      polygons:
+        order: 0
+        color: '#101b31'
+
+  buildings:
+    data: {source: preview}
+    filter: {kind: building}
+    draw:
+      polygons:
+        order: 1
+        color: '#172944'
+        extrude: true
+
+  roads:
+    data: {source: preview}
+    filter: {kind: road}
+    draw:
+      lines:
+        order: 2
+        color: '#27d7ff'
+        width: 8px
+        outline:
+          color: '#8c3dff'
+          width: 2px

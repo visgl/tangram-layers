@@ -1,0 +1,215 @@
+import {
+  AccordeonPanel,
+  PanelManager,
+  SettingsPanel,
+  SidebarPanelContainer,
+  TextEditorPanel
+} from 'https://esm.sh/@deck.gl-community/panels@9.4.0-alpha.2?bundle';
+
+const SCENE_OPTIONS = [
+  {label: 'Local streets', value: 'styles/local-basemap.yaml'},
+  {label: 'TRON preview', value: 'styles/local-tron.yaml'},
+  {label: 'Light raster basemap', value: 'styles/open-light-raster.yaml'},
+  {label: 'Street map raster', value: 'styles/open-streets-raster.yaml'},
+  {label: 'Albers projection morph', value: 'styles/projection-morph.yaml'},
+  {label: 'Crosshatch preview', value: 'styles/crosshatch-preview.yaml'},
+  {label: 'Simple', value: 'styles/simple.yaml'},
+  {label: 'Bubble Wrap', value: 'styles/bubble-wrap.yaml'},
+  {label: 'Walkabout', value: 'styles/walkabout.yaml'},
+  {label: 'Refill', value: 'styles/refill.yaml'},
+  {label: 'Refill Blue Terrain', value: 'styles/refill-blue-terrain.yaml'},
+  {label: 'TRON', value: 'styles/tron.yaml'},
+  {label: 'Crosshatch', value: 'styles/crosshatch.yaml'},
+  {label: 'Rainbow Buildings', value: 'styles/rainbow-buildings.yaml'},
+  {label: 'Pop-up Buildings', value: 'styles/popup-buildings.yaml'}
+];
+
+const SETTINGS_SCHEMA = {
+  title: 'Scene settings',
+  sections: [
+    {
+      id: 'scene',
+      name: 'Scene',
+      initiallyCollapsed: false,
+      settings: [
+        {
+          name: 'scene',
+          label: 'Scene',
+          type: 'select',
+          description: 'Historical styles use a keyless OpenMapTiles compatibility source.',
+          options: SCENE_OPTIONS.map(option => ({
+            label: option.label,
+            value: option.value,
+            description: 'Runs without a Nextzen key.'
+          })),
+          defaultValue: 'styles/local-basemap.yaml',
+          persist: 'none'
+        },
+        {
+          name: 'camera',
+          label: 'Camera',
+          type: 'select',
+          options: [
+            {label: 'Perspective', value: 'perspective'},
+            {label: 'Flat', value: 'flat'},
+            {label: 'Isometric', value: 'isometric'}
+          ],
+          defaultValue: 'perspective',
+          persist: 'none'
+        },
+        {
+          name: 'debug',
+          label: 'Debug inspection',
+          type: 'boolean',
+          defaultValue: false,
+          persist: 'none'
+        }
+      ]
+    }
+  ]
+};
+
+function createSettings() {
+  const sceneUrl = window.tangramRequestedSceneWithoutKey
+    ? 'styles/local-basemap.yaml'
+    : new URLSearchParams(window.location.search).get('scene') || 'styles/local-basemap.yaml';
+  return {scene: sceneUrl, camera: 'perspective', debug: false};
+}
+
+function createPanelHost() {
+  const host = document.createElement('div');
+  host.className = 'classic-settings-host';
+  // The classic map is made entirely from absolutely positioned elements, so
+  // the body has no normal-flow height for percentage sizing to resolve
+  // against. Use the viewport as the panel host's containing block and let
+  // PanelManager size its placement containers from it.
+  host.style.position = 'fixed';
+  host.style.inset = '0';
+  host.style.width = '100vw';
+  host.style.height = '100vh';
+  document.body.appendChild(host);
+  return host;
+}
+
+async function startSettingsPanel() {
+  if (!window.scene || !window.layer) {
+    return;
+  }
+
+  const settings = createSettings();
+  let selectedScene = settings.scene;
+  let activeScene = settings.scene;
+  const sceneSource = await fetchSceneSource(settings.scene);
+  const panelManager = new PanelManager({parentElement: createPanelHost()});
+  const settingsPanel = new SettingsPanel({
+    id: 'tangram-settings',
+    schema: SETTINGS_SCHEMA,
+    settings,
+    onSettingsChange: nextSettings => {
+      if (nextSettings.scene && nextSettings.scene !== selectedScene) {
+        selectedScene = nextSettings.scene;
+        sidebarPanel.setProps({title: 'Tangram playground'});
+        settings.scene = nextSettings.scene;
+        activeScene = nextSettings.scene;
+        window.scene.load(nextSettings.scene);
+      }
+      if (nextSettings.camera && nextSettings.camera !== settings.camera) {
+        settings.camera = nextSettings.camera;
+        if (window.scene.config?.cameras?.[nextSettings.camera]) {
+          window.scene.setActiveCamera(nextSettings.camera);
+        }
+      }
+      if (typeof nextSettings.debug === 'boolean' && nextSettings.debug !== settings.debug) {
+        settings.debug = nextSettings.debug;
+        window.scene.setIntrospection(nextSettings.debug);
+      }
+    }
+  });
+
+  const editorPanel = new TextEditorPanel({
+    id: 'tangram-scene-editor',
+    title: 'Scene YAML (edit to apply)',
+    language: 'plaintext',
+    defaultValue: sceneSource,
+    onValueChange: applyEditedScene
+  });
+  const accordionPanel = new AccordeonPanel({
+    id: 'tangram-playground-panels',
+    title: 'Playground panels',
+    panels: [settingsPanel, editorPanel]
+  });
+  const sidebarPanel = new SidebarPanelContainer({
+    id: 'tangram-playground-sidebar',
+    title: window.tangramRequestedSceneWithoutKey
+      ? 'Tangram playground — Nextzen key required'
+      : 'Tangram playground',
+    panel: accordionPanel,
+    side: 'right',
+    placement: 'top-right',
+    widthPx: 430,
+    triggerLabel: 'Open Tangram controls',
+    button: true,
+    defaultOpen: true,
+    viewportMarginPx: 12
+  });
+
+  panelManager.setProps({components: [sidebarPanel]});
+  // AccordeonPanel intentionally starts with all sections collapsed. Open the
+  // settings section for the playground's first visit; the user can collapse
+  // it to reach the scene editor or close the sidebar with its handle.
+  const firstAccordionButton = panelManager.parentElement.querySelector(
+    '[data-sidebar-shell] section button'
+  );
+  if (firstAccordionButton) {
+    firstAccordionButton.dispatchEvent(new PointerEvent('pointerdown', {bubbles: true}));
+  }
+  // PanelManager normally receives this notification from Deck's redraw
+  // lifecycle. The standalone classic example has no Deck instance, so make
+  // the initial placement pass explicitly and keep it current on resize.
+  const updatePanelLayout = () => {
+    panelManager.onRedraw({viewports: [], layers: []});
+  };
+  updatePanelLayout();
+  window.addEventListener('resize', updatePanelLayout);
+  window.settingsPanel = settingsPanel;
+  window.settingsPanelManager = panelManager;
+  window.sceneEditorPanel = editorPanel;
+  window.tangramPlaygroundSidebar = sidebarPanel;
+  window.addEventListener(
+    'beforeunload',
+    () => {
+      window.removeEventListener('resize', updatePanelLayout);
+      panelManager.finalize();
+    },
+    {once: true}
+  );
+
+  let applyTimer;
+  function applyEditedScene(source) {
+    window.clearTimeout(applyTimer);
+    applyTimer = window.setTimeout(() => {
+      try {
+        const config = window.Tangram.debug.yaml.safeLoad(source);
+        const sceneUrl = new URL(activeScene, window.location.href);
+        window.scene.load(config, {base_path: new URL('.', sceneUrl).href});
+        editorPanel.setProps({title: 'Scene YAML (applied)'});
+      } catch (error) {
+        editorPanel.setProps({title: `Scene YAML (error: ${error.message})`});
+      }
+    }, 400);
+  }
+}
+
+async function fetchSceneSource(sceneUrl) {
+  try {
+    const response = await fetch(new URL(sceneUrl, window.location.href));
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return await response.text();
+  } catch (error) {
+    return `# Unable to load scene YAML: ${error.message}`;
+  }
+}
+
+window.addEventListener('load', startSettingsPanel);

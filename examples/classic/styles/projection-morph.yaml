@@ -1,0 +1,98 @@
+# Port of the Albers projection experiment from tangrams/tangram-sandbox.
+# The bundled TopoJSON keeps this example runnable without a tile-service key.
+
+scene:
+  background:
+    color: '#f7f4ee'
+
+cameras:
+  perspective:
+    type: perspective
+    active: true
+
+lights:
+  directional:
+    type: directional
+    direction: [.1, .5, -1]
+    diffuse: .7
+    ambient: .5
+
+sources:
+  states:
+    type: TopoJSON
+    url: ../data/us-states-10m.json
+
+styles:
+  projection-morph:
+    base: polygons
+    lighting: false
+    animated: true
+    shaders:
+      defines:
+        EARTH_RADIUS: 6378137.0
+        PI: 3.14159265358979323846
+        HALF_PI: 1.5707963267948966
+        QUARTER_PI: 0.7853981633974483
+        ZOOM_START: 5.0
+        ZOOM_END: 10.0
+      blocks:
+        global: |
+          float deg2rad(float degrees) {
+              return degrees * PI / 180.0;
+          }
+
+          float rad2deg(float radians) {
+              return radians * 180.0 / PI;
+          }
+
+          float y2lat(float y) {
+              return rad2deg(2.0 * atan(exp(y / EARTH_RADIUS)) - HALF_PI);
+          }
+
+          float x2lon(float x) {
+              return rad2deg(x / EARTH_RADIUS);
+          }
+
+          vec2 latlon2albers(float lat, float lon) {
+              float lat0 = deg2rad(y2lat(u_map_position.y));
+              float lon0 = deg2rad(x2lon(u_map_position.x));
+              float phi1 = deg2rad(y2lat(u_map_position.y) + 20.0);
+              float phi2 = deg2rad(y2lat(u_map_position.y) - 20.0);
+              float n = 0.5 * (sin(phi1) + sin(phi2));
+              float c = cos(phi1) * cos(phi1) + 2.0 * n * sin(phi1);
+              float p0 = sqrt(c - 2.0 * n * sin(lat0)) / n;
+              float theta = n * (deg2rad(lon) - lon0);
+              float p = sqrt(c - 2.0 * n * sin(deg2rad(lat))) / n;
+              return vec2(p * sin(theta), p0 - p * cos(theta)) * EARTH_RADIUS;
+          }
+
+          float projectionMix() {
+              return smoothstep(ZOOM_START, ZOOM_END, u_map_position.z);
+          }
+        position: |
+          vec2 mercator = u_map_position.xy + position.xy;
+          float latitude = y2lat(mercator.y);
+          float longitude = x2lon(mercator.x);
+          position.xy = mix(latlon2albers(latitude, longitude), position.xy, projectionMix());
+        color: |
+          color.rgb = mix(vec3(0.19, 0.32, 0.52), vec3(0.78, 0.39, 0.18),
+                          clamp((worldPosition().z + 1.0) * 0.02, 0.0, 1.0));
+
+  state-borders:
+    base: lines
+    lighting: false
+
+layers:
+  states:
+    data: {source: states, layer: states}
+    draw:
+      projection-morph:
+        order: 0
+        style: projection-morph
+        color: '#4e769f'
+    borders:
+      draw:
+        state-borders:
+          order: 1
+          color: '#f7f4ee'
+          width: 1px
