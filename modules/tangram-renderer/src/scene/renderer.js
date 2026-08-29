@@ -15,7 +15,7 @@ export default class Renderer {
         const device_options = this.device_renderer ? this.device_renderer.getSceneOptions() : {};
         this.scene = Scene.create(config, Object.assign({}, options, device_options, {
             disableRenderLoop: true,
-            externalCamera: true
+            cameraMode: 'external'
         }));
     }
 

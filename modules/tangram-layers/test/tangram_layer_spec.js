@@ -103,7 +103,7 @@ class FakeRenderer {
         const device_options = this.device_renderer ? this.device_renderer.getSceneOptions() : {};
         this.scene = FakeScene.create(source, Object.assign({}, options, device_options, {
             disableRenderLoop: true,
-            externalCamera: true
+            cameraMode: 'external'
         }));
         this.frameCalls = [];
         this.renderCalls = [];
@@ -246,7 +246,7 @@ describe('TangramLayer', function () {
         assert.strictEqual(parentElement.children[0], deckCanvas);
         assert.strictEqual(scene.options.webGLContext, device.handle);
         assert.isTrue(scene.options.disableRenderLoop);
-        assert.isTrue(scene.options.externalCamera);
+        assert.strictEqual(scene.options.cameraMode, 'external');
         assert.isTrue(scene.options.enableUniformBuffers);
         assert.isFunction(scene.options.uniformBufferFactory);
         assert.isFunction(scene.options.shaderFactory);

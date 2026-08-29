@@ -10,10 +10,25 @@ page, so the examples sidebar stays visible while you move between demos.
 ## TangramLayer examples
 
 <div className="example-tile-grid">
-  <a className="example-tile" href="/tangram-layers/examples/deck">
+  <a className="example-tile" href="/tangram-layers/examples/deck?view=mapPerspective">
     <span className="example-tile__eyebrow">TangramLayer</span>
-    <strong>Deck + TangramLayer</strong>
-    <span>A Tangram basemap rendered through deck.gl’s WebGL or WebGPU device, with deck.gl overlays.</span>
+    <strong>MapView perspective</strong>
+    <span>deck.gl owns the pitched camera and supplies its matrices to the Tangram renderer.</span>
+  </a>
+  <a className="example-tile" href="/tangram-layers/examples/deck?view=mapFlat">
+    <span className="example-tile__eyebrow">TangramLayer</span>
+    <strong>MapView flat</strong>
+    <span>An orthographic Web Mercator view using the same host-driven renderer contract.</span>
+  </a>
+  <a className="example-tile" href="/tangram-layers/examples/deck?view=globe">
+    <span className="example-tile__eyebrow">Capability preview</span>
+    <strong>GlobeView</strong>
+    <span>Explore deck.gl’s globe and the remaining Tangram vertex-projection work.</span>
+  </a>
+  <a className="example-tile" href="/tangram-layers/examples/deck?view=firstPerson">
+    <span className="example-tile__eyebrow">Capability preview</span>
+    <strong>FirstPersonView</strong>
+    <span>Explore deck.gl’s first-person camera and the required geographic LOD anchor.</span>
   </a>
 </div>
 
@@ -46,9 +61,9 @@ page, so the examples sidebar stays visible while you move between demos.
     <span>A street-map raster alternative for testing the renderer without vector data.</span>
   </a>
   <a className="example-tile" href="/tangram-layers/examples/classic?scene=styles/projection-morph.yaml">
-    <span className="example-tile__eyebrow">Camera</span>
+    <span className="example-tile__eyebrow">Shader projection</span>
     <strong>Albers projection morph</strong>
-    <span>Animate the world between geographic and projected coordinate systems.</span>
+    <span>Morph vertices between geographic projections as zoom changes without replacing the host camera.</span>
   </a>
   <a className="example-tile" href="/tangram-layers/examples/classic?scene=scene.yaml">
     <span className="example-tile__eyebrow">Style</span>

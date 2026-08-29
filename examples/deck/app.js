@@ -1,4 +1,4 @@
-import {Deck} from '@deck.gl/core';
+import {Deck, FirstPersonView, MapView, _GlobeView as GlobeView} from '@deck.gl/core';
 import {PathLayer, ScatterplotLayer} from '@deck.gl/layers';
 import {webgpuAdapter} from 'https://esm.sh/@luma.gl/webgpu@9.4.0-alpha.1?bundle&external=@luma.gl/core';
 import {TangramLayer} from '@vis.gl/tangram-layers';
@@ -59,13 +59,64 @@ const BASEMAPS = {
   }
 };
 
-const initialViewState = {
+const mapViewState = {
   longitude: -74.009764,
   latitude: 40.705319,
   zoom: 15,
   bearing: -20,
   pitch: 35
 };
+
+const mapController = {
+  dragRotate: true,
+  touchRotate: true,
+  maxPitch: 50
+};
+
+const VIEW_MODES = {
+  mapFlat: {
+    label: 'MapView — flat',
+    view: new MapView({id: 'main', orthographic: true, controller: true}),
+    initialViewState: {...mapViewState, bearing: 0, pitch: 0},
+    supportsTangram: true
+  },
+  mapPerspective: {
+    label: 'MapView — perspective',
+    view: new MapView({id: 'main', controller: mapController}),
+    initialViewState: mapViewState,
+    supportsTangram: true
+  },
+  globe: {
+    label: 'GlobeView — renderer adapter needed',
+    view: new GlobeView({id: 'main', controller: true}),
+    initialViewState: {
+      longitude: mapViewState.longitude,
+      latitude: mapViewState.latitude,
+      zoom: 3
+    },
+    supportsTangram: false,
+    limitation:
+      'GlobeView is a deck.gl-only preview: Tangram tile vertices still need a globe projection adapter.'
+  },
+  firstPerson: {
+    label: 'FirstPersonView — renderer adapter needed',
+    view: new FirstPersonView({id: 'main', controller: true}),
+    initialViewState: {
+      longitude: mapViewState.longitude,
+      latitude: mapViewState.latitude,
+      position: [0, 0, 800],
+      bearing: -20,
+      pitch: 35
+    },
+    supportsTangram: false,
+    limitation:
+      'FirstPersonView is a deck.gl-only preview: Tangram needs an explicit geographic tile-selection anchor and level of detail.'
+  }
+};
+
+const requestedViewModeId = searchParams.get('view');
+const viewModeId = VIEW_MODES[requestedViewModeId] ? requestedViewModeId : 'mapPerspective';
+const viewMode = VIEW_MODES[viewModeId];
 
 const landmarks = [
   {name: 'One World Trade Center', coordinates: [-74.013379, 40.712743]},
@@ -87,6 +138,7 @@ const statusElement = document.getElementById('status');
 const visibilityInput = document.getElementById('basemap-visible');
 const basemapSelect = document.getElementById('basemap-style');
 const deviceSelect = document.getElementById('device-type');
+const viewSelect = document.getElementById('view-type');
 const cartoAttribution = document.getElementById('carto-attribution');
 const nextzenAttribution = document.getElementById('nextzen-attribution');
 const tronSourceLink = document.getElementById('tron-source-link');
@@ -94,6 +146,7 @@ const nextzenKeyForm = document.getElementById('nextzen-key-form');
 const nextzenKeyInput = document.getElementById('nextzen-api-key');
 nextzenKeyInput.value = apiKey || '';
 deviceSelect.value = deviceType;
+viewSelect.value = viewModeId;
 const defaultBasemapId = 'tron';
 const requestedBasemapId = searchParams.get('basemap');
 const initialBasemapId =
@@ -122,7 +175,7 @@ function setStatus(message, type = '') {
 function createLayers() {
   const basemap = BASEMAPS[basemapId];
   const layers = [];
-  if (!basemap.requiresApiKey || (apiKey && nextzenKeyValidated)) {
+  if (viewMode.supportsTangram && (!basemap.requiresApiKey || (apiKey && nextzenKeyValidated))) {
     layers.push(
       new TangramLayer({
         id: 'tangram-basemap',
@@ -174,9 +227,13 @@ function updateBasemapPresentation() {
   nextzenAttribution.hidden = !usesNextzen;
   tronSourceLink.hidden = !isTron;
   nextzenKeyForm.hidden = !usesNextzen;
+  basemapSelect.disabled = !viewMode.supportsTangram;
+  visibilityInput.disabled = !viewMode.supportsTangram;
 
   lastError = null;
-  if (basemap.requiresApiKey && !apiKey) {
+  if (!viewMode.supportsTangram) {
+    setStatus(viewMode.limitation, 'warning');
+  } else if (basemap.requiresApiKey && !apiKey) {
     setStatus(
       'Original TRON requires an existing Nextzen key; new signups are closed. Enter a key below.',
       'error'
@@ -198,12 +255,8 @@ try {
           adapters: [webgpuAdapter]
         }
       : {type: 'webgl'},
-    initialViewState,
-    controller: {
-      dragRotate: true,
-      touchRotate: true,
-      maxPitch: 50
-    },
+    views: viewMode.view,
+    initialViewState: viewMode.initialViewState,
     layers: createLayers(),
     getTooltip: ({object}) => object && object.name,
     onError: (error) => {
@@ -227,6 +280,12 @@ deviceSelect.addEventListener('change', (event) => {
   if (!BASEMAPS[basemapId].deviceTypes.includes(event.target.value)) {
     url.searchParams.delete('basemap');
   }
+  window.location.assign(url);
+});
+
+viewSelect.addEventListener('change', (event) => {
+  const url = new URL(window.location.href);
+  url.searchParams.set('view', event.target.value);
   window.location.assign(url);
 });
 

@@ -14861,7 +14861,10 @@ class View {
     };
     this.aspect = null;
     this.buffer = 0;
-    this.external_camera = options.externalCamera === true;
+    // Host-driven renderers own camera projection. `externalCamera` remains
+    // as a compatibility alias while callers migrate to the explicit mode.
+    this.camera_mode = options.cameraMode || (options.externalCamera === true ? 'external' : 'scene');
+    this.external_camera = this.camera_mode === 'external';
     this.continuous_zoom = typeof options.continuousZoom === 'boolean' ? options.continuousZoom : true;
     this.wrap = options.wrapView === false ? false : true;
     this.preserve_tiles_within_zoom = 1;
@@ -14891,7 +14894,7 @@ class View {
   // Supply camera matrices from an embedding renderer
   setCameraMatrices(matrices) {
     if (!this.camera || this.camera.type !== 'external') {
-      throw new Error('View must be constructed with externalCamera to accept camera matrices');
+      throw new Error('View must use cameraMode \'external\' to accept camera matrices');
     }
     this.camera.setMatrices(matrices);
   }
@@ -37472,7 +37475,7 @@ class Renderer {
     const device_options = this.device_renderer ? this.device_renderer.getSceneOptions() : {};
     this.scene = Scene.create(config, Object.assign({}, options, device_options, {
       disableRenderLoop: true,
-      externalCamera: true
+      cameraMode: 'external'
     }));
   }
   static create(config, options = {}) {
@@ -37597,7 +37600,7 @@ return Tangram$1;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = 'ccbc667b9adbb0120039dfe86e77949fbfcc05ce';
+	Tangram.debug.SHA = '6dbff8341ea83616c22d0b88a6288e6d49a402f1';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}
