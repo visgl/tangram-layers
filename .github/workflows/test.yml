@@ -71,6 +71,24 @@ jobs:
       - name: Run dev-tools headless browser tests
         run: yarn test-headless
 
+  test-legacy:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.15.0
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Install workspace dependencies
+        run: yarn install --immutable
+      - name: Build packages
+        run: yarn build
+      - name: Run legacy Karma browser tests
+        run: yarn test-run-headless
+
   test-website:
     runs-on: ubuntu-22.04
     steps:

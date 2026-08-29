@@ -20,6 +20,8 @@ function appendScript(url, type = 'text/javascript') {
   });
 }
 
+let classicPlaygroundMountId = 0;
+
 export default function ClassicPlayground() {
   const classicBaseUrl = useBaseUrl('/examples/classic/');
   const rendererUrl = useBaseUrl('/modules/tangram-renderer/dist/tangram.debug.mjs');
@@ -52,7 +54,10 @@ export default function ClassicPlayground() {
       [`${classicBaseUrl}main.js?embedded=1`, 'text/javascript'],
       [`${classicBaseUrl}app/url.js?embedded=1`, 'text/javascript'],
       [`${classicBaseUrl}app/key.js?embedded=1`, 'text/javascript'],
-      [`${classicBaseUrl}app/settings-panel.js?embedded=1`, 'module']
+      [
+        `${classicBaseUrl}app/settings-panel.js?embedded=1&mount=${++classicPlaygroundMountId}`,
+        'module'
+      ]
     ];
 
     (async () => {

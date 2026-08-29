@@ -5,7 +5,7 @@ the Examples sidebar remains available from the documentation navigation. The
 playground itself is a buildable example package rather than an embedded iframe.
 
 <div>
-  <a className="button button--primary button--lg" href="/tangram-layers/examples/classic/?scene=styles/crosshatch-preview.yaml">
+  <a className="button button--primary button--lg" href="/tangram-layers/examples/classic?scene=styles/crosshatch-preview.yaml">
     Open the classic playground
   </a>
 </div>

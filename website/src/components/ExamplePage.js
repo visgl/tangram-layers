@@ -3,8 +3,8 @@ import Link from '@docusaurus/Link';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 
 const EXAMPLE_LINKS = [
-  {label: 'Deck + TangramLayer', path: '/examples/deck/'},
-  {label: 'Classic playground', path: '/examples/classic/'},
+  {label: 'Deck + TangramLayer', path: '/examples/deck'},
+  {label: 'Classic playground', path: '/examples/classic'},
   {label: 'Example gallery', path: '/docs/examples'}
 ];
 
