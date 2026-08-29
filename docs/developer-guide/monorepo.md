@@ -1,0 +1,43 @@
+# Monorepo guide
+
+Tangram layers uses a Yarn 4 workspace layout modeled on the vis.gl projects.
+Install dependencies once at the repository root; workspace packages resolve
+each other through the `workspace:^` protocol.
+
+## Workspace layout
+
+| Directory | Role |
+| --- | --- |
+| `modules/tangram-renderer` | Published-style Tangram renderer package and worker bundles |
+| `modules/tangram-layers` | Published-style deck.gl adapter |
+| `dev-modules/*` | Private development and test utilities |
+| `examples/*` | Runnable applications and playgrounds |
+| `website` | Docusaurus documentation and static example assembly |
+
+The renderer intentionally keeps its package-specific Rollup pipeline. This is
+the boundary that emits the browser runtime and worker bundle; repository-wide
+linting and testing are orchestrated by `@vis.gl/dev-tools`.
+
+## Common commands
+
+```sh
+yarn install
+yarn build
+yarn test-fast       # lint and Node tests
+yarn test-browser    # Chromium-backed Vitest project
+yarn test-headless   # headless package-entry smoke tests
+yarn test-coverage
+yarn website:start
+```
+
+The full compatibility suite remains available as `yarn test`, which includes
+the legacy Karma run and the network-dependent browser fixtures. Use
+`yarn playwright:install` once on a new machine before running headless tests.
+
+## Adding a package
+
+Create a `package.json` under `modules/`, `dev-modules/`, or `examples/` and
+run `yarn install` from the root. Published packages should expose explicit
+`import` and `default` entries from `dist/`, keep runtime dependencies narrow,
+and add package-entry coverage under `test/`. Development-only packages should
+be marked `private` and may expose source directly.

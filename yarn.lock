@@ -6120,6 +6120,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@vis.gl/tangram-deck-example@workspace:examples/deck":
+  version: 0.0.0-use.local
+  resolution: "@vis.gl/tangram-deck-example@workspace:examples/deck"
+  languageName: unknown
+  linkType: soft
+
 "@vis.gl/tangram-layers@workspace:modules/tangram-layers":
   version: 0.0.0-use.local
   resolution: "@vis.gl/tangram-layers@workspace:modules/tangram-layers"
@@ -6169,6 +6175,12 @@ __metadata:
     rollup-plugin-sourcemaps2: "npm:^0.4.2"
     rollup-plugin-string-import: "npm:^1.2.5"
     topojson-client: "https://github.com/tangrams/topojson-client.git#read-only"
+  languageName: unknown
+  linkType: soft
+
+"@vis.gl/tangram-test-utils@workspace:dev-modules/test-utils":
+  version: 0.0.0-use.local
+  resolution: "@vis.gl/tangram-test-utils@workspace:dev-modules/test-utils"
   languageName: unknown
   linkType: soft
 
@@ -19022,6 +19034,7 @@ __metadata:
     rollup-plugin-sourcemaps2: "npm:^0.4.2"
     rollup-plugin-string-import: "npm:^1.2.5"
     sinon: "npm:^19.0.2"
+    typescript: "npm:^6.0.3"
     vitest: "npm:^4.0.18"
   languageName: unknown
   linkType: soft

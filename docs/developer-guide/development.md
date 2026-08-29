@@ -10,8 +10,12 @@ yarn install       # install all workspaces once
 yarn bootstrap     # install and link workspace binaries
 yarn clean         # remove generated package output
 yarn build         # clean, build renderer bundles, then build TangramLayer
+yarn build:packages # alias for the complete package build
 yarn lint          # Biome plus the renderer compatibility lint
 yarn lint:fix      # apply safe Biome fixes
+yarn test-fast     # lint and Node tests
+yarn test-browser  # Chromium-backed Vitest project
+yarn test-coverage # headless Vitest coverage run
 yarn test          # lint, worker bundle, and Karma browser tests
 ```
 
@@ -25,6 +29,9 @@ The classic playground is also a workspace package. Its build copies the
 playground source and style gallery into `examples/classic/dist/`; the website
 build consumes that output. For a standalone local server, run
 `yarn workspace @vis.gl/tangram-classic start`.
+
+Private shared development helpers live under `dev-modules/`. They are not
+published and should stay focused on test and build infrastructure.
 
 ## Website and examples
 
