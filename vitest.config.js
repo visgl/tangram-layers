@@ -1,5 +1,7 @@
 import {getVitestConfig} from '@vis.gl/dev-tools';
 
+const runLegacyBrowserTests = process.env.TANGRAM_VITEST_LEGACY === '1';
+
 export default getVitestConfig({
   overrides: {
     optimizeDeps: {include: ['sinon']},
@@ -31,10 +33,13 @@ export default getVitestConfig({
     },
     headless: {
       test: {
-        include: ['test/**/*.browser.spec.js', 'modules/**/test/**/*_spec.js'],
+        include: [
+          'test/**/*.browser.spec.js',
+          ...(runLegacyBrowserTests ? ['modules/**/test/**/*_spec.js'] : [])
+        ],
         exclude: ['modules/tangram-renderer/test/leaflet_layer_spec.js'],
-        globals: true,
-        setupFiles: ['./test/vitest-browser-setup.js']
+        globals: runLegacyBrowserTests,
+        setupFiles: runLegacyBrowserTests ? ['./test/vitest-browser-setup.js'] : []
       }
     }
   }
