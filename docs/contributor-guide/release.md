@@ -17,3 +17,6 @@ Review the generated version changes before publishing. The renderer and layer
 packages are currently alpha releases; a future public API change should use an
 appropriate major version bump and include an entry in `CHANGELOG.md`, the
 upgrade guide, and the relevant package documentation.
+
+Before publishing, verify the package entrypoints, generated worker bundles,
+website examples, and the release notes on the intended branch.

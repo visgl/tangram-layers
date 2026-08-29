@@ -12,10 +12,13 @@ module.exports = {
         'developer-guide/architecture',
         'developer-guide/development',
         'developer-guide/bundling',
-        'developer-guide/legacy-concepts',
-        'developer-guide/monorepo',
-        'developer-guide/release'
+        'developer-guide/legacy-concepts'
       ]
+    },
+    {
+      type: 'category',
+      label: 'Contributor guide',
+      items: ['contributor-guide/monorepo', 'contributor-guide/release']
     },
     {
       type: 'category',
@@ -27,11 +30,6 @@ module.exports = {
         'api-reference/tangram-layer',
         'api-reference/tangram-layers'
       ]
-    },
-    {
-      type: 'category',
-      label: 'Examples',
-      items: ['examples/index', 'examples/deck', 'examples/classic']
     },
     {
       type: 'category',

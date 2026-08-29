@@ -17,6 +17,13 @@ website.
 - [Legacy concepts](developer-guide/legacy-concepts.md) — scene structure,
   sources, layers, styles, and porting guidance.
 
+## Contributor guide
+
+- [Monorepo guide](contributor-guide/monorepo.md) — workspaces, packages, and
+  repository commands.
+- [Release workflow](contributor-guide/release.md) — versioning and publishing
+  the workspace packages.
+
 ## API reference
 
 - [Renderer reference](api-reference/tangram-renderer.md) — `@vis.gl/tangram-renderer` exports.
