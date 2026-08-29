@@ -1,4 +1,4 @@
-import {cp, mkdir, rm} from 'node:fs/promises';
+import {cp, mkdir, rm, writeFile} from 'node:fs/promises';
 import {dirname, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
@@ -22,6 +22,37 @@ await cp(
 await cp(resolve(repositoryDirectory, 'examples/deck'), resolve(staticDirectory, 'examples/deck'), {
   recursive: true
 });
+
+const websiteExampleRedirect = (target) => `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <meta http-equiv="refresh" content="0;url=../${target}">
+    <title>Tangram layers example</title>
+  </head>
+  <body>
+    <p>Opening the integrated example…</p>
+    <script>
+      const targetUrl = new URL('../${target}', window.location.href);
+      targetUrl.search = window.location.search;
+      targetUrl.hash = window.location.hash;
+      window.location.replace(targetUrl.href);
+    </script>
+  </body>
+</html>
+`;
+
+// Docusaurus owns the route without a trailing slash. Replace copied standalone
+// entrypoints with redirects so `/examples/*/` cannot bypass the embedded page.
+await writeFile(
+  resolve(staticDirectory, 'examples/classic/index.html'),
+  websiteExampleRedirect('classic')
+);
+await writeFile(
+  resolve(staticDirectory, 'examples/deck/index.html'),
+  websiteExampleRedirect('deck')
+);
 await cp(
   resolve(repositoryDirectory, 'modules/tangram-renderer/dist/tangram.debug.mjs'),
   resolve(staticDirectory, 'modules/tangram-renderer/dist/tangram.debug.mjs')
