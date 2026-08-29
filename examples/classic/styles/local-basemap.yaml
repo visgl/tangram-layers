@@ -1,6 +1,7 @@
 scene:
   background:
-    color: '#dfe7ec'
+    # Let the Leaflet CARTO layer show through outside the preview geometry.
+    color: [0.875, 0.906, 0.925, 0]
 
 cameras:
   perspective:
@@ -19,7 +20,7 @@ layers:
     draw:
       polygons:
         order: 0
-        color: '#eef1ed'
+        color: [0.933, 0.945, 0.929, 0.32]
 
   buildings:
     data: {source: preview}

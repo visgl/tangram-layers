@@ -42,6 +42,7 @@ export default function ClassicPlayground() {
       )
     ];
     window.tangramClassicEmbedded = true;
+    window.tangramClassicBaseUrl = classicBaseUrl;
     window.tangramStyleSchemaUrl = styleSchemaUrl;
 
     const scripts = [
@@ -94,6 +95,7 @@ export default function ClassicPlayground() {
       scriptElements.current = [];
       document.body.classList.remove('tangram-classic-embedded');
       delete window.tangramClassicEmbedded;
+      delete window.tangramClassicBaseUrl;
       delete window.tangramClassicCancelled;
       delete window.tangramClassicDestroy;
       delete window.tangramClassicSettingsCleanup;

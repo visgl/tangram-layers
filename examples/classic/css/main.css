@@ -55,6 +55,50 @@ div > .leaflet-pelias-control {
     height: 100%;
 }
 
+/* Give the sidebar and its accordion the full canvas height so the editor can
+   use the remaining space instead of being constrained by its content. */
+.classic-settings-host [data-sidebar-shell] {
+    height: 100%;
+    align-items: stretch;
+}
+
+.classic-settings-host [data-sidebar-shell] > [role="dialog"] {
+    height: 100%;
+    max-height: none;
+}
+
+.classic-settings-host [data-sidebar-shell] > [role="dialog"] > div:nth-child(2),
+.classic-settings-host [data-sidebar-shell] > [role="dialog"] > div:nth-child(2) > div,
+.classic-settings-host [data-sidebar-shell] > [role="dialog"] > div:nth-child(2) > div > div {
+    min-height: 0;
+}
+
+.classic-settings-host [data-sidebar-shell] > [role="dialog"] > div:nth-child(2) > div,
+.classic-settings-host [data-sidebar-shell] > [role="dialog"] > div:nth-child(2) > div > div {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+}
+
+.classic-settings-host [data-sidebar-shell] section:last-child {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+}
+
+.classic-settings-host [data-sidebar-shell] section:last-child > div {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+}
+
+.classic-settings-host [data-sidebar-shell] section:last-child .monaco-editor {
+    min-height: 240px;
+    flex: 1;
+}
+
 .classic-settings-host .top-left [class~="deck-widget-panel"] {
     width: min(360px, calc(100vw - 24px));
 }
