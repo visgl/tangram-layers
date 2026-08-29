@@ -33,6 +33,10 @@ describe('TileManager', function () {
             });
         });
 
+        it('queues the requested coordinate', () => {
+            sinon.assert.calledWith(tile_manager.queueCoordinate, coords);
+        });
+
     });
 
     describe('.loadCoordinate(coords)', () => {
