@@ -39,6 +39,7 @@
     "playwright:install": "playwright install chromium",
     "test-website": "yarn website:build",
     "test-run": "yarn test-build-worker && ESM=false karma start karma.conf.js --browsers Chrome --single-run",
+    "test-run-headless": "yarn test-build-worker && ESM=false karma start karma.conf.js --browsers ChromeHeadlessWebGL --single-run",
     "test-build-worker": "yarn workspace @vis.gl/tangram-renderer test-build-worker",
     "karma-start": "karma start karma.conf.js --browsers Chrome --no-watch",
     "karma-run": "karma run karma.conf.js --browsers Chrome",

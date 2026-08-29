@@ -87,7 +87,7 @@ jobs:
       - name: Build packages
         run: yarn build
       - name: Run legacy Karma browser tests
-        run: yarn test-run
+        run: yarn test-run-headless
 
   test-website:
     runs-on: ubuntu-22.04

@@ -88,6 +88,17 @@ export default function (config) {
         logLevel: config.LOG_INFO,
         autoWatch: false,
         browsers: ['Chrome'],
+        customLaunchers: {
+            ChromeHeadlessWebGL: {
+                base: 'ChromeHeadless',
+                flags: [
+                    '--no-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--use-angle=swiftshader',
+                    '--enable-unsafe-swiftshader'
+                ]
+            }
+        },
 
         singleRun: false
 
