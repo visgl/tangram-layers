@@ -35,7 +35,7 @@ const config = {
           path: path.resolve(__dirname, '../docs'),
           routeBasePath: 'docs',
           sidebarPath: path.resolve(__dirname, 'sidebars.js'),
-          editUrl: 'https://github.com/visgl/tangram-layers/tree/ib/monorepo-layout/'
+          editUrl: 'https://github.com/visgl/tangram-layers/tree/master/'
         },
         blog: false,
         theme: {

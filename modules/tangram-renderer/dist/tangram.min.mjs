@@ -42,7 +42,7 @@ define(["./shared"],function(e){"use strict";const t={float:{alignment:4,size:4,
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = 'ef463cd25996865905320df7829405e5d0fc6b11';
+	Tangram.debug.SHA = 'ccbc667b9adbb0120039dfe86e77949fbfcc05ce';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}
