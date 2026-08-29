@@ -2560,7 +2560,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@docusaurus/plugin-content-docs@npm:3.10.2":
+"@docusaurus/plugin-content-docs@npm:3.10.2, @docusaurus/plugin-content-docs@npm:^3.9.2":
   version: 3.10.2
   resolution: "@docusaurus/plugin-content-docs@npm:3.10.2"
   dependencies:
@@ -19044,6 +19044,7 @@ __metadata:
   resolution: "tangram-layers-website@workspace:website"
   dependencies:
     "@docusaurus/core": "npm:^3.9.2"
+    "@docusaurus/plugin-content-docs": "npm:^3.9.2"
     "@docusaurus/preset-classic": "npm:^3.9.2"
     "@mdx-js/react": "npm:^3.0.1"
     "@types/react": "npm:^19.0.0"

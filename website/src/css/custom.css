@@ -46,33 +46,6 @@
   background: #343438;
 }
 
-.example-page {
-  padding-top: 2rem;
-  padding-bottom: 3rem;
-}
-
-.example-page__sidebar {
-  padding-top: 1rem;
-  border-right: 1px solid var(--ifm-color-emphasis-200);
-}
-
-.example-page__sidebar h2 {
-  font-size: 1.1rem;
-}
-
-.example-page__sidebar ul {
-  padding: 0;
-  list-style: none;
-}
-
-.example-page__sidebar li {
-  margin: 0.65rem 0;
-}
-
-.example-page__content {
-  min-width: 0;
-}
-
 .example-device-tabs {
   display: flex;
   gap: 0.25rem;
@@ -170,12 +143,6 @@
 @media (max-width: 996px) {
   .example-frame {
     min-height: 560px;
-  }
-
-  .example-page__sidebar {
-    padding-bottom: 1rem;
-    border-right: 0;
-    border-bottom: 1px solid var(--ifm-color-emphasis-200);
   }
 
   .deck-example-embed,

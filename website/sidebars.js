@@ -59,22 +59,5 @@ module.exports = {
         }
       ]
     }
-  ],
-  examplesSidebar: [
-    {
-      type: 'doc',
-      id: 'examples/index',
-      label: 'All Tangram examples'
-    },
-    {
-      type: 'doc',
-      id: 'examples/deck',
-      label: 'Deck + TangramLayer'
-    },
-    {
-      type: 'doc',
-      id: 'examples/classic',
-      label: 'Classic playground'
-    }
   ]
 };
