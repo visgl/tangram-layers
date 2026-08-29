@@ -22,6 +22,7 @@ module.exports = {
       label: 'API reference',
       items: [
         'api-reference/tangram-renderer',
+        'api-reference/styling',
         'api-reference/renderer',
         'api-reference/tangram-layer',
         'api-reference/tangram-layers'

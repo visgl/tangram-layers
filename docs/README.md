@@ -20,6 +20,7 @@ website.
 ## API reference
 
 - [Renderer reference](api-reference/tangram-renderer.md) — `@vis.gl/tangram-renderer` exports.
+- [Styling reference](api-reference/styling.md) — scene, source, layer, draw, and filter syntax.
 - [TangramLayer reference](api-reference/tangram-layers.md) — `@vis.gl/tangram-layers` exports.
 
 ## Examples and project information

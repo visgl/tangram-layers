@@ -3,6 +3,12 @@ import {PathLayer, ScatterplotLayer} from '@deck.gl/layers';
 import {webgpuAdapter} from 'https://esm.sh/@luma.gl/webgpu@9.4.0-alpha.1?bundle&external=@luma.gl/core';
 import {TangramLayer} from '@vis.gl/tangram-layers';
 
+const exampleBaseUrl = window.tangramExampleBaseUrl || new URL('./', import.meta.url).href;
+
+function resolveExampleAsset(relativePath) {
+  return new URL(relativePath, exampleBaseUrl).href;
+}
+
 const searchParams = new URLSearchParams(window.location.search);
 const requestedBackend = searchParams.get('device');
 const defaultDeviceType = 'webgpu';
@@ -323,7 +329,7 @@ function createVectorScene({labels = true} = {}) {
       background: {color: '#f5f3ef'}
     },
     fonts: {
-      Montserrat: {url: '../classic/fonts/montserrat.woff'}
+      Montserrat: {url: resolveExampleAsset('../classic/fonts/montserrat.woff')}
     },
     sources: {
       carto: {
@@ -466,7 +472,7 @@ function createTronCartoScene({
   const scene = {
     import: ['https://www.nextzen.org/carto/tron-style/6/tron-style.zip'],
     fonts: {
-      Montserrat: {url: '../classic/fonts/montserrat.woff'}
+      Montserrat: {url: resolveExampleAsset('../classic/fonts/montserrat.woff')}
     },
     global: {
       sdk_api_key: '',
@@ -686,7 +692,7 @@ function createTronCartoScene({
     };
     if (pointProbe === 'sprite') {
       scene.textures = {
-        'point-probe': {url: '../classic/images/wheel.png'}
+        'point-probe': {url: resolveExampleAsset('../classic/images/wheel.png')}
       };
       scene.layers['tron-carto-places'].draw.points.texture = 'point-probe';
       scene.layers['tron-carto-places'].draw.points.color = '#ffffff';
@@ -762,3 +768,10 @@ function createTronCartoScene({
   }
   return scene;
 }
+
+window.tangramDeckExampleDestroy = function destroyTangramDeckExample() {
+  if (deckInstance) {
+    deckInstance.finalize();
+    deckInstance = null;
+  }
+};

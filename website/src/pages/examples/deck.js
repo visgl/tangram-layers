@@ -1,17 +1,17 @@
-import {useEffect} from 'react';
-import useBaseUrl from '@docusaurus/useBaseUrl';
+import ExampleDeviceTabs from '../../components/ExampleDeviceTabs';
+import ExamplePage from '../../components/ExamplePage';
+import DeckExample from '../../components/DeckExample';
 
-export default function DeckExample() {
-  const deckExampleUrl = useBaseUrl('/examples/deck/');
-
-  useEffect(() => {
-    window.location.replace(deckExampleUrl);
-  }, [deckExampleUrl]);
-
+export default function DeckExamplePage() {
   return (
-    <main style={{padding: '3rem'}}>
-      <p>Opening the deck.gl example…</p>
-      <a href={deckExampleUrl}>Open the deck.gl example</a>
-    </main>
+    <ExamplePage
+      title="Deck + TangramLayer"
+      description="A deck.gl basemap integration powered by Tangram."
+    >
+      <h1>Deck + TangramLayer</h1>
+      <p>Compare a Tangram basemap and deck.gl overlays on WebGPU or WebGL.</p>
+      <ExampleDeviceTabs />
+      <DeckExample />
+    </ExamplePage>
   );
 }
