@@ -1230,7 +1230,7 @@ export default class Scene {
     //      scene.setDataSource("dynamic_data", {type: 'GeoJSON', data: geojson_data });
     //
     setDataSource (name, config) {
-        if (!name || !config || !config.type || (!config.url && !config.data)) {
+        if (!name || !config || !config.type || (!config.url && !config.tilejson && !config.data)) {
             log('error', 'No name provided or not a valid config:', name, config);
             return;
         }

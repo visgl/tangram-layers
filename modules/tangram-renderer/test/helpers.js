@@ -7,7 +7,7 @@ document.body.appendChild(container);
 
 // Use test-specific worker build for web workers
 window.Tangram = window.Tangram || {};
-window.Tangram.workerURL = 'http://localhost:9876/base/modules/tangram-renderer/build/worker.test.js';
+window.Tangram.workerURL = new URL('../build/worker.test.js', import.meta.url).href;
 
 // Helper for loading scene
 window.makeScene = function (options) {
@@ -18,7 +18,7 @@ window.makeScene = function (options) {
     options.logLevel =  options.logLevel || 'info';
 
     return new Scene(
-        options.config || 'http://localhost:9876/base/modules/tangram-renderer/test/fixtures/sample-scene.yaml',
+        options.config || new URL('./fixtures/sample-scene.yaml', import.meta.url).href,
         options
     );
 

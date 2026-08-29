@@ -3,8 +3,7 @@ name: Deploy deck demo to GitHub Pages
 on:
   push:
     branches:
-      - ib/tangram-on-webgpu
-      - ib/monorepo-layout
+      - master
   workflow_dispatch:
 
 permissions:

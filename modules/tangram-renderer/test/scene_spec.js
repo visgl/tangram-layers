@@ -179,4 +179,22 @@ describe('Scene', function () {
 
     });
 
+    describe('.setDataSource()', () => {
+
+        it('accepts a TileJSON-backed source', async () => {
+            await subject.load();
+            const updateConfig = sinon.stub(subject, 'updateConfig').resolves();
+
+            subject.setDataSource('tilejson', {
+                type: 'MVT',
+                tilejson: 'https://tiles.example.com/planet'
+            });
+
+            assert.propertyVal(subject.config.sources.tilejson, 'tilejson', 'https://tiles.example.com/planet');
+            sinon.assert.calledOnce(updateConfig);
+            updateConfig.restore();
+        });
+
+    });
+
 });

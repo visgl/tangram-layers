@@ -743,6 +743,28 @@ describe('TangramLayer', function () {
         assert.strictEqual(layer.errors[0].message, 'TangramLayer scene');
     });
 
+    it('reports nonfatal scene import failures without disabling rendering', async function () {
+        let reportedError = null;
+        const { layer } = createLayer({
+            onSceneError: error => { reportedError = error; }
+        });
+        const scene = FakeScene.instances[0];
+        await flushPromises();
+
+        scene.emit('error', {
+            type: 'scene_import',
+            message: 'Failed to import scene: optional.yaml',
+            error: new Error('optional scene failed')
+        });
+        scene.deferred.resolve();
+        await flushPromises();
+
+        assert.strictEqual(reportedError.message, 'optional scene failed');
+        assert.isFalse(layer.state.tangramRecord.loadFailed);
+        layer.draw();
+        assert.lengthOf(scene.updateCalls, 1);
+    });
+
     it('destroys a loaded scene without removing deck canvas during finalization', async function () {
         const { layer, parentElement, deckCanvas } = createLayer();
         const scene = FakeScene.instances[0];
