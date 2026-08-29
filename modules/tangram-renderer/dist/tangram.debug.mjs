@@ -33646,7 +33646,7 @@ class Scene {
   //      scene.setDataSource("dynamic_data", {type: 'GeoJSON', data: geojson_data });
   //
   setDataSource(name, config) {
-    if (!name || !config || !config.type || !config.url && !config.data) {
+    if (!name || !config || !config.type || !config.url && !config.tilejson && !config.data) {
       topojson.log('error', 'No name provided or not a valid config:', name, config);
       return;
     }
@@ -37597,7 +37597,7 @@ return Tangram$1;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = 'fc19d01442d2612e7c35bdea7a90740fb7733345';
+	Tangram.debug.SHA = 'ef463cd25996865905320df7829405e5d0fc6b11';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

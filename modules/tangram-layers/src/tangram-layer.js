@@ -265,7 +265,8 @@ export function createTangramLayerClass({Layer, ClassicWebGLRenderer, Renderer})
         load: (message) => {
           injectNextzenApiKey(message.config, record.apiKey);
         },
-        error: (message) => this._reportSceneError(record, normalizeError(message))
+        error: (message) =>
+          this._reportSceneError(record, normalizeError(message), message.type !== 'scene_import')
       });
 
       this._synchronizeTangramScene(record);
@@ -354,12 +355,14 @@ export function createTangramLayerClass({Layer, ClassicWebGLRenderer, Renderer})
       this._raiseBridgeError(error);
     }
 
-    _reportSceneError(record, error) {
+    _reportSceneError(record, error, isFatal = true) {
       if (record.disposed || record.lastSceneError === error.message) {
         return;
       }
       record.lastSceneError = error.message;
-      record.loadFailed = true;
+      if (isFatal) {
+        record.loadFailed = true;
+      }
       record.owner.props.onSceneError(error, record.scene);
       record.owner.raiseError(error, 'TangramLayer scene');
     }
