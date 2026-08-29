@@ -1,0 +1,27 @@
+sources:
+  mapzen: &openmaptiles
+    type: MVT
+    url: ''
+    tilejson: https://tiles.openfreemap.org/planet
+    tile_size: 256
+    max_zoom: 14
+    rasters: [normals]
+    scripts:
+      openmaptiles-mapzen-compat: ../app/openmaptiles-mapzen-compat.js
+    transform: |
+      function(data) {
+          return transformOpenMapTilesToMapzen(data);
+      }
+    attribution: |
+      <a href="https://openfreemap.org" target="_blank">OpenFreeMap</a>
+      <a href="https://www.openmaptiles.org/" target="_blank">&copy; OpenMapTiles</a>
+      Data from <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>
+  tilezen:
+    <<: *openmaptiles
+  normals: &normals
+    type: Raster
+    url: https://s3.amazonaws.com/elevation-tiles-prod/normal/{z}/{x}/{y}.png
+    tile_size: 256
+    max_zoom: 14
+  normals-elevation:
+    <<: *normals

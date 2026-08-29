@@ -1,0 +1,45 @@
+{
+  "name": "@vis.gl/tangram-layers",
+  "version": "1.0.0-alpha.0",
+  "description": "deck.gl layers for Tangram basemaps",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./dist/*": "./dist/*"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/visgl/tangram-layers.git",
+    "directory": "modules/tangram-layers"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "prepack": "yarn build",
+    "lint": "eslint src/"
+  },
+  "devDependencies": {
+    "eslint": "7.8.1",
+    "rollup": "4.20.0"
+  },
+  "dependencies": {
+    "@vis.gl/tangram-renderer": "workspace:^"
+  },
+  "peerDependencies": {
+    "@deck.gl/core": "^9.4.0-alpha.0",
+    "@luma.gl/core": "^9.4.0-alpha.0"
+  }
+}

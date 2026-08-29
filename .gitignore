@@ -7,6 +7,20 @@
 node_modules
 build
 
+# Yarn and Docusaurus generated state
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+website/.docusaurus
+website/build
+website/static/examples
+website/static/modules
+website/static/robots.txt
+modules/tangram-layers/dist
+examples/classic/dist
+
 # OS misc
 .DS_Store
 

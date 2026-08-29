@@ -1,0 +1,31 @@
+{
+  "name": "tangram-layers-website",
+  "version": "1.0.0-alpha.0",
+  "private": true,
+  "description": "Documentation and examples website for Tangram layers",
+  "packageManager": "yarn@4.18.0",
+  "scripts": {
+    "start": "docusaurus start",
+    "build": "yarn workspace @vis.gl/tangram-classic build && node scripts/copy-assets.mjs && docusaurus build",
+    "serve": "docusaurus serve",
+    "deploy": "docusaurus deploy",
+    "clear": "docusaurus clear"
+  },
+  "dependencies": {
+    "@docusaurus/core": "^3.9.2",
+    "@docusaurus/preset-classic": "^3.9.2",
+    "@mdx-js/react": "^3.0.1",
+    "prism-react-renderer": "^2.4.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0"
+  },
+  "browserslist": [
+    ">0.5%",
+    "not dead",
+    "not op_mini all"
+  ]
+}

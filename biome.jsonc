@@ -1,0 +1,31 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.8/schema.json",
+  "extends": ["@vis.gl/dev-tools/biome.jsonc"],
+  "formatter": {
+    "includes": [
+      "modules/tangram-layers/src/**/*.js",
+      "modules/tangram-renderer/dist/index.js",
+      "website/scripts/**/*.mjs",
+      "website/src/**/*.js",
+      "website/docusaurus.config.js",
+      "website/sidebars.js",
+      "examples/deck/**/*.js"
+    ]
+  },
+  "linter": {
+    "includes": [
+      "modules/tangram-layers/src/**/*.js",
+      "modules/tangram-renderer/dist/index.js",
+      "website/scripts/**/*.mjs",
+      "website/src/**/*.js",
+      "website/docusaurus.config.js",
+      "website/sidebars.js",
+      "examples/deck/**/*.js"
+    ],
+    "rules": {
+      "suspicious": {
+        "noConsole": "warn"
+      }
+    }
+  }
+}

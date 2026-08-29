@@ -1,0 +1,100 @@
+:root {
+  --ifm-color-primary: #3b82f6;
+  --ifm-color-primary-dark: #2563eb;
+  --ifm-color-primary-darker: #1d4ed8;
+  --ifm-color-primary-darkest: #1e3a8a;
+  --ifm-color-primary-light: #60a5fa;
+  --ifm-color-primary-lighter: #93c5fd;
+  --ifm-color-primary-lightest: #dbeafe;
+}
+
+.hero--primary {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(90deg, rgba(2, 8, 18, 0.78), rgba(7, 25, 44, 0.5)),
+    url('../../static/img/tron-map.svg') center / cover;
+  overflow: hidden;
+}
+
+.hero--primary::after {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(105deg, transparent 35%, rgba(69, 217, 255, 0.14), transparent 63%);
+  content: '';
+  transform: translateX(-100%);
+  animation: tron-scan 8s linear infinite;
+}
+
+@keyframes tron-scan {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.hero__title {
+  letter-spacing: -0.02em;
+}
+
+.example-frame {
+  display: block;
+  width: 100%;
+  min-height: 680px;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 8px;
+  background: #343438;
+}
+
+.example-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0 2rem;
+}
+
+.example-tile {
+  display: flex;
+  min-height: 148px;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 1.1rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 10px;
+  background: linear-gradient(145deg, var(--ifm-background-surface-color), rgba(69, 217, 255, 0.06));
+  color: var(--ifm-font-color-base);
+  text-decoration: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.example-tile:hover {
+  border-color: var(--ifm-color-primary);
+  box-shadow: 0 8px 24px rgba(7, 25, 44, 0.14);
+  color: var(--ifm-font-color-base);
+  text-decoration: none;
+  transform: translateY(-2px);
+}
+
+.example-tile strong {
+  font-size: 1.05rem;
+}
+
+.example-tile span:last-child {
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.example-tile__eyebrow {
+  color: var(--ifm-color-primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 996px) {
+  .example-frame {
+    min-height: 560px;
+  }
+}

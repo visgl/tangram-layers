@@ -1,0 +1,17 @@
+{
+  "name": "@vis.gl/tangram-classic",
+  "version": "1.0.0-alpha.0",
+  "private": true,
+  "description": "Classic Tangram playground and style gallery",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node scripts/serve.mjs"
+  },
+  "dependencies": {
+    "@vis.gl/tangram-renderer": "workspace:^"
+  }
+}

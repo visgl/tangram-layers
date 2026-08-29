@@ -1,0 +1,4 @@
+import:
+  - https://www.nextzen.org/carto/refill-style/12/refill-style.zip
+  - https://www.nextzen.org/carto/refill-style/12/themes/label-10.zip
+  - openmaptiles-mapzen-compat.yaml
