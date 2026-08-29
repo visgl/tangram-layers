@@ -5,6 +5,13 @@ luma.gl-backed renderer and a deck.gl adapter that can compose it as a basemap.
 The project is an experimental custodian fork and is not the official Tangram
 website.
 
+## Overview
+
+- [Overview](resources.md) — project history, legacy documentation, and the
+  original Tangram demo catalog.
+- [What's new](whats-new.md) — notable changes by release line.
+- [Upgrade guide](upgrade-guide.md) — migration notes from legacy Tangram.
+
 ## Developer guide
 
 - [Getting started](get-started/getting-started.md) — install, build, and run the examples.
@@ -36,8 +43,4 @@ website.
 
 ## Examples and project information
 
-- [What's new](whats-new.md) — notable changes by release line.
-- [Upgrade guide](upgrade-guide.md) — migration notes from legacy Tangram.
-- [Historical resources](resources.md) — Mapzen, legacy documentation, and the
-  original Tangram demo catalog.
 - [Deck example](examples/deck.md) — the runnable WebGL/WebGPU integration.

@@ -1,4 +1,4 @@
-# Historical resources
+# Overview
 
 Tangram grew out of Mapzen's open-source mapping work. These links preserve the
 original project context and point to the demos that inspired this fork. They

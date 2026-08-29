@@ -2,6 +2,15 @@ module.exports = {
   docsSidebar: [
     {
       type: 'category',
+      label: 'Overview',
+      items: [
+        {type: 'doc', id: 'resources', label: 'Overview'},
+        {type: 'doc', id: 'whats-new', label: "What's new"},
+        {type: 'doc', id: 'upgrade-guide', label: 'Upgrade guide'}
+      ]
+    },
+    {
+      type: 'category',
       label: 'Developer guide',
       items: [
         'get-started/getting-started',
@@ -46,11 +55,6 @@ module.exports = {
           ]
         }
       ]
-    },
-    {
-      type: 'category',
-      label: 'Project information',
-      items: ['resources', 'upgrade-guide', 'whats-new']
     }
   ],
   examplesSidebar: [
