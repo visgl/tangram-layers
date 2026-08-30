@@ -27,6 +27,7 @@
     "build:modules": "yarn workspace @vis.gl/tangram-renderer build && yarn workspace @vis.gl/tangram-layers build",
     "build:packages": "yarn build",
     "bundle-size": "node scripts/report-bundle-size.mjs",
+    "coverage:scope": "node scripts/check-coverage-scope.mjs",
     "lint": "yarn lint:licenses && ocular-lint && yarn workspace @vis.gl/tangram-renderer lint",
     "lint:fix": "yarn lint:licenses:fix && ocular-lint fix && yarn workspace @vis.gl/tangram-renderer lint",
     "lint:licenses": "node scripts/check-license-headers.mjs",

@@ -4,6 +4,15 @@
 
 import {getVitestConfig} from '@vis.gl/dev-tools';
 
+const RENDERER_SOURCE_GLOB = 'modules/tangram-renderer/src/**/*.{js,ts}';
+const GENERATED_OR_EXTERNAL_COVERAGE_PATHS = [
+  '**/build/**',
+  '**/dist/**',
+  '**/node_modules/**',
+  '**/vendor/**',
+  '**/*.d.ts'
+];
+
 export default getVitestConfig({
   overrides: {
     optimizeDeps: {include: ['sinon']},
@@ -25,8 +34,11 @@ export default getVitestConfig({
   coverage: {
     provider: 'v8',
     reporter: ['text', 'lcov', 'json-summary'],
-    include: ['modules/tangram-renderer/src/**/*.{js,ts}'],
-    exclude: ['**/*.d.ts']
+    // Keep the denominator to authored renderer source. Package outputs and
+    // vendored copies are tracked in this repository for distribution, but are
+    // not independently executable source and must never enter coverage.
+    include: [RENDERER_SOURCE_GLOB],
+    exclude: GENERATED_OR_EXTERNAL_COVERAGE_PATHS
   },
   projects: {
     node: {
