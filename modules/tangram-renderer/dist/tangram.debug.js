@@ -103,17 +103,17 @@ function _iterableToArrayLimit(r, l) {
   }
 }
 
-function _arrayLikeToArray$3(r, a) {
+function _arrayLikeToArray$4(r, a) {
   (null == a || a > r.length) && (a = r.length);
   for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
   return n;
 }
 
-function _unsupportedIterableToArray$3(r, a) {
+function _unsupportedIterableToArray$4(r, a) {
   if (r) {
-    if ("string" == typeof r) return _arrayLikeToArray$3(r, a);
+    if ("string" == typeof r) return _arrayLikeToArray$4(r, a);
     var t = {}.toString.call(r).slice(8, -1);
-    return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray$3(r, a) : void 0;
+    return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray$4(r, a) : void 0;
   }
 }
 
@@ -122,11 +122,11 @@ function _nonIterableRest() {
 }
 
 function _slicedToArray(r, e) {
-  return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray$3(r, e) || _nonIterableRest();
+  return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray$4(r, e) || _nonIterableRest();
 }
 
 function _arrayWithoutHoles(r) {
-  if (Array.isArray(r)) return _arrayLikeToArray$3(r);
+  if (Array.isArray(r)) return _arrayLikeToArray$4(r);
 }
 
 function _iterableToArray(r) {
@@ -138,7 +138,7 @@ function _nonIterableSpread() {
 }
 
 function _toConsumableArray(r) {
-  return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray$3(r) || _nonIterableSpread();
+  return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray$4(r) || _nonIterableSpread();
 }
 
 function _classCallCheck(a, n) {
@@ -313,7 +313,7 @@ function setupMainThread() {
     }));
     freeTransferables(transferables);
     if (transferables.length > 0) {
-      log('trace', "'".concat(method, "' transferred ").concat(transferables.length, " objects to worker thread"));
+      _log('trace', "'".concat(method, "' transferred ").concat(transferables.length, " objects to worker thread"));
     }
     message_id++;
     return promise;
@@ -384,7 +384,7 @@ function setupMainThread() {
             }));
             freeTransferables(transferables);
             if (transferables.length > 0) {
-              log('trace', "'".concat(method_name, "' transferred ").concat(transferables.length, " objects to worker thread"));
+              _log('trace', "'".concat(method_name, "' transferred ").concat(transferables.length, " objects to worker thread"));
             }
           }, function (error) {
             worker.postMessage({
@@ -411,7 +411,7 @@ function setupMainThread() {
           }));
           freeTransferables(transferables);
           if (transferables.length > 0) {
-            log('trace', "'".concat(method_name, "' transferred ").concat(transferables.length, " objects to worker thread"));
+            _log('trace', "'".concat(method_name, "' transferred ").concat(transferables.length, " objects to worker thread"));
           }
         }
       }
@@ -481,7 +481,7 @@ function setupWorkerThread() {
     }));
     freeTransferables(transferables);
     if (transferables.length > 0) {
-      log('trace', "'".concat(method, "' transferred ").concat(transferables.length, " objects to main thread"));
+      _log('trace', "'".concat(method, "' transferred ").concat(transferables.length, " objects to main thread"));
     }
     message_id++;
     return promise;
@@ -546,7 +546,7 @@ function setupWorkerThread() {
           }));
           freeTransferables(transferables);
           if (transferables.length > 0) {
-            log('trace', "'".concat(method_name, "' transferred ").concat(transferables.length, " objects to main thread"));
+            _log('trace', "'".concat(method_name, "' transferred ").concat(transferables.length, " objects to main thread"));
           }
         }, function (error) {
           self.postMessage({
@@ -573,7 +573,7 @@ function setupWorkerThread() {
         }));
         freeTransferables(transferables);
         if (transferables.length > 0) {
-          log('trace', "'".concat(method_name, "' transferred ").concat(transferables.length, " objects to main thread"));
+          _log('trace', "'".concat(method_name, "' transferred ").concat(transferables.length, " objects to main thread"));
         }
       }
     }
@@ -657,6 +657,7 @@ if (Thread.is_worker) {
   setupWorkerThread();
 }
 
+var workerBroker = WorkerBroker;
 var LEVELS = {
   silent: -1,
   error: 0,
@@ -665,70 +666,75 @@ var LEVELS = {
   debug: 3,
   trace: 4
 };
-var methods = {};
-var logged_once = {};
-function methodForLevel(level) {
-  if (Thread.is_main) {
-    methods[level] = methods[level] || (console[level] ? console[level] : console.log).bind(console); // eslint-disable-line no-console
-    return methods[level];
-  }
-}
 
-// Logs message, proxying any log requests from worker threads back to the main thread.
-// Returns (asynchronously, due to proxying) a boolean indicating if the message was logged.
-// Option `once: true` can be used to only log each unique log message once (e.g. for warnings
-// that would otherwise be repetitive or possibly logged thousands of times, such as per feature).
-function log(opts) {
-  var level = _typeof(opts) === 'object' ? opts.level : opts;
-  if (LEVELS[level] <= LEVELS[log.level]) {
-    for (var _len = arguments.length, msg = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-      msg[_key - 1] = arguments[_key];
+/** Supported renderer log levels. */
+
+/** Per-message renderer logging options. */
+
+/** Renderer logger with shared level and worker controls. */
+
+var methods = {};
+var loggedOnce = {};
+function getMethodForLevel(level) {
+  if (!Thread.is_main) {
+    return;
+  }
+  if (!methods[level]) {
+    var consoleMethods = console;
+    methods[level] = (consoleMethods[level] || console.log).bind(console);
+  }
+  return methods[level];
+}
+var _log = function log(options) {
+  var $args = arguments;
+  return new Promise(function ($return, $error) {
+    var level = _typeof(options) === 'object' ? options.level : options;
+    if (LEVELS[level] > LEVELS[_log.level]) {
+      return $return(false);
+    }
+    for (var _len = $args.length, messages = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+      messages[_key - 1] = $args[_key];
     }
     if (Thread.is_worker) {
-      // Proxy to main thread
-      return WorkerBroker.postMessage.apply(WorkerBroker, [{
+      return $return(workerBroker.postMessage.apply(workerBroker, [{
         method: '_logProxy',
         stringify: true
-      }, opts].concat(msg));
-    } else {
-      // Only log message once?
-      if (_typeof(opts) === 'object' && opts.once === true) {
-        if (logged_once[JSON.stringify(msg)]) {
-          return Promise.resolve(false);
-        }
-        logged_once[JSON.stringify(msg)] = true;
-      }
-
-      // Write to console (on main thread)
-      var logger = methodForLevel(level);
-      if (msg.length > 1) {
-        logger.apply(void 0, ["Tangram ".concat(version, " [").concat(level, "]: ").concat(msg[0])].concat(_toConsumableArray(msg.slice(1))));
-      } else {
-        logger("Tangram ".concat(version, " [").concat(level, "]: ").concat(msg[0]));
-      }
+      }, options].concat(messages)));
     }
-    return Promise.resolve(true);
-  }
-  return Promise.resolve(false);
-}
-log.level = 'info';
-log.workers = null;
-log.setLevel = function (level) {
-  log.level = level;
-  if (Thread.is_main && Array.isArray(log.workers)) {
-    WorkerBroker.postMessage(log.workers, '_logSetLevelProxy', level);
+    if (_typeof(options) === 'object' && options.once === true) {
+      var key = JSON.stringify(messages);
+      if (loggedOnce[key]) {
+        return $return(false);
+      }
+      loggedOnce[key] = true;
+    }
+    var logger = getMethodForLevel(level);
+    if (messages.length > 1) {
+      logger.apply(void 0, ["Tangram ".concat(version, " [").concat(level, "]: ").concat(messages[0])].concat(_toConsumableArray(messages.slice(1))));
+    } else {
+      logger("Tangram ".concat(version, " [").concat(level, "]: ").concat(messages[0]));
+    }
+    return $return(true);
+  });
+};
+_log.level = 'info';
+_log.workers = null;
+_log.setLevel = function (level) {
+  _log.level = level;
+  if (Thread.is_main && Array.isArray(_log.workers)) {
+    workerBroker.postMessage(_log.workers, '_logSetLevelProxy', level);
   }
 };
 if (Thread.is_main) {
-  log.setWorkers = function (workers) {
-    log.workers = workers;
+  _log.setWorkers = function (workers) {
+    _log.workers = workers;
   };
-  log.reset = function () {
-    logged_once = {};
+  _log.reset = function () {
+    loggedOnce = {};
   };
 }
-WorkerBroker.addTarget('_logProxy', log); // proxy log messages from worker to main thread
-WorkerBroker.addTarget('_logSetLevelProxy', log.setLevel); // proxy log level setting from main to worker thread
+WorkerBroker.addTarget('_logProxy', _log);
+WorkerBroker.addTarget('_logSetLevelProxy', _log.setLevel);
 
 var Utils = {};
 WorkerBroker.addTarget('Utils', Utils);
@@ -758,7 +764,7 @@ Utils.io = function (url) {
     // Some versions of IE11 and Edge will hang web workers when performing XHR requests
     // These requests can be proxied through the main thread
     // https://developer.microsoft.com/en-us/microsoft-edge/platform/issues/9545866/
-    log('debug', 'Proxying request for URL to worker', url);
+    _log('debug', 'Proxying request for URL to worker', url);
     if (request_key) {
       Utils._proxy_requests[request_key] = true; // mark as proxied
     }
@@ -831,11 +837,11 @@ Utils.cancelRequest = function (key) {
   }
   var req = Utils._requests[key];
   if (req) {
-    log('trace', "Cancelling network request key '".concat(key, "'"));
+    _log('trace', "Cancelling network request key '".concat(key, "'"));
     Utils._requests[key].abort();
     delete Utils._requests[key];
   } else {
-    log('trace', "Could not find network request key '".concat(key, "'"));
+    _log('trace', "Could not find network request key '".concat(key, "'"));
   }
 };
 
@@ -1117,7 +1123,7 @@ function createObjectURL(url) {
     _createObjectURL = window.URL && window.URL.createObjectURL || window.webkitURL && window.webkitURL.createObjectURL;
     if (typeof _createObjectURL !== 'function') {
       _createObjectURL = null;
-      log('warn', 'window.URL.createObjectURL (or vendor prefix) not found, unable to create local blob URLs');
+      _log('warn', 'window.URL.createObjectURL (or vendor prefix) not found, unable to create local blob URLs');
     }
   }
   if (_createObjectURL) {
@@ -1135,41 +1141,42 @@ function getURLParameter(name, url) {
   return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
 }
 
+function _createForOfIteratorHelper$3(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray$3(r)) || e) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: true } : { done: false, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = true, u = false; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = true, o = r; }, f: function f() { try { a || null == t.return || t.return(); } finally { if (u) throw o; } } }; }
+function _unsupportedIterableToArray$3(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray$3(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray$3(r, a) : void 0; } }
+function _arrayLikeToArray$3(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
-// import log from './log';
+/** State shared by cooperative tasks for the current frame. */
 
+/** A cooperative task scheduled by the renderer. */
+
+/** Cooperative renderer task scheduler. */
+
+/** Shared renderer task scheduler. */
 var Task = {
   id: 0,
-  // unique id per task
   queue: [],
-  // current queue of outstanding tasks
   max_time: 20,
-  // default time in which all tasks should complete per frame
   start_time: null,
-  // start time for tasks in current frame
   state: {},
-  // track flags about environment state (ex: whether user is currently moving the view)
   add: function add(task) {
     task.id = Task.id++;
-    task.max_time = task.max_time || Task.max_time; // allow task to run for this much time (tasks have a global collective limit per frame, too)
-    task.pause_factor = task.pause_factor || 1; // pause tasks by this many frames when they run too long
-    var promise = new Promise(function (resolve, reject) {
+    task.max_time = task.max_time || Task.max_time;
+    task.pause_factor = task.pause_factor || 1;
+    task.promise = new Promise(function (resolve, reject) {
       task.resolve = resolve;
       task.reject = reject;
     });
-    task.promise = promise;
     task.elapsed = 0;
     task.total_elapsed = 0;
     task.stats = {
       calls: 0
     };
     this.queue.push(task);
-
-    // Run task immediately if under total frame time
-    this.start_time = this.start_time || performance.now(); // start frame timer if necessary
+    this.start_time = this.start_time || performance.now();
     this.elapsed = performance.now() - this.start_time;
     if (this.elapsed < Task.max_time || task.immediate) {
       this.process(task);
@@ -1177,78 +1184,71 @@ var Task = {
     return task.promise;
   },
   remove: function remove(task) {
-    var idx = this.queue.indexOf(task);
-    if (idx > -1) {
-      this.queue.splice(idx, 1);
+    var index = this.queue.indexOf(task);
+    if (index > -1) {
+      this.queue.splice(index, 1);
     }
   },
   process: function process(task) {
-    // Skip task while user is moving the view, if the task requests it
-    // (for intensive tasks that lock the UI, like canvas rasterization)
     if (this.state.user_moving_view && task.user_moving_view === false) {
-      // log('debug', `*** SKIPPING task id ${task.id}, ${task.type} while user is moving view`);
       return;
     }
-
-    // Skip task if it's currently paused
     if (task.pause) {
-      // log('debug', `*** PAUSING task id ${task.id}, ${task.type} (${task.pause})`);
       task.pause--;
       return true;
     }
     task.stats.calls++;
-    task.start_time = performance.now(); // start task timer
+    task.start_time = performance.now();
     return task.run(task);
   },
   processAll: function processAll() {
-    this.start_time = this.start_time || performance.now(); // start frame timer if necessary
-    for (var i = 0; i < this.queue.length; i++) {
-      // Exceeded either total task time, or total frame time
-      var task = this.queue[i];
-      if (this.process(task) !== true) {
-        // If the task didn't complete, pause it for a task-specific number of frames
-        // (can be disabled by setting pause_factor to 0)
-        if (!task.pause) {
-          task.pause = task.elapsed > task.max_time ? task.pause_factor : 0;
+    this.start_time = this.start_time || performance.now();
+    var _iterator = _createForOfIteratorHelper$3(this.queue),
+      _step;
+    try {
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+        var _task = _step.value;
+        if (this.process(_task) !== true) {
+          if (!_task.pause) {
+            _task.pause = _task.elapsed > _task.max_time ? _task.pause_factor : 0;
+          }
+          _task.total_elapsed += _task.elapsed;
         }
-        task.total_elapsed += task.elapsed;
+        this.elapsed = performance.now() - this.start_time;
+        if (this.elapsed >= Task.max_time) {
+          this.start_time = null;
+          break;
+        }
       }
-
-      // Check total frame time
-      this.elapsed = performance.now() - this.start_time;
-      if (this.elapsed >= Task.max_time) {
-        this.start_time = null; // reset frame timer
-        break;
-      }
+    } catch (err) {
+      _iterator.e(err);
+    } finally {
+      _iterator.f();
     }
   },
   finish: function finish(task, value) {
     task.elapsed = performance.now() - task.start_time;
     task.total_elapsed += task.elapsed;
-    // log('debug', `task type ${task.type}, tile ${task.id}, finish after ${task.stats.calls} calls, ${task.total_elapsed.toFixed(2)} elapsed`);
     this.remove(task);
     task.resolve(value);
     return task.promise;
   },
   cancel: function cancel(task) {
-    var val;
-    if (task.cancel instanceof Function) {
-      val = task.cancel(task); // optional cancel function
-    }
-    task.resolve(val);
+    var _task$cancel;
+    var value = (_task$cancel = task.cancel) === null || _task$cancel === void 0 ? void 0 : _task$cancel.call(task, task);
+    task.resolve(value);
   },
   shouldContinue: function shouldContinue(task) {
-    // Suspend task if it runs over its specific per-frame limit, or the global limit
     task.elapsed = performance.now() - task.start_time;
     this.elapsed = performance.now() - this.start_time;
     return task.elapsed < task.max_time && this.elapsed < Task.max_time;
   },
-  removeForTile: function removeForTile(tile_id) {
-    for (var idx = this.queue.length - 1; idx >= 0; idx--) {
-      if (this.queue[idx].tile_id === tile_id) {
-        // log('trace', `Task: remove tasks for tile ${tile_id}`);
-        this.cancel(this.queue[idx]);
-        this.queue.splice(idx, 1);
+  removeForTile: function removeForTile(tileId) {
+    for (var index = this.queue.length - 1; index >= 0; index--) {
+      var _task2 = this.queue[index];
+      if (_task2.tile_id === tileId) {
+        this.cancel(_task2);
+        this.queue.splice(index, 1);
       }
     }
   },
@@ -1285,7 +1285,7 @@ function subscribeMixin(target) {
           try {
             handler.call.apply(handler, [_listener].concat(data));
           } catch (error) {
-            log('warn', "Caught exception in listener for event '".concat(event, "':"), error);
+            _log('warn', "Caught exception in listener for event '".concat(event, "':"), error);
           }
         }
       }
@@ -1446,7 +1446,7 @@ var Texture = /*#__PURE__*/function () {
       name: name
     }, options));
     this.load(options);
-    log('trace', "creating Texture ".concat(this.name));
+    _log('trace', "creating Texture ".concat(this.name));
   }
 
   // Destroy a single texture instance
@@ -1468,7 +1468,7 @@ var Texture = /*#__PURE__*/function () {
       var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
         force = _ref.force;
       if (this.retain_count > 0 && !force) {
-        log('error', "Texture '".concat(this.name, "': destroying texture with retain count of '").concat(this.retain_count, "'"));
+        _log('error', "Texture '".concat(this.name, "': destroying texture with retain count of '").concat(this.retain_count, "'"));
         return;
       }
       if (!this.valid) {
@@ -1486,7 +1486,7 @@ var Texture = /*#__PURE__*/function () {
         delete Texture.texture_configs[this.name];
       }
       this.valid = false;
-      log('trace', "destroying Texture ".concat(this.name));
+      _log('trace', "destroying Texture ".concat(this.name));
     }
   }, {
     key: "retain",
@@ -1497,7 +1497,7 @@ var Texture = /*#__PURE__*/function () {
     key: "release",
     value: function release() {
       if (this.retain_count <= 0) {
-        log('error', "Texture '".concat(this.name, "': releasing texture with retain count of '").concat(this.retain_count, "'"));
+        _log('error', "Texture '".concat(this.name, "': releasing texture with retain count of '").concat(this.retain_count, "'"));
       }
       this.retain_count--;
       if (this.retain_count <= 0) {
@@ -1578,7 +1578,7 @@ var Texture = /*#__PURE__*/function () {
             }
           } catch (e) {
             _this3.loaded = false;
-            log('warn', "Texture '".concat(_this3.name, "': failed to load url: '").concat(_this3.url, "'"), e, options);
+            _log('warn', "Texture '".concat(_this3.name, "': failed to load url: '").concat(_this3.url, "'"), e, options);
             Texture.trigger('warning', {
               message: "Failed to load texture from ".concat(_this3.url),
               error: e,
@@ -1591,7 +1591,7 @@ var Texture = /*#__PURE__*/function () {
         image.onerror = function (e) {
           // Warn and resolve on error
           _this3.loaded = false;
-          log('warn', "Texture '".concat(_this3.name, "': failed to load url: '").concat(_this3.url, "'"), e, options);
+          _log('warn', "Texture '".concat(_this3.name, "': failed to load url: '").concat(_this3.url, "'"), e, options);
           Texture.trigger('warning', {
             message: "Failed to load texture from ".concat(_this3.url),
             error: e,
@@ -1646,7 +1646,7 @@ var Texture = /*#__PURE__*/function () {
         this.loaded = false;
         var msg = "the 'element' parameter (`element: ".concat(JSON.stringify(el), "`) must be a CSS ");
         msg += 'selector string, or a <canvas>, <image> or <video> object';
-        log('warn', "Texture '".concat(this.name, "': ").concat(msg), options);
+        _log('warn', "Texture '".concat(this.name, "': ").concat(msg), options);
         Texture.trigger('warning', {
           message: "Failed to load texture because ".concat(msg),
           texture: options
@@ -3091,7 +3091,7 @@ var ShaderProgram = /*#__PURE__*/function () {
     value: function setTextureUniform(uniform_name, texture_name) {
       var texture = Texture.textures[texture_name];
       if (texture == null) {
-        log('warn', "Cannot find texture '".concat(texture_name, "'"));
+        _log('warn', "Cannot find texture '".concat(texture_name, "'"));
         return;
       }
       this.texture_uniforms[uniform_name] = texture;
@@ -3334,7 +3334,7 @@ var ShaderProgram = /*#__PURE__*/function () {
         if (ext) {
           exts.push(name);
         } else {
-          log('debug', "Could not enable extension '".concat(name, "'"));
+          _log('debug', "Could not enable extension '".concat(name, "'"));
         }
       });
       return exts;
@@ -3438,7 +3438,7 @@ ShaderProgram.updateProgram = function (gl, program, vertex_shader_source, fragm
   // Program with this exact vertex and fragment shader sources already cached?
   var key = hashString(gl._tangram_id + '::' + vertex_shader_source + '::' + fragment_shader_source);
   if (!use_shader_resources && ShaderProgram.programs_by_source[key]) {
-    log('trace', 'Reusing identical source GL program object');
+    _log('trace', 'Reusing identical source GL program object');
     return ShaderProgram.programs_by_source[key];
   }
   var vertex_shader = use_shader_resources ? shader_resources.vertex_shader.handle : ShaderProgram.createShader(gl, vertex_shader_source, gl.VERTEX_SHADER);
@@ -3486,7 +3486,7 @@ ShaderProgram.createShader = function (gl, source, stype) {
   // Program with identical vertex and fragment shader sources already cached?
   var key = hashString(gl._tangram_id + '::' + source);
   if (ShaderProgram.shaders_by_source[key]) {
-    log('trace', 'Reusing identical source GL shader object');
+    _log('trace', 'Reusing identical source GL shader object');
     return ShaderProgram.shaders_by_source[key];
   }
   var shader = gl.createShader(stype);
@@ -3546,11 +3546,11 @@ var VertexArrayObject = {
       ext = getVertexArrayExtension(gl);
     }
     if (ext != null) {
-      log('info', 'Vertex Array Object extension available');
+      _log('info', 'Vertex Array Object extension available');
     } else if (this.disabled !== true) {
-      log('warn', 'Vertex Array Object extension NOT available');
+      _log('warn', 'Vertex Array Object extension NOT available');
     } else {
-      log('warn', 'Vertex Array Object extension force disabled');
+      _log('warn', 'Vertex Array Object extension force disabled');
     }
   },
   getExtension: function getExtension$1(gl, ext_name) {
@@ -4892,7 +4892,7 @@ function tryEval(func, context) {
   try {
     return func(context);
   } catch (e) {
-    log('warn', "Property function in layer '".concat(context.layers[context.layers.length - 1], "' failed with\n"), "error ".concat(e.stack, "\n"), "function '".concat(func.source, "'\n"), context.feature, context);
+    _log('warn', "Property function in layer '".concat(context.layers[context.layers.length - 1], "' failed with\n"), "error ".concat(e.stack, "\n"), "function '".concat(func.source, "'\n"), context.feature, context);
   }
 }
 
@@ -5150,7 +5150,7 @@ var FeatureSelection = /*#__PURE__*/function () {
     value: function finishRead(message) {
       var request = this.requests[message.id];
       if (!request) {
-        log('error', 'FeatureSelection.finishRead(): could not find message', message);
+        _log('error', 'FeatureSelection.finishRead(): could not find message', message);
         return; // request was cleared before it returned
       }
       var feature = message.feature;
@@ -5949,195 +5949,160 @@ function _inherits(t, e) {
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
-/*** Vector functions - vectors provided as [x, y] or [x, y, z] arrays ***/
+/** A numeric vector accepted by Tangram's vector utilities. */
 
-var Vector = {};
-Vector.copy = function (v) {
-  var V = [];
-  var lim = v.length;
-  for (var i = 0; i < lim; i++) {
-    V[i] = v[i];
+/** A mutable numeric vector returned or updated by Tangram's vector utilities. */
+
+function copy(vector) {
+  return _toConsumableArray(vector);
+}
+function negate(vector) {
+  return vector.map(function (component) {
+    return -component;
+  });
+}
+function add(left, right) {
+  var length = Math.min(left.length, right.length);
+  var result = [];
+  for (var index = 0; index < length; index++) {
+    result[index] = left[index] + right[index];
   }
-  return V;
-};
-Vector.neg = function (v) {
-  var V = [];
-  var lim = v.length;
-  for (var i = 0; i < lim; i++) {
-    V[i] = -v[i];
+  return result;
+}
+function subtract(left, right) {
+  var length = Math.min(left.length, right.length);
+  var result = [];
+  for (var index = 0; index < length; index++) {
+    result[index] = left[index] - right[index];
   }
-  return V;
-};
-
-// Addition of two vectors
-Vector.add = function (v1, v2) {
-  var v = [];
-  var lim = Math.min(v1.length, v2.length);
-  for (var i = 0; i < lim; i++) {
-    v[i] = v1[i] + v2[i];
+  return result;
+}
+function signedArea(first, second, third) {
+  return (second[0] - first[0]) * (third[1] - first[1]) - (third[0] - first[0]) * (second[1] - first[1]);
+}
+function multiply(vector, multiplier) {
+  var length = typeof multiplier === 'number' ? vector.length : Math.min(vector.length, multiplier.length);
+  var result = [];
+  for (var index = 0; index < length; index++) {
+    result[index] = vector[index] * (typeof multiplier === 'number' ? multiplier : multiplier[index]);
   }
-  return v;
-};
-
-// Substraction of two vectors
-Vector.sub = function (v1, v2) {
-  var v = [];
-  var lim = Math.min(v1.length, v2.length);
-  for (var i = 0; i < lim; i++) {
-    v[i] = v1[i] - v2[i];
+  return result;
+}
+function divide(vector, divisor) {
+  var length = typeof divisor === 'number' ? vector.length : Math.min(vector.length, divisor.length);
+  var result = [];
+  for (var index = 0; index < length; index++) {
+    result[index] = vector[index] / (typeof divisor === 'number' ? divisor : divisor[index]);
   }
-  return v;
-};
-Vector.signed_area = function (v1, v2, v3) {
-  return (v2[0] - v1[0]) * (v3[1] - v1[1]) - (v3[0] - v1[0]) * (v2[1] - v1[1]);
-};
-
-// Multiplication of two vectors, or a vector and a scalar
-Vector.mult = function (v1, v2) {
-  var v = [],
-    len = v1.length,
-    i;
-  if (typeof v2 === 'number') {
-    // Mulitply by scalar
-    for (i = 0; i < len; i++) {
-      v[i] = v1[i] * v2;
-    }
-  } else {
-    // Multiply two vectors
-    len = Math.min(v1.length, v2.length);
-    for (i = 0; i < len; i++) {
-      v[i] = v1[i] * v2[i];
-    }
-  }
-  return v;
-};
-
-// Division of two vectors
-Vector.div = function (v1, v2) {
-  var v = [],
-    i;
-  if (typeof v2 === 'number') {
-    // Divide by scalar
-    for (i = 0; i < v1.length; i++) {
-      v[i] = v1[i] / v2;
-    }
-  } else {
-    // Divide to vectors
-    var len = Math.min(v1.length, v2.length);
-    for (i = 0; i < len; i++) {
-      v[i] = v1[i] / v2[i];
-    }
-  }
-  return v;
-};
-
-// Get 2D perpendicular
-Vector.perp = function (v1, v2) {
-  return [v2[1] - v1[1], v1[0] - v2[0]];
-};
-
-// Get 2D vector rotated
-Vector.rot = function (v, a) {
-  var c = Math.cos(a);
-  var s = Math.sin(a);
-  return [v[0] * c - v[1] * s, v[0] * s + v[1] * c];
-};
-
-// Get 2D counter-clockwise angle
-// Angles in quadrant I and II are mapped to [0, PI)
-// Angles in quadrant III and IV are mapped to [-PI, 0]
-Vector.angle = function (_ref) {
+  return result;
+}
+function perpendicular(first, second) {
+  return [second[1] - first[1], first[0] - second[0]];
+}
+function rotate(vector, angleRadians) {
+  var cosine = Math.cos(angleRadians);
+  var sine = Math.sin(angleRadians);
+  return [vector[0] * cosine - vector[1] * sine, vector[0] * sine + vector[1] * cosine];
+}
+function angle(_ref) {
   var _ref2 = _slicedToArray(_ref, 2),
     x = _ref2[0],
     y = _ref2[1];
   return Math.atan2(y, x);
-};
-
-// Get angle between two vectors
-Vector.angleBetween = function (A, B) {
-  var delta = Vector.dot(Vector.normalize(Vector.copy(A)), Vector.normalize(Vector.copy(B)));
+}
+function angleBetween(first, second) {
+  var delta = dot(normalize(copy(first)), normalize(copy(second)));
   if (delta > 1) {
     delta = 1;
-  } // protect against floating point error
+  }
   return Math.acos(delta);
-};
-
-// Compare two points
-Vector.isEqual = function (v1, v2) {
-  var len = v1.length;
-  for (var i = 0; i < len; i++) {
-    if (v1[i] !== v2[i]) {
+}
+function isEqual(first, second) {
+  for (var index = 0; index < first.length; index++) {
+    if (first[index] !== second[index]) {
       return false;
     }
   }
   return true;
-};
-
-// Vector length squared
-Vector.lengthSq = function (v) {
-  if (v.length === 2) {
-    return v[0] * v[0] + v[1] * v[1];
-  } else if (v.length >= 3) {
-    return v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
+}
+function lengthSquared(vector) {
+  if (vector.length === 2) {
+    return vector[0] * vector[0] + vector[1] * vector[1];
+  }
+  if (vector.length >= 3) {
+    return vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2];
   }
   return 0;
-};
-
-// Vector length
-Vector.length = function (v) {
-  return Math.sqrt(Vector.lengthSq(v));
-};
-
-// Normalize a vector *in place* (use Vector.copy() if you need a new vector instance)
-Vector.normalize = function (v) {
-  var d;
-  if (v.length === 2) {
-    d = v[0] * v[0] + v[1] * v[1];
-    if (d === 1) {
-      return v;
+}
+function getLength(vector) {
+  return Math.sqrt(lengthSquared(vector));
+}
+function normalize(vector) {
+  if (vector.length !== 2 && vector.length < 3) {
+    return vector;
+  }
+  var magnitudeSquared = vector[0] * vector[0] + vector[1] * vector[1];
+  if (vector.length >= 3) {
+    magnitudeSquared += vector[2] * vector[2];
+  }
+  if (magnitudeSquared === 1) {
+    return vector;
+  }
+  var magnitude = Math.sqrt(magnitudeSquared);
+  if (magnitude !== 0) {
+    vector[0] /= magnitude;
+    vector[1] /= magnitude;
+    if (vector.length >= 3) {
+      vector[2] /= magnitude;
     }
-    d = Math.sqrt(d);
-    if (d !== 0) {
-      v[0] /= d;
-      v[1] /= d;
-    } else {
-      v[0] = 0, v[1] = 0;
-    }
-  } else if (v.length >= 3) {
-    d = v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
-    if (d === 1) {
-      return v;
-    }
-    d = Math.sqrt(d);
-    if (d !== 0) {
-      v[0] /= d;
-      v[1] /= d;
-      v[2] /= d;
-    } else {
-      v[0] = 0, v[1] = 0, v[2] = 0;
+  } else {
+    vector[0] = 0;
+    vector[1] = 0;
+    if (vector.length >= 3) {
+      vector[2] = 0;
     }
   }
-  return v;
-};
-
-// Cross product of two vectors
-Vector.cross = function (v1, v2) {
-  if (v1.length === 2) {
-    return v1[0] * v2[1] - v1[1] * v2[0];
-  } else if (v1.length === 3) {
-    return [v1[1] * v2[2] - v1[2] * v2[1], v1[2] * v2[0] - v1[0] * v2[2], v1[0] * v2[1] - v1[1] * v2[0]];
+  return vector;
+}
+function cross(first, second) {
+  if (first.length === 2) {
+    return first[0] * second[1] - first[1] * second[0];
   }
-};
-
-// Dot product of two vectors
-Vector.dot = function (v1, v2) {
-  var n = 0;
-  var lim = Math.min(v1.length, v2.length);
-  for (var i = 0; i < lim; i++) {
-    n += v1[i] * v2[i];
+  if (first.length === 3) {
+    return [first[1] * second[2] - first[2] * second[1], first[2] * second[0] - first[0] * second[2], first[0] * second[1] - first[1] * second[0]];
   }
-  return n;
+  return undefined;
+}
+function dot(first, second) {
+  var length = Math.min(first.length, second.length);
+  var result = 0;
+  for (var index = 0; index < length; index++) {
+    result += first[index] * second[index];
+  }
+  return result;
+}
+
+/** Tangram's numeric vector operations. */
+var Vector = {
+  copy: copy,
+  neg: negate,
+  add: add,
+  sub: subtract,
+  signed_area: signedArea,
+  mult: multiply,
+  div: divide,
+  perp: perpendicular,
+  rot: rotate,
+  angle: angle,
+  angleBetween: angleBetween,
+  isEqual: isEqual,
+  lengthSq: lengthSquared,
+  length: getLength,
+  normalize: normalize,
+  cross: cross,
+  dot: dot
 };
 
 var ambient_source = `// Tangram
@@ -6862,7 +6827,7 @@ var DataSource = /*#__PURE__*/function () {
     this.zoom_offset = config.zoom_offset != null ? config.zoom_offset : 0;
     if (this.zoom_offset < 0) {
       var msg = "Data source '".concat(this.name, "' zoom_offset must not be negative \u2013 setting to 0.");
-      log({
+      _log({
         level: 'warn',
         once: true
       }, msg);
@@ -6925,7 +6890,7 @@ var DataSource = /*#__PURE__*/function () {
   }, {
     key: "copyTileData",
     value: function copyTileData(source, dest) {
-      log('trace', "Copy tile data from ".concat(source.key, " to ").concat(dest.key));
+      _log('trace', "Copy tile data from ".concat(source.key, " to ").concat(dest.key));
       dest.source_data = {
         layers: source.source_data.layers
       };
@@ -6962,7 +6927,7 @@ var DataSource = /*#__PURE__*/function () {
     value: function setTileSize(tile_size) {
       this.tile_size = tile_size || 256;
       if (typeof this.tile_size !== 'number' || this.tile_size < 256 || !Utils.isPowerOf2(this.tile_size)) {
-        log({
+        _log({
           level: 'warn',
           once: true
         }, "Data source '".concat(this.name, "': 'tile_size' parameter must be a number that is a power of 2 greater than or equal to 256, but was '").concat(tile_size, "'"));
@@ -7160,7 +7125,7 @@ var NetworkSource = /*#__PURE__*/function (_DataSource) {
         var _ref5 = _slicedToArray(_ref4, 2),
           param = _ref5[0],
           value = _ref5[1];
-        log({
+        _log({
           level: 'warn',
           once: true
         }, "Data source '".concat(_this6.name, "': parameter '").concat(param, "' already present in URL '").concat(url, "', ") + "skipping value '".concat(param, "=").concat(value, "' specified in 'url_params'"));
@@ -7254,7 +7219,7 @@ var NetworkTileSource = /*#__PURE__*/function (_NetworkSource) {
         _this8.url_subdomains = source.url_subdomains;
         _this8.next_url_subdomain = 0;
       } else {
-        log({
+        _log({
           level: 'warn',
           once: true
         }, "Data source '".concat(_this8.name, "': source URL includes '{s}' subdomain marker ('").concat(_this8.url, "'), but no subdomains ") + 'were specified in \'url_subdomains\' parameter');
@@ -7661,7 +7626,7 @@ var RasterTileSource = /*#__PURE__*/function (_NetworkTileSource) {
           // raster source supports higher detail, but was downsampled to match (the downsampling already
           // happened upstream, when the attaching source calculated its own tile coordinate)
           if (zdiff < 0) {
-            log({
+            _log({
               level: 'warn',
               once: true
             }, "Raster source '".concat(this.name, "' supports higher zoom detail than source '").concat(tile_source.name, "' ") + "it's attached to. Downsampling this source ".concat(-zdiff, " extra zoom levels to match."));
@@ -7835,7 +7800,7 @@ var RasterSource = /*#__PURE__*/function (_RasterTileSource) {
         };
         image.onerror = function (e) {
           // Warn and resolve on error
-          log('warn', "Raster source '".concat(_this4.name, "': failed to load url: '").concat(url, "'"), e);
+          _log('warn', "Raster source '".concat(_this4.name, "': failed to load url: '").concat(url, "'"), e);
           resolve(null);
         };
 
@@ -8236,7 +8201,7 @@ var Style = {
           msg += '; \'order\' was set to a dynamic value (e.g. string tied to feature property, ';
           msg += 'or JS function), but evaluated to null for one or more features';
         }
-        log({
+        _log({
           level: 'warn',
           once: true
         }, msg);
@@ -8274,7 +8239,7 @@ var Style = {
       }
       return style;
     } catch (error) {
-      log('error', 'Style.parseFeature: style parsing error', feature, style, error.stack);
+      _log('error', 'Style.parseFeature: style parsing error', feature, style, error.stack);
     }
   },
   _parseFeature: function _parseFeature() {
@@ -8396,11 +8361,11 @@ var Style = {
       return;
     }
     if (!program.compiled) {
-      log('debug', "Compiling style '".concat(this.name, "', program key '").concat(key, "'"));
+      _log('debug', "Compiling style '".concat(this.name, "', program key '").concat(key, "'"));
       try {
         program.compile();
       } catch (e) {
-        log('error', "Style: error compiling program for style '".concat(this.name, "' (program key '").concat(key, "')"), this, e.stack, e.type, e.shader_errors);
+        _log('error', "Style: error compiling program for style '".concat(this.name, "' (program key '").concat(key, "')"), this, e.stack, e.type, e.shader_errors);
         throw e; // re-throw so users can be notified via event subscriptions
       }
     }
@@ -8431,7 +8396,7 @@ var Style = {
     for (var u in uniforms) {
       // validate uniforms
       if (uniforms[u] == null) {
-        log({
+        _log({
           level: 'warn',
           once: true
         }, "Style '".concat(this.name, "' has invalid uniform '").concat(u, "': uniform values must be non-null"));
@@ -8926,7 +8891,7 @@ var VertexData = /*#__PURE__*/function () {
       this.vertex_buffer = VertexData.array_pool.pop();
       this.byte_length = this.vertex_buffer.byteLength;
       this.size = Math.floor(this.byte_length / this.stride);
-      log('trace', "VertexData: reused buffer of bytes ".concat(this.byte_length, ", ").concat(this.size, " vertices"));
+      _log('trace', "VertexData: reused buffer of bytes ".concat(this.byte_length, ", ").concat(this.size, " vertices"));
     } else {
       this.size = prealloc; // # of vertices to allocate
       this.byte_length = this.stride * this.size;
@@ -8998,7 +8963,7 @@ var VertexData = /*#__PURE__*/function () {
       // Clip the buffer to size used for this VBO
       this.vertex_buffer = this.vertex_buffer.subarray(0, this.offset);
       this.element_buffer = this.vertex_elements.end();
-      log('trace', "VertexData: ".concat(this.size, " vertices total, realloc count ").concat(this.realloc_count));
+      _log('trace', "VertexData: ".concat(this.size, " vertices total, realloc count ").concat(this.realloc_count));
       return this;
     }
   }]);
@@ -11688,7 +11653,7 @@ Object.assign(Lines, {
         }
         outline_style.computeVariant(draw.outline);
       } else {
-        log({
+        _log({
           level: 'warn',
           once: true
         }, "Layer group '".concat(draw.layers.join(', '), "': ") + "line 'outline' specifies non-existent draw style '".concat(draw.outline.style, "' (or maybe the style is ") + 'defined but is missing a \'base\' or has another error), skipping outlines for features matching this layer group');
@@ -11759,7 +11724,7 @@ Object.assign(Lines, {
                     }.bind(this);
                     var $Try_1_Catch = function (e) {
                       try {
-                        log('trace', "".concat(_this.name, ": line dash texture create failed because style no longer on main thread"));
+                        _log('trace', "".concat(_this.name, ": line dash texture create failed because style no longer on main thread"));
                         return $Try_1_Post();
                       } catch ($boundEx) {
                         return $error($boundEx);
@@ -12235,22 +12200,33 @@ function boxIntersectsList(a, boxes, callback) {
   }
 }
 
-// single-allocation, reusable objects
 var ZERO_AXES = [[1, 0], [0, 1]];
-var proj_a = [],
-  proj_b = [];
-var d0, d1, d2, d3;
+var projectionA = [];
+var projectionB = [];
+
+/** Two-dimensional oriented bounding box. */
 var OBB = /*#__PURE__*/function () {
-  function OBB(x, y, a, w, h) {
+  function OBB(x, y, angle, width, height) {
     _classCallCheck(this, OBB);
-    this.dimension = [w / 2, h / 2]; // store half-dimension as that's what's needed in calculations below
-    this.angle = a;
+    /** Half-width and half-height. */
+    _defineProperty(this, "dimension", void 0);
+    /** Rotation angle in radians. */
+    _defineProperty(this, "angle", void 0);
+    /** Box center. */
+    _defineProperty(this, "centroid", void 0);
+    /** Flattened corner coordinates. */
+    _defineProperty(this, "quad", void 0);
+    /** First normalized separating axis. */
+    _defineProperty(this, "axis_0", void 0);
+    /** Second normalized separating axis. */
+    _defineProperty(this, "axis_1", void 0);
+    this.dimension = [width / 2, height / 2];
+    this.angle = angle;
     this.centroid = [x, y];
-    this.quad = null;
-    this.axis_0 = null;
-    this.axis_1 = null;
     this.update();
   }
+
+  /** Returns a serializable representation of the box. */
   return _createClass(OBB, [{
     key: "toJSON",
     value: function toJSON() {
@@ -12262,107 +12238,81 @@ var OBB = /*#__PURE__*/function () {
         h: this.dimension[1]
       };
     }
+
+    /** Returns the axis-aligned extent containing the box. */
   }, {
     key: "getExtent",
     value: function getExtent() {
-      // special handling to skip calculations for 0-angle
       if (this.angle === 0) {
-        return [this.quad[0], this.quad[1],
-        // lower-left
-        this.quad[4], this.quad[5] // upper-right
-        ];
+        return [this.quad[0], this.quad[1], this.quad[4], this.quad[5]];
       }
-      var aabb = [Math.min(this.quad[0], this.quad[2], this.quad[4], this.quad[6]),
-      // min x
-      Math.min(this.quad[1], this.quad[3], this.quad[5], this.quad[7]),
-      // min y
-      Math.max(this.quad[0], this.quad[2], this.quad[4], this.quad[6]),
-      // max x
-      Math.max(this.quad[1], this.quad[3], this.quad[5], this.quad[7]) // max y
-      ];
-      return aabb;
+      return [Math.min(this.quad[0], this.quad[2], this.quad[4], this.quad[6]), Math.min(this.quad[1], this.quad[3], this.quad[5], this.quad[7]), Math.max(this.quad[0], this.quad[2], this.quad[4], this.quad[6]), Math.max(this.quad[1], this.quad[3], this.quad[5], this.quad[7])];
     }
+
+    /** Recalculates the normalized box axes. */
   }, {
     key: "updateAxes",
     value: function updateAxes() {
-      // upper-left to upper-right
       this.axis_0 = Vector.normalize([this.quad[4] - this.quad[6], this.quad[5] - this.quad[7]]);
-
-      // lower-right to upper-right
       this.axis_1 = Vector.normalize([this.quad[4] - this.quad[2], this.quad[5] - this.quad[3]]);
     }
+
+    /** Recalculates corners and axes from the current center, dimensions, and angle. */
   }, {
     key: "update",
     value: function update() {
-      var c = this.centroid;
-      var w2 = this.dimension[0];
-      var h2 = this.dimension[1];
-
-      // special handling to skip calculations for 0-angle
+      var _this$centroid = _slicedToArray(this.centroid, 2),
+        centerX = _this$centroid[0],
+        centerY = _this$centroid[1];
+      var _this$dimension = _slicedToArray(this.dimension, 2),
+        halfWidth = _this$dimension[0],
+        halfHeight = _this$dimension[1];
       if (this.angle === 0) {
-        // quad is a flat array storing 4 [x, y] vectors
-        this.quad = [c[0] - w2, c[1] - h2,
-        // lower-left
-        c[0] + w2, c[1] - h2,
-        // lower-right
-        c[0] + w2, c[1] + h2,
-        // upper-right
-        c[0] - w2, c[1] + h2 // upper-left
-        ];
+        this.quad = [centerX - halfWidth, centerY - halfHeight, centerX + halfWidth, centerY - halfHeight, centerX + halfWidth, centerY + halfHeight, centerX - halfWidth, centerY + halfHeight];
         this.axis_0 = ZERO_AXES[0];
         this.axis_1 = ZERO_AXES[1];
+        return;
       }
-      // calculate axes and enclosing quad
-      else {
-        var x0 = Math.cos(this.angle) * w2;
-        var x1 = Math.sin(this.angle) * w2;
-        var y0 = -Math.sin(this.angle) * h2;
-        var y1 = Math.cos(this.angle) * h2;
-
-        // quad is a flat array storing 4 [x, y] vectors
-        this.quad = [c[0] - x0 - y0, c[1] - x1 - y1,
-        // lower-left
-        c[0] + x0 - y0, c[1] + x1 - y1,
-        // lower-right
-        c[0] + x0 + y0, c[1] + x1 + y1,
-        // upper-right
-        c[0] - x0 + y0, c[1] - x1 + y1 // upper-left
-        ];
-        this.updateAxes();
-      }
+      var widthX = Math.cos(this.angle) * halfWidth;
+      var widthY = Math.sin(this.angle) * halfWidth;
+      var heightX = -Math.sin(this.angle) * halfHeight;
+      var heightY = Math.cos(this.angle) * halfHeight;
+      this.quad = [centerX - widthX - heightX, centerY - widthY - heightY, centerX + widthX - heightX, centerY + widthY - heightY, centerX + widthX + heightX, centerY + widthY + heightY, centerX - widthX + heightX, centerY - widthY + heightY];
+      this.updateAxes();
     }
+
+    /** Projects a box onto an axis and writes its minimum and maximum values. */
   }], [{
     key: "projectToAxis",
-    value: function projectToAxis(obb, axis, proj) {
-      // for each axis, project obb quad to it and find min and max values
-      var quad = obb.quad;
-      d0 = quad[0] * axis[0] + quad[1] * axis[1];
-      d1 = quad[2] * axis[0] + quad[3] * axis[1];
-      d2 = quad[4] * axis[0] + quad[5] * axis[1];
-      d3 = quad[6] * axis[0] + quad[7] * axis[1];
-      proj[0] = Math.min(d0, d1, d2, d3);
-      proj[1] = Math.max(d0, d1, d2, d3);
-      return proj;
+    value: function projectToAxis(box, axis, projection) {
+      var dot0 = box.quad[0] * axis[0] + box.quad[1] * axis[1];
+      var dot1 = box.quad[2] * axis[0] + box.quad[3] * axis[1];
+      var dot2 = box.quad[4] * axis[0] + box.quad[5] * axis[1];
+      var dot3 = box.quad[6] * axis[0] + box.quad[7] * axis[1];
+      projection[0] = Math.min(dot0, dot1, dot2, dot3);
+      projection[1] = Math.max(dot0, dot1, dot2, dot3);
+      return projection;
     }
+
+    /** Tests two separating axes for overlap. */
   }, {
     key: "axisCollide",
-    value: function axisCollide(obb_a, obb_b, axis_0, axis_1) {
-      OBB.projectToAxis(obb_a, axis_0, proj_a);
-      OBB.projectToAxis(obb_b, axis_0, proj_b);
-      if (proj_b[0] > proj_a[1] || proj_b[1] < proj_a[0]) {
+    value: function axisCollide(first, second, axis0, axis1) {
+      OBB.projectToAxis(first, axis0, projectionA);
+      OBB.projectToAxis(second, axis0, projectionB);
+      if (projectionB[0] > projectionA[1] || projectionB[1] < projectionA[0]) {
         return false;
       }
-      OBB.projectToAxis(obb_a, axis_1, proj_a);
-      OBB.projectToAxis(obb_b, axis_1, proj_b);
-      if (proj_b[0] > proj_a[1] || proj_b[1] < proj_a[0]) {
-        return false;
-      }
-      return true;
+      OBB.projectToAxis(first, axis1, projectionA);
+      OBB.projectToAxis(second, axis1, projectionB);
+      return !(projectionB[0] > projectionA[1] || projectionB[1] < projectionA[0]);
     }
+
+    /** Tests whether two oriented boxes intersect. */
   }, {
     key: "intersect",
-    value: function intersect(obb_a, obb_b) {
-      return OBB.axisCollide(obb_a, obb_b, obb_a.axis_0, obb_a.axis_1) && OBB.axisCollide(obb_a, obb_b, obb_b.axis_0, obb_b.axis_1);
+    value: function intersect(first, second) {
+      return OBB.axisCollide(first, second, first.axis_0, first.axis_1) && OBB.axisCollide(first, second, second.axis_0, second.axis_1);
     }
   }]);
 }();
@@ -12704,7 +12654,7 @@ var Collision = {
   collide: function collide(objects, style, tile) {
     var state = this.tiles[tile];
     if (!state) {
-      log('trace', 'Collision.collide() called with null tile', tile, this.tiles, style, objects);
+      _log('trace', 'Collision.collide() called with null tile', tile, this.tiles, style, objects);
       return Promise.resolve([]);
     }
 
@@ -13499,7 +13449,7 @@ var FontManager = {
         var $Try_1_Catch = function (e) {
           try {
             // Promise rejects, font is not available
-            log('warn', "Font face '".concat(family, "' is NOT available"), options, e);
+            _log('warn', "Font face '".concat(family, "' is NOT available"), options, e);
             return $Try_1_Post();
           } catch ($boundEx) {
             return $error($boundEx);
@@ -13516,7 +13466,7 @@ var FontManager = {
           return Promise.resolve(observer.load()).then(function ($await_6) {
             try {
               // Promise resolves, font is available
-              log('debug', "Font face '".concat(family, "' is available"), options);
+              _log('debug', "Font face '".concat(family, "' is available"), options);
               return $Try_1_Post();
             } catch ($boundEx) {
               return $Try_1_Catch($boundEx);
@@ -13587,14 +13537,14 @@ var FontManager = {
             });
           }
           document.fonts.add(face);
-          log('trace', 'Adding FontFace to document.fonts:', face);
+          _log('trace', 'Adding FontFace to document.fonts:', face);
         } else {
           css = "\n                @font-face {\n                    font-family: '".concat(family, "';\n                    font-weight: ").concat(weight || 'normal', ";\n                    font-style: ").concat(style || 'normal', ";\n                    src: url(").concat(encodeURI(data), ");\n                }");
           style_el = document.createElement('style');
           style_el.appendChild(document.createTextNode(''));
           document.head.appendChild(style_el);
           style_el.sheet.insertRule(css, 0);
-          log('trace', 'Injecting CSS font face:', css);
+          _log('trace', 'Injecting CSS font face:', css);
         }
         return $return();
       }
@@ -14428,7 +14378,7 @@ var TextCanvas = /*#__PURE__*/function () {
   }, {
     key: "cancelRasterizeTask",
     value: function cancelRasterizeTask(task) {
-      log('trace', "RasterizeTask: release textures [".concat(task.cursor.texture_names.join(', '), "]"));
+      _log('trace', "RasterizeTask: release textures [".concat(task.cursor.texture_names.join(', '), "]"));
       task.cursor.texture_names.forEach(function (t) {
         return Texture.release(t);
       });
@@ -14605,11 +14555,11 @@ var TextCanvas = /*#__PURE__*/function () {
       if (TextCanvas.cache.text_count > TextCanvas.cache.text_count_max) {
         TextCanvas.cache.text = {};
         TextCanvas.cache.text_count = 0;
-        log('debug', 'TextCanvas: pruning text cache');
+        _log('debug', 'TextCanvas: pruning text cache');
       }
       if (Object.keys(TextCanvas.cache.segment).length > TextCanvas.cache.segment_count_max) {
         TextCanvas.cache.segment = {};
-        log('debug', 'TextCanvas: pruning segment cache');
+        _log('debug', 'TextCanvas: pruning segment cache');
       }
     }
   }]);
@@ -14774,7 +14724,7 @@ var TextLabels = {
           try {
             texts = $await_3;
             if (tile.canceled) {
-              log('trace', "Style ".concat(this.name, ": stop tile build because tile was canceled: ").concat(tile.key, ", post-calcTextSizes()"));
+              _log('trace', "Style ".concat(this.name, ": stop tile build because tile was canceled: ").concat(tile.key, ", post-calcTextSizes()"));
               return $return([]);
             }
             this.texts[tile.id] = texts || [];
@@ -14806,7 +14756,7 @@ var TextLabels = {
             try {
               labels = $await_5;
               if (tile.canceled) {
-                log('trace', "stop tile build because tile was canceled: ".concat(tile.key, ", post-collide()"));
+                _log('trace', "stop tile build because tile was canceled: ".concat(tile.key, ", post-collide()"));
                 return $return({});
               }
               texts = this.texts[tile.id];
@@ -14854,7 +14804,7 @@ var TextLabels = {
                   try {
                     rasterized = $await_6;
                     if (tile.canceled) {
-                      log('trace', "stop tile build because tile was canceled: ".concat(tile.key, ", post-rasterizeTexts()"));
+                      _log('trace', "stop tile build because tile was canceled: ".concat(tile.key, ", post-rasterizeTexts()"));
                       return $return({});
                     }
                     return $return(_objectSpread$2({
@@ -16320,7 +16270,7 @@ var View = /*#__PURE__*/function () {
         var view_tile_min = TileID.coordAtZoom(Geo.tileForMeters([_this.center.meters.x - _this.size.meters.x / 2 - view_buffer, _this.center.meters.y + _this.size.meters.y / 2 + view_buffer], _this.tile_zoom), tile.coords.z);
         var view_tile_max = TileID.coordAtZoom(Geo.tileForMeters([_this.center.meters.x + _this.size.meters.x / 2 + view_buffer, _this.center.meters.y - _this.size.meters.y / 2 - view_buffer], _this.tile_zoom), tile.coords.z);
         if (tile.coords.x < view_tile_min.x || tile.coords.x > view_tile_max.x || tile.coords.y < view_tile_min.y || tile.coords.y > view_tile_max.y) {
-          log('trace', "View: remove tile ".concat(tile.key, " (as ").concat(tile.coords.key, ") ") + "for being too far out of visible area (".concat(view_tile_min.key, ", ").concat(view_tile_max.key, ")"));
+          _log('trace', "View: remove tile ".concat(tile.key, " (as ").concat(tile.coords.key, ") ") + "for being too far out of visible area (".concat(view_tile_min.key, ", ").concat(view_tile_max.key, ")"));
           return true;
         }
         return false;
@@ -16863,19 +16813,19 @@ Object.assign(Points, {
         style.texcoords = sprite_info.texcoords;
       } else {
         // sprites are defined in the style's texture, but none are used in the current layer
-        log({
+        _log({
           level: 'debug',
           once: true
         }, "Layer group '".concat(draw.layers.join(', '), "' ") + "uses a texture '".concat(style.texture, "', but doesn't specify which sprite to draw. ") + 'Features that match this layer group won\'t be drawn without specifying the sprite with the ' + '\'sprite\' or \'sprite_default\' properties. The merged draw parameters for this layer group are:', draw).then(function (logged) {
           if (logged) {
-            log('debug', "Example feature for layer group '".concat(draw.layers.join(', '), "'"), feature);
+            _log('debug', "Example feature for layer group '".concat(draw.layers.join(', '), "'"), feature);
           }
         });
         return;
       }
     } else if (draw.sprite) {
       // sprite specified in the draw layer but no sprites defined in the texture
-      log({
+      _log({
         level: 'warn',
         once: true
       }, "Layer group '".concat(draw.layers.join(', '), "' ") + "specifies sprite '".concat(draw.sprite, "', but the texture '").concat(draw.texture, "' doesn't define any sprites. ") + 'Features that match this layer group won\'t be drawn. The merged draw parameters for this layer group are:', draw);
@@ -16926,7 +16876,7 @@ Object.assign(Points, {
     this.parseTextFeature(feature, draw.text, context, tile);
     if (Array.isArray(tf)) {
       tf = null; // NB: boundary labels not supported for point label attachments, should log warning
-      log({
+      _log({
         level: 'warn',
         once: true
       }, "Layer group '".concat(draw.layers.join(', '), "': ") + 'cannot use boundary labels (e.g. \'text_source: { left: ..., right: ... }\') for \'text\' labels attached to \'points\'; ' + "provided 'text_source' value was ".concat(JSON.stringify(draw.text.text_source)));
@@ -16963,7 +16913,7 @@ Object.assign(Points, {
       style.size = StyleParser.evalCachedPointSizeProperty(draw.size, sprite_info, Texture.textures[style.texture], context);
       if (style.size == null) {
         // the StyleParser couldn't evaluate a sprite size
-        log({
+        _log({
           level: 'warn',
           once: true
         }, "Layer group '".concat(draw.layers.join(', '), "': ") + "'size' (".concat(JSON.stringify(draw.size.value), ") couldn't be interpreted, features that match ") + 'this layer group won\'t be drawn');
@@ -16984,7 +16934,7 @@ Object.assign(Points, {
       this.texture_missing_sprites[style.texture] = this.texture_missing_sprites[style.texture] || {};
       if (!this.texture_missing_sprites[style.texture][sprite]) {
         // only log each missing sprite once
-        log('debug', "Style: in style '".concat(this.name, "', could not find sprite '").concat(sprite, "' for texture '").concat(style.texture, "'"));
+        _log('debug', "Style: in style '".concat(this.name, "', could not find sprite '").concat(sprite, "' for texture '").concat(style.texture, "'"));
         this.texture_missing_sprites[style.texture][sprite] = true;
       }
     } else if (info) {
@@ -17013,7 +16963,7 @@ Object.assign(Points, {
       var _this, queue, text_objs, point_objs, _await$Promise$all, _await$Promise$all2, _await$Promise$all2$, labels, texts, textures, tile_data, _tile_data$textures;
       _this = this;
       if (tile.canceled) {
-        log('trace', "Style ".concat(this.name, ": stop tile build because tile was canceled: ").concat(tile.key));
+        _log('trace', "Style ".concat(this.name, ": stop tile build because tile was canceled: ").concat(tile.key));
         return $return(null);
       }
       queue = this.queues[tile.id];
@@ -17132,7 +17082,7 @@ Object.assign(Points, {
     try {
       draw.size = StyleParser.createPointSizePropertyCache(draw.size, draw.texture);
     } catch (e) {
-      log({
+      _log({
         level: 'warn',
         once: true
       }, "Layer group '".concat(draw.layers.join(', '), "': ") + "".concat(e, " (").concat(JSON.stringify(draw.size), "), features that match this layer group won't be drawn."));
@@ -19002,7 +18952,7 @@ var StyleManager = /*#__PURE__*/function () {
       Object.keys(this.styles).forEach(function (_name) {
         var style = _this.styles[_name];
         if ((style.resource_context || style.gl) === resource_context) {
-          log('trace', "StyleManager.destroy: destroying render style ".concat(style.name));
+          _log('trace', "StyleManager.destroy: destroying render style ".concat(style.name));
           if (style.base) {
             _this.remove(style.name);
           }
@@ -19758,7 +19708,7 @@ var Layer = /*#__PURE__*/function () {
           // Invalid draw group
           var msg = "Draw group '".concat(group, "' for layer ").concat(this.full_name, " is invalid, must be an object, ");
           msg += "but was set to `".concat(group, ": ").concat(this.draw[group], "` instead");
-          log('warn', msg); // TODO: fire external event that clients to subscribe to
+          _log('warn', msg); // TODO: fire external event that clients to subscribe to
 
           delete this.draw[group];
         }
@@ -19768,7 +19718,7 @@ var Layer = /*#__PURE__*/function () {
   return _createClass(Layer, [{
     key: "build",
     value: function build() {
-      log('trace', "Building layer '".concat(this.full_name, "'"));
+      _log('trace', "Building layer '".concat(this.full_name, "'"));
       this.buildFilter();
       this.buildDraw();
       this.is_built = true;
@@ -19789,7 +19739,7 @@ var Layer = /*#__PURE__*/function () {
         // Invalid filter
         var msg = "Filter for layer ".concat(this.full_name, " is invalid, filter value must be an object or function, ");
         msg += "but was set to `filter: ".concat(this.filter, "` instead");
-        log('warn', msg); // TODO: fire external event that clients to subscribe to
+        _log('warn', msg); // TODO: fire external event that clients to subscribe to
         return;
       }
       try {
@@ -19804,7 +19754,7 @@ var Layer = /*#__PURE__*/function () {
         // Invalid filter
         var _msg = "Filter for layer ".concat(this.full_name, " is invalid, `filter: ").concat(JSON.stringify(this.filter), "` ");
         _msg += "failed with error '".concat(e.message, "', stack trace: ").concat(e.stack);
-        log('warn', _msg); // TODO: fire external event that clients to subscribe to
+        _log('warn', _msg); // TODO: fire external event that clients to subscribe to
       }
     }
 
@@ -19914,7 +19864,7 @@ var Layer = /*#__PURE__*/function () {
           // Filter function error
           var msg = "Filter for this ".concat(this.full_name, ": `filter: ").concat(this.filter_original, "` ");
           msg += "failed with error '".concat(error.message, "', stack trace: ").concat(error.stack);
-          log('error', msg, context.feature);
+          _log('error', msg, context.feature);
         }
       } else {
         match = this.filter == null;
@@ -20098,7 +20048,7 @@ function parseLayerChildren(parent, children, styles) {
         }
         msg += ' instead?';
       }
-      log('warn', msg); // TODO: fire external event that clients to subscribe to
+      _log('warn', msg); // TODO: fire external event that clients to subscribe to
     }
   }
 
@@ -20366,7 +20316,7 @@ var Tile = /*#__PURE__*/function () {
             var mesh_variant = mesh_data[s].meshes[variant];
             if (mesh_variant.vertex_data) {
               if (!styles[s]) {
-                log('warn', "Could not create mesh because style '".concat(s, "' not found, for tile ").concat(this.key, ", aborting tile"));
+                _log('warn', "Could not create mesh because style '".concat(s, "' not found, for tile ").concat(this.key, ", aborting tile"));
                 break;
               }
 
@@ -20560,7 +20510,7 @@ var Tile = /*#__PURE__*/function () {
           copy[key] = this.debug[key];
         }
       }
-      log('debug', "Tile ".concat(progress.done ? '(done)' : '', ": debug for ").concat(this.key, ": [  ").concat(JSON.stringify(copy), " ]"));
+      _log('debug', "Tile ".concat(progress.done ? '(done)' : '', ": debug for ").concat(this.key, ": [  ").concat(JSON.stringify(copy), " ]"));
     }
   }], [{
     key: "cancel",
@@ -20597,7 +20547,7 @@ var Tile = /*#__PURE__*/function () {
         var layer = layers[layer_name];
         // Skip layers with no data source defined
         if (!layer || !layer.config_data) {
-          log('warn', "Layer ".concat(layer_name, " was defined without a geometry data source and will not be rendered."));
+          _log('warn', "Layer ".concat(layer_name, " was defined without a geometry data source and will not be rendered."));
           continue;
         }
 
@@ -20640,7 +20590,7 @@ var Tile = /*#__PURE__*/function () {
               var style_name = group.style || group_name;
               var style = styles[style_name];
               if (!style) {
-                log('warn', "Style '".concat(style_name, "' not found, skipping layer '").concat(layer_name, "':"), group, feature);
+                _log('warn', "Style '".concat(style_name, "' not found, skipping layer '").concat(layer_name, "':"), group, feature);
                 continue;
               }
               group = style.preprocess(group);
@@ -20735,7 +20685,7 @@ var Tile = /*#__PURE__*/function () {
         };
         var $Try_1_Catch = function (e) {
           try {
-            log('error', "Error for style group '".concat(group_name, "' for tile ").concat(tile.key), e && e.stack || e);
+            _log('error', "Error for style group '".concat(group_name, "' for tile ").concat(tile.key), e && e.stack || e);
             return $Try_1_Post();
           } catch ($boundEx) {
             return $error($boundEx);
@@ -20760,7 +20710,7 @@ var Tile = /*#__PURE__*/function () {
           }))).then(function ($await_3) {
             try {
               // Mark the group as done, and check if all groups have finished
-              log('trace', "Finished style group '".concat(group_name, "' for tile ").concat(tile.key));
+              _log('trace', "Finished style group '".concat(group_name, "' for tile ").concat(tile.key));
               groups[group_name] = null;
               if (Object.keys(groups).every(function (g) {
                 return groups[g] == null;
@@ -20805,7 +20755,7 @@ var Tile = /*#__PURE__*/function () {
           // Wildcard takes precedence over explicit source layer(s)
           if (source_config.layer != null) {
             var msg = "Layer ".concat(scene_layer_name, " includes both 'all_layers: true' and an explicit ") + '\'layer\' keyword in its \'data\' block. \'all_layers: true\' takes precedence, \'layer\' ' + 'will be ignored.';
-            log({
+            _log({
               level: 'warn',
               once: true
             }, msg);
@@ -20863,7 +20813,7 @@ var Tile = /*#__PURE__*/function () {
             textures.forEach(function (t) {
               var texture = Texture.textures[t];
               if (texture) {
-                log('trace', "releasing texture ".concat(t, " for tile ").concat(tile.key));
+                _log('trace', "releasing texture ".concat(t, " for tile ").concat(tile.key));
                 texture.release();
               }
             });
@@ -22217,7 +22167,7 @@ var MVTSource = /*#__PURE__*/function (_NetworkTileSource) {
     } else {
       if (source.parse_json != null) {
         var msg = "Data source '".concat(_this.name, "': 'parse_json' parameter should be 'true', or an array of ") + "property names (was '".concat(JSON.stringify(source.parse_json), "')");
-        log({
+        _log({
           level: 'warn',
           once: true
         }, msg);
@@ -23182,7 +23132,7 @@ var GeoJSONSource = /*#__PURE__*/function (_NetworkSource) {
         }]).then(function (data) {
           // Warn and continue on data source error
           if (data.source_data.error) {
-            log('warn', "data source load error(s) for source '".concat(_this2.name, "', URL '").concat(_this2.url, "': ").concat(data.source_data.error));
+            _log('warn', "data source load error(s) for source '".concat(_this2.name, "', URL '").concat(_this2.url, "': ").concat(data.source_data.error));
           }
           var layers = data.source_data.layers;
           for (var layer_name in layers) {
@@ -23678,6 +23628,7 @@ exports$1._defineProperty = _defineProperty;
 exports$1._get = _get;
 exports$1._getPrototypeOf = _getPrototypeOf;
 exports$1._inherits = _inherits;
+exports$1._log = _log;
 exports$1._possibleConstructorReturn = _possibleConstructorReturn;
 exports$1._slicedToArray = _slicedToArray;
 exports$1._toConsumableArray = _toConsumableArray;
@@ -23698,7 +23649,6 @@ exports$1.isLocalURL = isLocalURL;
 exports$1.isRelativeURL = isRelativeURL;
 exports$1.isReserved = isReserved;
 exports$1.layerCache = layerCache;
-exports$1.log = log;
 exports$1.mergeDebugSettings = mergeDebugSettings;
 exports$1.mergeObjects = mergeObjects;
 exports$1.parseLayers = parseLayers;
@@ -23722,7 +23672,7 @@ var SceneWorker = Object.assign(self, {
     this.scene_id = scene_id;
     this._worker_id = worker_id;
     this.num_workers = num_workers;
-    topojson.log.setLevel(log_level);
+    topojson._log.setLevel(log_level);
     topojson.Utils.device_pixel_ratio = device_pixel_ratio;
     topojson.VertexElements.setElementIndexUint(has_element_index_unit);
     topojson.FeatureSelection.setPrefix(this._worker_id);
@@ -23738,7 +23688,7 @@ var SceneWorker = Object.assign(self, {
     if (scripts.length === 0) {
       return;
     }
-    topojson.log('debug', 'loading custom data source scripts in worker:', scripts);
+    topojson._log('debug', 'loading custom data source scripts in worker:', scripts);
 
     // `window` is already shimmed to allow compatibility with some other libraries (e.g. FontFaceObserver)
     // So there's an extra dance here to look for any additional `window` properties added by these script imports,
@@ -23788,7 +23738,7 @@ var SceneWorker = Object.assign(self, {
 
     // Return promise for when config refresh finishes
     this.configuring = this.syncing_textures.then(function () {
-      topojson.log('debug', 'updated config');
+      topojson._log('debug', 'updated config');
     });
     return this.configuring;
   },
@@ -23863,13 +23813,13 @@ var SceneWorker = Object.assign(self, {
         tile.error = null;
         _this3.loadTileSourceData(tile).then(function () {
           if (!_this3.getTile(tile.key)) {
-            topojson.log('trace', "stop tile build after data source load because tile was removed: ".concat(tile.key));
+            topojson._log('trace', "stop tile build after data source load because tile was removed: ".concat(tile.key));
             return;
           }
 
           // Warn and continue on data source error
           if (tile.source_data.error) {
-            topojson.log('warn', "tile load error(s) for ".concat(tile.key, ": ").concat(tile.source_data.error));
+            topojson._log('warn', "tile load error(s) for ".concat(tile.key, ": ").concat(tile.source_data.error));
           }
           tile.loading = false;
           tile.loaded = true;
@@ -23878,7 +23828,7 @@ var SceneWorker = Object.assign(self, {
           tile.loading = false;
           tile.loaded = false;
           tile.error = error.stack;
-          topojson.log('error', "tile load error for ".concat(tile.key, ": ").concat(tile.error));
+          topojson._log('error', "tile load error for ".concat(tile.key, ": ").concat(tile.error));
 
           // Send error to main thread
           topojson.WorkerBroker.postMessage("TileManager_".concat(_this3.scene_id, ".buildTileError"), topojson.Tile.slice(tile));
@@ -23886,7 +23836,7 @@ var SceneWorker = Object.assign(self, {
       }
       // Tile already loaded, just rebuild
       else {
-        topojson.log('trace', "used worker cache for tile ".concat(tile.key));
+        topojson._log('trace', "used worker cache for tile ".concat(tile.key));
 
         // Build geometry
         try {
@@ -23927,7 +23877,7 @@ var SceneWorker = Object.assign(self, {
     if (tile != null) {
       // Cancel if loading
       if (tile.loading === true) {
-        topojson.log('trace', "cancel tile load for ".concat(key));
+        topojson._log('trace', "cancel tile load for ".concat(key));
         tile.loading = false;
         topojson.Tile.cancel(tile);
       }
@@ -23935,7 +23885,7 @@ var SceneWorker = Object.assign(self, {
       // Remove from cache
       topojson.FeatureSelection.clearTile(key);
       delete this.tiles[key];
-      topojson.log('trace', "remove tile from cache for ".concat(key));
+      topojson._log('trace', "remove tile from cache for ".concat(key));
     }
   },
   // Query features within visible tiles, with optional filter conditions
@@ -24038,7 +23988,7 @@ var SceneWorker = Object.assign(self, {
     if (tex_config) {
       textures.push.apply(textures, topojson._toConsumableArray(Object.keys(tex_config)));
     }
-    topojson.log('trace', 'sync textures to worker:', textures);
+    topojson._log('trace', 'sync textures to worker:', textures);
     if (textures.length > 0) {
       return topojson.Texture.syncTexturesToWorker(textures);
     }
@@ -24525,7 +24475,7 @@ function applyGlobalProperties(globals, obj, target, key) {
       // handle globals that refer to other globals, detecting any cyclical references
       stack = stack || [prop];
       if (stack.indexOf(val) > -1) {
-        topojson.log({
+        topojson._log({
           level: 'warn',
           once: true
         }, 'Global properties: cyclical reference detected', stack);
@@ -32590,7 +32540,7 @@ var SceneLoader = {
             // scene loaded, but some imports had errors
             errors.forEach(function (error) {
               var message = "Failed to import scene: ".concat(error.url);
-              topojson.log('error', message, error);
+              topojson._log('error', message, error);
               _this.trigger('error', {
                 type: 'scene_import',
                 message: message,
@@ -33380,7 +33330,7 @@ var TileManager = /*#__PURE__*/function () {
   }, {
     key: "removeTile",
     value: function removeTile(key) {
-      topojson.log('trace', "tile unload for ".concat(key));
+      topojson._log('trace', "tile unload for ".concat(key));
       var tile = this.tiles[key];
       if (tile != null) {
         tile.destroy();
@@ -33673,7 +33623,7 @@ var TileManager = /*#__PURE__*/function () {
         }
         var key = topojson.TileID.normalizedKey(coords, source, this.view.tile_zoom);
         if (key && !this.hasTile(key)) {
-          topojson.log('trace', "load tile ".concat(key, ", distance from view center: ").concat(coords.center_dist));
+          topojson._log('trace', "load tile ".concat(key, ", distance from view center: ").concat(coords.center_dist));
           var tile = new topojson.Tile({
             source: source,
             coords: coords,
@@ -33705,13 +33655,13 @@ var TileManager = /*#__PURE__*/function () {
         progress = _ref2.progress;
       // Removed this tile during load?
       if (this.tiles[tile.key] == null) {
-        topojson.log('trace', "discarded tile ".concat(tile.key, " in TileManager.buildTileStylesCompleted because previously removed"));
+        topojson._log('trace', "discarded tile ".concat(tile.key, " in TileManager.buildTileStylesCompleted because previously removed"));
         topojson.Tile.abortBuild(tile);
         this.updateTileStates();
       }
       // Built with an outdated scene configuration?
       else if (tile.generation !== this.scene.generation) {
-        topojson.log('trace', "discarded tile ".concat(tile.key, " in TileManager.buildTileStylesCompleted because built with ") + "scene config gen ".concat(tile.generation, ", current ").concat(this.scene.generation));
+        topojson._log('trace', "discarded tile ".concat(tile.key, " in TileManager.buildTileStylesCompleted because built with ") + "scene config gen ".concat(tile.generation, ", current ").concat(this.scene.generation));
         topojson.Tile.abortBuild(tile);
         this.updateTileStates();
       } else {
@@ -33719,7 +33669,7 @@ var TileManager = /*#__PURE__*/function () {
         if (this.tiles[tile.key]) {
           // Ignore if from a previously discarded tile
           if (tile.id < this.tiles[tile.key].id) {
-            topojson.log('trace', "discarded tile ".concat(tile.key, " for id ").concat(tile.id, " in TileManager.buildTileStylesCompleted because built for discarded tile id"));
+            topojson._log('trace', "discarded tile ".concat(tile.key, " for id ").concat(tile.id, " in TileManager.buildTileStylesCompleted because built for discarded tile id"));
             topojson.Tile.abortBuild(tile);
             return;
           }
@@ -33743,7 +33693,7 @@ var TileManager = /*#__PURE__*/function () {
   }, {
     key: "buildTileError",
     value: function buildTileError(tile) {
-      topojson.log('error', "Error building tile ".concat(tile.key, ":"), tile.error);
+      topojson._log('error', "Error building tile ".concat(tile.key, ":"), tile.error);
       this.forgetTile(tile.key);
       topojson.Tile.abortBuild(tile);
     }
@@ -33754,14 +33704,14 @@ var TileManager = /*#__PURE__*/function () {
     value: function tileBuildStart(key) {
       this.building_tiles = this.building_tiles || {};
       this.building_tiles[key] = true;
-      topojson.log('trace', "tileBuildStart for ".concat(key, ": ").concat(Object.keys(this.building_tiles).length));
+      topojson._log('trace', "tileBuildStart for ".concat(key, ": ").concat(Object.keys(this.building_tiles).length));
     }
   }, {
     key: "tileBuildStop",
     value: function tileBuildStop(key) {
       // Done building?
       if (this.building_tiles) {
-        topojson.log('trace', "tileBuildStop for ".concat(key, ": ").concat(Object.keys(this.building_tiles).length));
+        topojson._log('trace', "tileBuildStop for ".concat(key, ": ").concat(Object.keys(this.building_tiles).length));
         delete this.building_tiles[key];
         this.checkBuildQueue();
       }
@@ -34068,10 +34018,10 @@ var MediaCapture = /*#__PURE__*/function () {
     value: function startVideoCapture() {
       var _this2 = this;
       if (typeof window === 'undefined' || typeof window.MediaRecorder !== 'function' || !this.canvas || typeof this.canvas.captureStream !== 'function') {
-        topojson.log('warn', 'Video capture (Canvas.captureStream and/or MediaRecorder APIs) not supported by browser');
+        topojson._log('warn', 'Video capture (Canvas.captureStream and/or MediaRecorder APIs) not supported by browser');
         return false;
       } else if (this.video_capture) {
-        topojson.log('warn', 'Video capture already in progress, call Scene.stopVideoCapture() first');
+        topojson._log('warn', 'Video capture already in progress, call Scene.stopVideoCapture() first');
         return false;
       }
 
@@ -34117,7 +34067,7 @@ var MediaCapture = /*#__PURE__*/function () {
         cap.media_recorder.start();
       } catch (e) {
         this.video_capture = null;
-        topojson.log('error', 'Scene video capture failed', e);
+        topojson._log('error', 'Scene video capture failed', e);
         return false;
       }
       return true;
@@ -34129,7 +34079,7 @@ var MediaCapture = /*#__PURE__*/function () {
     value: function stopVideoCapture() {
       var _this3 = this;
       if (!this.video_capture) {
-        topojson.log('warn', 'No scene video capture in progress, call Scene.startVideoCapture() first');
+        topojson._log('warn', 'No scene video capture in progress, call Scene.startVideoCapture() first');
         return Promise.resolve({});
       }
 
@@ -34178,7 +34128,7 @@ function setupSceneDebug(scene) {
             var avg = ~~(times.reduce(function (a, b) {
               return a + b;
             }) / times.length);
-            topojson.log('info', "Profiled rebuild ".concat(num, " times: ").concat(avg, " avg (").concat(Math.min.apply(Math, times), " min, ").concat(Math.max.apply(Math, times), " max)"));
+            topojson._log('info', "Profiled rebuild ".concat(num, " times: ").concat(avg, " avg (").concat(Math.min.apply(Math, times), " min, ").concat(Math.max.apply(Math, times), " max)"));
           }
         });
       };
@@ -34264,7 +34214,7 @@ function setupSceneDebug(scene) {
       if (topojson.debugSettings.layer_stats) {
         return topojson.debugSumLayerStats(scene.tile_manager.getRenderableTiles());
       } else {
-        topojson.log('warn', 'Enable the \'layer_stats\' debug setting to collect layer stats');
+        topojson._log('warn', 'Enable the \'layer_stats\' debug setting to collect layer stats');
         return {};
       }
     },
@@ -34367,8 +34317,8 @@ var Scene = /*#__PURE__*/function () {
     this.last_complete_generation = Scene.generation; // last generation id with a complete view
     setupSceneDebug(this);
     this.log_level = options.logLevel || 'warn';
-    topojson.log.setLevel(this.log_level);
-    topojson.log.reset();
+    topojson._log.setLevel(this.log_level);
+    topojson._log.reset();
   }
   return topojson._createClass(Scene, [{
     key: "setCameraMatrices",
@@ -34391,7 +34341,7 @@ var Scene = /*#__PURE__*/function () {
       if (this.initializing) {
         return this.initializing;
       }
-      topojson.log.reset();
+      topojson._log.reset();
       this.updating++;
       this.initialized = false;
       this.view_complete = false; // track if a view complete event has been triggered yet
@@ -34482,11 +34432,11 @@ var Scene = /*#__PURE__*/function () {
         });
         message = "Scene.load() failed to load ".concat(JSON.stringify(_this.config_source), ": ").concat(error.message);
         if (_this.last_valid_config_source) {
-          topojson.log('warn', message, error);
-          topojson.log('info', 'Scene.load() reverting to last valid configuration');
+          topojson._log('warn', message, error);
+          topojson._log('info', 'Scene.load() reverting to last valid configuration');
           return _this.load(_this.last_valid_config_source, _this.last_valid_base_path);
         }
-        topojson.log('error', message, error);
+        topojson._log('error', message, error);
         throw error;
       });
       return this.initializing;
@@ -34534,7 +34484,7 @@ var Scene = /*#__PURE__*/function () {
       this.destroyWorkers();
       this.tile_manager.destroy();
       this.tile_manager = null;
-      topojson.log.reset();
+      topojson._log.reset();
     }
   }, {
     key: "createCanvas",
@@ -34712,13 +34662,13 @@ var Scene = /*#__PURE__*/function () {
         var worker = new Worker(Tangram.workerURL); // eslint-disable-line no-undef
         _this4.workers[id] = worker;
         topojson.WorkerBroker.addWorker(worker);
-        topojson.log('debug', "Scene.makeWorkers: initializing worker ".concat(id));
+        topojson._log('debug', "Scene.makeWorkers: initializing worker ".concat(id));
         var _id = id;
         queue.push(topojson.WorkerBroker.postMessage(worker, 'self.init', _this4.id, id, _this4.num_workers, _this4.log_level, topojson.Utils.device_pixel_ratio, has_element_index_uint, _this4.external_scripts).then(function (id) {
-          topojson.log('debug', "Scene.makeWorkers: initialized worker ".concat(id));
+          topojson._log('debug', "Scene.makeWorkers: initialized worker ".concat(id));
           return id;
         }, function (error) {
-          topojson.log('error', "Scene.makeWorkers: failed to initialize worker ".concat(_id, ":"), error);
+          topojson._log('error', "Scene.makeWorkers: failed to initialize worker ".concat(_id, ":"), error);
           return Promise.reject(error);
         }));
       };
@@ -34727,7 +34677,7 @@ var Scene = /*#__PURE__*/function () {
       }
       this.next_worker = 0;
       return Promise.all(queue).then(function () {
-        topojson.log.setWorkers(_this4.workers);
+        topojson._log.setWorkers(_this4.workers);
       });
     }
   }, {
@@ -34735,7 +34685,7 @@ var Scene = /*#__PURE__*/function () {
     value: function destroyWorkers() {
       this.selection = null; // selection needs to be re-initialized when workers are
       if (Array.isArray(this.workers)) {
-        topojson.log.setWorkers(null);
+        topojson._log.setWorkers(null);
         this.workers.forEach(function (worker) {
           worker.terminate();
         });
@@ -34915,7 +34865,7 @@ var Scene = /*#__PURE__*/function () {
         this.dirty = true;
       }
       this.frame++;
-      topojson.log('trace', 'Scene.render()');
+      topojson._log('trace', 'Scene.render()');
       return true;
     }
 
@@ -34948,7 +34898,7 @@ var Scene = /*#__PURE__*/function () {
           this.logFirstFrame();
           this.getFeatureSelectionMapSize().then(function (size) {
             _this8.selection_feature_count = size;
-            topojson.log('info', "Scene: rendered ".concat(_this8.render_count, " primitives (").concat(size, " features in selection map)"));
+            topojson._log('info', "Scene: rendered ".concat(_this8.render_count, " primitives (").concat(size, " features in selection map)"));
           });
         }
         this.last_render_count = this.render_count;
@@ -35421,7 +35371,7 @@ var Scene = /*#__PURE__*/function () {
         return Promise.resolve();
       }
       if (!this.initialized) {
-        topojson.log('debug', 'Scene.getFeatureAt() called before scene was initialized');
+        topojson._log('debug', 'Scene.getFeatureAt() called before scene was initialized');
         return Promise.resolve();
       }
 
@@ -35565,7 +35515,7 @@ var Scene = /*#__PURE__*/function () {
           // Queue up to one rebuild call at a time, only save last request
           if (_this1.building.queued && _this1.building.queued.reject) {
             // notify previous request that it did not complete
-            topojson.log('debug', 'Scene.rebuild: request superceded by a newer call');
+            topojson._log('debug', 'Scene.rebuild: request superceded by a newer call');
             _this1.building.queued.resolve(false); // false flag indicates rebuild request was superceded
           }
 
@@ -35583,7 +35533,7 @@ var Scene = /*#__PURE__*/function () {
             reject: reject,
             options: options
           };
-          topojson.log('trace', 'Scene.rebuild(): queuing request');
+          topojson._log('trace', 'Scene.rebuild(): queuing request');
           return;
         }
 
@@ -35641,7 +35591,7 @@ var Scene = /*#__PURE__*/function () {
     value: function tileManagerBuildDone() {
       topojson.TextCanvas.pruneTextCache();
       if (this.building) {
-        topojson.log('info', 'Scene: build geometry finished');
+        topojson._log('info', 'Scene: build geometry finished');
         if (this.building.resolve) {
           this.logFirstBuild();
           this.building.resolve(true);
@@ -35651,7 +35601,7 @@ var Scene = /*#__PURE__*/function () {
         var queued = this.building.queued;
         this.building = null;
         if (queued) {
-          topojson.log('debug', 'Scene: starting queued rebuild() request');
+          topojson._log('debug', 'Scene: starting queued rebuild() request');
           this.rebuild(queued.options).then(queued.resolve, queued.reject);
         } else {
           this.tile_manager.updateLabels(); // refresh label if nothing to rebuild
@@ -35716,7 +35666,7 @@ var Scene = /*#__PURE__*/function () {
     key: "setDataSource",
     value: function setDataSource(name, config) {
       if (!name || !config || !config.type || !config.url && !config.tilejson && !config.data) {
-        topojson.log('error', 'No name provided or not a valid config:', name, config);
+        topojson._log('error', 'No name provided or not a valid config:', name, config);
         return;
       }
       var load = this.config.sources[name] == null;
@@ -35768,7 +35718,7 @@ var Scene = /*#__PURE__*/function () {
         } catch (e) {
           delete this.sources[name];
           var message = "Could not create data source: ".concat(e.message);
-          topojson.log('warn', "Scene: ".concat(message), source);
+          topojson._log('warn', "Scene: ".concat(message), source);
           this.trigger('warning', {
             type: 'sources',
             source: source,
@@ -36201,7 +36151,7 @@ var Scene = /*#__PURE__*/function () {
     value: function logFirstFrame() {
       if (this.last_render_count === 0 && !this.times.first_frame) {
         this.times.first_frame = +new Date() - this.start_time;
-        topojson.log('debug', "Scene: initial frame time: ".concat(this.times.first_frame));
+        topojson._log('debug', "Scene: initial frame time: ".concat(this.times.first_frame));
       }
     }
 
@@ -36211,7 +36161,7 @@ var Scene = /*#__PURE__*/function () {
     value: function logFirstBuild() {
       if (this.times.first_build == null) {
         this.times.first_build = +new Date() - this.start_time;
-        topojson.log('debug', "Scene: initial build time: ".concat(this.times.first_build));
+        topojson._log('debug', "Scene: initial build time: ".concat(this.times.first_build));
       }
     }
   }], [{
@@ -39868,7 +39818,7 @@ var Renderer = /*#__PURE__*/function () {
 
 // Make some modules accessible for debugging
 var debug = {
-  log: topojson.log,
+  log: topojson._log,
   yaml: yaml,
   Utils: topojson.Utils,
   Geo: topojson.Geo,
@@ -39918,7 +39868,7 @@ return Tangram$1;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = 'dc2777ff1c531d96f58e5c48e555e702e05ed9bd';
+	Tangram.debug.SHA = 'eb48c065ed11c00981539a8b64827e2c3834c9db';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

@@ -511,7 +511,9 @@ if (Thread.is_worker) {
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
+const workerBroker = WorkerBroker;
 const LEVELS = {
   silent: -1,
   error: 0,
@@ -520,67 +522,69 @@ const LEVELS = {
   debug: 3,
   trace: 4
 };
+
+/** Supported renderer log levels. */
+
+/** Per-message renderer logging options. */
+
+/** Renderer logger with shared level and worker controls. */
+
 const methods = {};
-let logged_once = {};
-function methodForLevel(level) {
-  if (Thread.is_main) {
-    methods[level] = methods[level] || (console[level] ? console[level] : console.log).bind(console); // eslint-disable-line no-console
-    return methods[level];
+let loggedOnce = {};
+function getMethodForLevel(level) {
+  if (!Thread.is_main) {
+    return;
   }
+  if (!methods[level]) {
+    const consoleMethods = console;
+    methods[level] = (consoleMethods[level] || console.log).bind(console);
+  }
+  return methods[level];
 }
-
-// Logs message, proxying any log requests from worker threads back to the main thread.
-// Returns (asynchronously, due to proxying) a boolean indicating if the message was logged.
-// Option `once: true` can be used to only log each unique log message once (e.g. for warnings
-// that would otherwise be repetitive or possibly logged thousands of times, such as per feature).
-function log(opts, ...msg) {
-  let level = typeof opts === 'object' ? opts.level : opts;
-  if (LEVELS[level] <= LEVELS[log.level]) {
-    if (Thread.is_worker) {
-      // Proxy to main thread
-      return WorkerBroker.postMessage({
-        method: '_logProxy',
-        stringify: true
-      }, opts, ...msg);
-    } else {
-      // Only log message once?
-      if (typeof opts === 'object' && opts.once === true) {
-        if (logged_once[JSON.stringify(msg)]) {
-          return Promise.resolve(false);
-        }
-        logged_once[JSON.stringify(msg)] = true;
-      }
-
-      // Write to console (on main thread)
-      let logger = methodForLevel(level);
-      if (msg.length > 1) {
-        logger(`Tangram ${version} [${level}]: ${msg[0]}`, ...msg.slice(1));
-      } else {
-        logger(`Tangram ${version} [${level}]: ${msg[0]}`);
-      }
+const log = async (options, ...messages) => {
+  const level = typeof options === 'object' ? options.level : options;
+  if (LEVELS[level] > LEVELS[log.level]) {
+    return false;
+  }
+  if (Thread.is_worker) {
+    return workerBroker.postMessage({
+      method: '_logProxy',
+      stringify: true
+    }, options, ...messages);
+  }
+  if (typeof options === 'object' && options.once === true) {
+    const key = JSON.stringify(messages);
+    if (loggedOnce[key]) {
+      return false;
     }
-    return Promise.resolve(true);
+    loggedOnce[key] = true;
   }
-  return Promise.resolve(false);
-}
+  const logger = getMethodForLevel(level);
+  if (messages.length > 1) {
+    logger(`Tangram ${version} [${level}]: ${messages[0]}`, ...messages.slice(1));
+  } else {
+    logger(`Tangram ${version} [${level}]: ${messages[0]}`);
+  }
+  return true;
+};
 log.level = 'info';
 log.workers = null;
-log.setLevel = function (level) {
+log.setLevel = level => {
   log.level = level;
   if (Thread.is_main && Array.isArray(log.workers)) {
-    WorkerBroker.postMessage(log.workers, '_logSetLevelProxy', level);
+    workerBroker.postMessage(log.workers, '_logSetLevelProxy', level);
   }
 };
 if (Thread.is_main) {
-  log.setWorkers = function (workers) {
+  log.setWorkers = workers => {
     log.workers = workers;
   };
-  log.reset = function () {
-    logged_once = {};
+  log.reset = () => {
+    loggedOnce = {};
   };
 }
-WorkerBroker.addTarget('_logProxy', log); // proxy log messages from worker to main thread
-WorkerBroker.addTarget('_logSetLevelProxy', log.setLevel); // proxy log level setting from main to worker thread
+WorkerBroker.addTarget('_logProxy', log);
+WorkerBroker.addTarget('_logSetLevelProxy', log.setLevel);
 
 // Tangram
 // SPDX-License-Identifier: MIT
@@ -984,39 +988,36 @@ function getURLParameter(name, url) {
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
-// import log from './log';
+/** State shared by cooperative tasks for the current frame. */
 
+/** A cooperative task scheduled by the renderer. */
+
+/** Cooperative renderer task scheduler. */
+
+/** Shared renderer task scheduler. */
 const Task = {
   id: 0,
-  // unique id per task
   queue: [],
-  // current queue of outstanding tasks
   max_time: 20,
-  // default time in which all tasks should complete per frame
   start_time: null,
-  // start time for tasks in current frame
   state: {},
-  // track flags about environment state (ex: whether user is currently moving the view)
-
   add(task) {
     task.id = Task.id++;
-    task.max_time = task.max_time || Task.max_time; // allow task to run for this much time (tasks have a global collective limit per frame, too)
-    task.pause_factor = task.pause_factor || 1; // pause tasks by this many frames when they run too long
-    let promise = new Promise((resolve, reject) => {
+    task.max_time = task.max_time || Task.max_time;
+    task.pause_factor = task.pause_factor || 1;
+    task.promise = new Promise((resolve, reject) => {
       task.resolve = resolve;
       task.reject = reject;
     });
-    task.promise = promise;
     task.elapsed = 0;
     task.total_elapsed = 0;
     task.stats = {
       calls: 0
     };
     this.queue.push(task);
-
-    // Run task immediately if under total frame time
-    this.start_time = this.start_time || performance.now(); // start frame timer if necessary
+    this.start_time = this.start_time || performance.now();
     this.elapsed = performance.now() - this.start_time;
     if (this.elapsed < Task.max_time || task.immediate) {
       this.process(task);
@@ -1024,47 +1025,35 @@ const Task = {
     return task.promise;
   },
   remove(task) {
-    let idx = this.queue.indexOf(task);
-    if (idx > -1) {
-      this.queue.splice(idx, 1);
+    const index = this.queue.indexOf(task);
+    if (index > -1) {
+      this.queue.splice(index, 1);
     }
   },
   process(task) {
-    // Skip task while user is moving the view, if the task requests it
-    // (for intensive tasks that lock the UI, like canvas rasterization)
     if (this.state.user_moving_view && task.user_moving_view === false) {
-      // log('debug', `*** SKIPPING task id ${task.id}, ${task.type} while user is moving view`);
       return;
     }
-
-    // Skip task if it's currently paused
     if (task.pause) {
-      // log('debug', `*** PAUSING task id ${task.id}, ${task.type} (${task.pause})`);
       task.pause--;
       return true;
     }
     task.stats.calls++;
-    task.start_time = performance.now(); // start task timer
+    task.start_time = performance.now();
     return task.run(task);
   },
   processAll() {
-    this.start_time = this.start_time || performance.now(); // start frame timer if necessary
-    for (let i = 0; i < this.queue.length; i++) {
-      // Exceeded either total task time, or total frame time
-      let task = this.queue[i];
+    this.start_time = this.start_time || performance.now();
+    for (const task of this.queue) {
       if (this.process(task) !== true) {
-        // If the task didn't complete, pause it for a task-specific number of frames
-        // (can be disabled by setting pause_factor to 0)
         if (!task.pause) {
           task.pause = task.elapsed > task.max_time ? task.pause_factor : 0;
         }
         task.total_elapsed += task.elapsed;
       }
-
-      // Check total frame time
       this.elapsed = performance.now() - this.start_time;
       if (this.elapsed >= Task.max_time) {
-        this.start_time = null; // reset frame timer
+        this.start_time = null;
         break;
       }
     }
@@ -1072,30 +1061,26 @@ const Task = {
   finish(task, value) {
     task.elapsed = performance.now() - task.start_time;
     task.total_elapsed += task.elapsed;
-    // log('debug', `task type ${task.type}, tile ${task.id}, finish after ${task.stats.calls} calls, ${task.total_elapsed.toFixed(2)} elapsed`);
     this.remove(task);
     task.resolve(value);
     return task.promise;
   },
   cancel(task) {
-    let val;
-    if (task.cancel instanceof Function) {
-      val = task.cancel(task); // optional cancel function
-    }
-    task.resolve(val);
+    var _task$cancel;
+    const value = (_task$cancel = task.cancel) === null || _task$cancel === void 0 ? void 0 : _task$cancel.call(task, task);
+    task.resolve(value);
   },
   shouldContinue(task) {
-    // Suspend task if it runs over its specific per-frame limit, or the global limit
     task.elapsed = performance.now() - task.start_time;
     this.elapsed = performance.now() - this.start_time;
     return task.elapsed < task.max_time && this.elapsed < Task.max_time;
   },
-  removeForTile(tile_id) {
-    for (let idx = this.queue.length - 1; idx >= 0; idx--) {
-      if (this.queue[idx].tile_id === tile_id) {
-        // log('trace', `Task: remove tasks for tile ${tile_id}`);
-        this.cancel(this.queue[idx]);
-        this.queue.splice(idx, 1);
+  removeForTile(tileId) {
+    for (let index = this.queue.length - 1; index >= 0; index--) {
+      const task = this.queue[index];
+      if (task.tile_id === tileId) {
+        this.cancel(task);
+        this.queue.splice(index, 1);
       }
     }
   },
@@ -5430,192 +5415,155 @@ Material.block = 'material';
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
-/*** Vector functions - vectors provided as [x, y] or [x, y, z] arrays ***/
+/** A numeric vector accepted by Tangram's vector utilities. */
 
-const Vector = {};
-Vector.copy = function (v) {
-  var V = [];
-  var lim = v.length;
-  for (var i = 0; i < lim; i++) {
-    V[i] = v[i];
+/** A mutable numeric vector returned or updated by Tangram's vector utilities. */
+
+function copy(vector) {
+  return [...vector];
+}
+function negate(vector) {
+  return vector.map(component => -component);
+}
+function add(left, right) {
+  const length = Math.min(left.length, right.length);
+  const result = [];
+  for (let index = 0; index < length; index++) {
+    result[index] = left[index] + right[index];
   }
-  return V;
-};
-Vector.neg = function (v) {
-  var V = [];
-  var lim = v.length;
-  for (var i = 0; i < lim; i++) {
-    V[i] = -v[i];
+  return result;
+}
+function subtract(left, right) {
+  const length = Math.min(left.length, right.length);
+  const result = [];
+  for (let index = 0; index < length; index++) {
+    result[index] = left[index] - right[index];
   }
-  return V;
-};
-
-// Addition of two vectors
-Vector.add = function (v1, v2) {
-  var v = [];
-  var lim = Math.min(v1.length, v2.length);
-  for (var i = 0; i < lim; i++) {
-    v[i] = v1[i] + v2[i];
+  return result;
+}
+function signedArea(first, second, third) {
+  return (second[0] - first[0]) * (third[1] - first[1]) - (third[0] - first[0]) * (second[1] - first[1]);
+}
+function multiply(vector, multiplier) {
+  const length = typeof multiplier === 'number' ? vector.length : Math.min(vector.length, multiplier.length);
+  const result = [];
+  for (let index = 0; index < length; index++) {
+    result[index] = vector[index] * (typeof multiplier === 'number' ? multiplier : multiplier[index]);
   }
-  return v;
-};
-
-// Substraction of two vectors
-Vector.sub = function (v1, v2) {
-  var v = [];
-  var lim = Math.min(v1.length, v2.length);
-  for (var i = 0; i < lim; i++) {
-    v[i] = v1[i] - v2[i];
+  return result;
+}
+function divide(vector, divisor) {
+  const length = typeof divisor === 'number' ? vector.length : Math.min(vector.length, divisor.length);
+  const result = [];
+  for (let index = 0; index < length; index++) {
+    result[index] = vector[index] / (typeof divisor === 'number' ? divisor : divisor[index]);
   }
-  return v;
-};
-Vector.signed_area = function (v1, v2, v3) {
-  return (v2[0] - v1[0]) * (v3[1] - v1[1]) - (v3[0] - v1[0]) * (v2[1] - v1[1]);
-};
-
-// Multiplication of two vectors, or a vector and a scalar
-Vector.mult = function (v1, v2) {
-  var v = [],
-    len = v1.length,
-    i;
-  if (typeof v2 === 'number') {
-    // Mulitply by scalar
-    for (i = 0; i < len; i++) {
-      v[i] = v1[i] * v2;
-    }
-  } else {
-    // Multiply two vectors
-    len = Math.min(v1.length, v2.length);
-    for (i = 0; i < len; i++) {
-      v[i] = v1[i] * v2[i];
-    }
-  }
-  return v;
-};
-
-// Division of two vectors
-Vector.div = function (v1, v2) {
-  var v = [],
-    i;
-  if (typeof v2 === 'number') {
-    // Divide by scalar
-    for (i = 0; i < v1.length; i++) {
-      v[i] = v1[i] / v2;
-    }
-  } else {
-    // Divide to vectors
-    var len = Math.min(v1.length, v2.length);
-    for (i = 0; i < len; i++) {
-      v[i] = v1[i] / v2[i];
-    }
-  }
-  return v;
-};
-
-// Get 2D perpendicular
-Vector.perp = function (v1, v2) {
-  return [v2[1] - v1[1], v1[0] - v2[0]];
-};
-
-// Get 2D vector rotated
-Vector.rot = function (v, a) {
-  var c = Math.cos(a);
-  var s = Math.sin(a);
-  return [v[0] * c - v[1] * s, v[0] * s + v[1] * c];
-};
-
-// Get 2D counter-clockwise angle
-// Angles in quadrant I and II are mapped to [0, PI)
-// Angles in quadrant III and IV are mapped to [-PI, 0]
-Vector.angle = function ([x, y]) {
+  return result;
+}
+function perpendicular(first, second) {
+  return [second[1] - first[1], first[0] - second[0]];
+}
+function rotate(vector, angleRadians) {
+  const cosine = Math.cos(angleRadians);
+  const sine = Math.sin(angleRadians);
+  return [vector[0] * cosine - vector[1] * sine, vector[0] * sine + vector[1] * cosine];
+}
+function angle([x, y]) {
   return Math.atan2(y, x);
-};
-
-// Get angle between two vectors
-Vector.angleBetween = function (A, B) {
-  var delta = Vector.dot(Vector.normalize(Vector.copy(A)), Vector.normalize(Vector.copy(B)));
+}
+function angleBetween(first, second) {
+  let delta = dot(normalize(copy(first)), normalize(copy(second)));
   if (delta > 1) {
     delta = 1;
-  } // protect against floating point error
+  }
   return Math.acos(delta);
-};
-
-// Compare two points
-Vector.isEqual = function (v1, v2) {
-  var len = v1.length;
-  for (var i = 0; i < len; i++) {
-    if (v1[i] !== v2[i]) {
+}
+function isEqual(first, second) {
+  for (let index = 0; index < first.length; index++) {
+    if (first[index] !== second[index]) {
       return false;
     }
   }
   return true;
-};
-
-// Vector length squared
-Vector.lengthSq = function (v) {
-  if (v.length === 2) {
-    return v[0] * v[0] + v[1] * v[1];
-  } else if (v.length >= 3) {
-    return v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
+}
+function lengthSquared(vector) {
+  if (vector.length === 2) {
+    return vector[0] * vector[0] + vector[1] * vector[1];
+  }
+  if (vector.length >= 3) {
+    return vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2];
   }
   return 0;
-};
-
-// Vector length
-Vector.length = function (v) {
-  return Math.sqrt(Vector.lengthSq(v));
-};
-
-// Normalize a vector *in place* (use Vector.copy() if you need a new vector instance)
-Vector.normalize = function (v) {
-  var d;
-  if (v.length === 2) {
-    d = v[0] * v[0] + v[1] * v[1];
-    if (d === 1) {
-      return v;
+}
+function getLength(vector) {
+  return Math.sqrt(lengthSquared(vector));
+}
+function normalize(vector) {
+  if (vector.length !== 2 && vector.length < 3) {
+    return vector;
+  }
+  let magnitudeSquared = vector[0] * vector[0] + vector[1] * vector[1];
+  if (vector.length >= 3) {
+    magnitudeSquared += vector[2] * vector[2];
+  }
+  if (magnitudeSquared === 1) {
+    return vector;
+  }
+  const magnitude = Math.sqrt(magnitudeSquared);
+  if (magnitude !== 0) {
+    vector[0] /= magnitude;
+    vector[1] /= magnitude;
+    if (vector.length >= 3) {
+      vector[2] /= magnitude;
     }
-    d = Math.sqrt(d);
-    if (d !== 0) {
-      v[0] /= d;
-      v[1] /= d;
-    } else {
-      v[0] = 0, v[1] = 0;
-    }
-  } else if (v.length >= 3) {
-    d = v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
-    if (d === 1) {
-      return v;
-    }
-    d = Math.sqrt(d);
-    if (d !== 0) {
-      v[0] /= d;
-      v[1] /= d;
-      v[2] /= d;
-    } else {
-      v[0] = 0, v[1] = 0, v[2] = 0;
+  } else {
+    vector[0] = 0;
+    vector[1] = 0;
+    if (vector.length >= 3) {
+      vector[2] = 0;
     }
   }
-  return v;
-};
-
-// Cross product of two vectors
-Vector.cross = function (v1, v2) {
-  if (v1.length === 2) {
-    return v1[0] * v2[1] - v1[1] * v2[0];
-  } else if (v1.length === 3) {
-    return [v1[1] * v2[2] - v1[2] * v2[1], v1[2] * v2[0] - v1[0] * v2[2], v1[0] * v2[1] - v1[1] * v2[0]];
+  return vector;
+}
+function cross(first, second) {
+  if (first.length === 2) {
+    return first[0] * second[1] - first[1] * second[0];
   }
-};
-
-// Dot product of two vectors
-Vector.dot = function (v1, v2) {
-  var n = 0;
-  var lim = Math.min(v1.length, v2.length);
-  for (var i = 0; i < lim; i++) {
-    n += v1[i] * v2[i];
+  if (first.length === 3) {
+    return [first[1] * second[2] - first[2] * second[1], first[2] * second[0] - first[0] * second[2], first[0] * second[1] - first[1] * second[0]];
   }
-  return n;
+  return undefined;
+}
+function dot(first, second) {
+  const length = Math.min(first.length, second.length);
+  let result = 0;
+  for (let index = 0; index < length; index++) {
+    result += first[index] * second[index];
+  }
+  return result;
+}
+
+/** Tangram's numeric vector operations. */
+const Vector = {
+  copy,
+  neg: negate,
+  add,
+  sub: subtract,
+  signed_area: signedArea,
+  mult: multiply,
+  div: divide,
+  perp: perpendicular,
+  rot: rotate,
+  angle,
+  angleBetween,
+  isEqual,
+  lengthSq: lengthSquared,
+  length: getLength,
+  normalize,
+  cross,
+  dot
 };
 
 var ambient_source = `// Tangram
@@ -11558,26 +11506,32 @@ function boxIntersectsList(a, boxes, callback) {
   }
 }
 
-// Tangram
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2013-2016 Brett Camper and Mapzen
-
-
-// single-allocation, reusable objects
 const ZERO_AXES = [[1, 0], [0, 1]];
-const proj_a = [],
-  proj_b = [];
-let d0, d1, d2, d3;
+const projectionA = [];
+const projectionB = [];
+
+/** Two-dimensional oriented bounding box. */
 class OBB {
-  constructor(x, y, a, w, h) {
-    this.dimension = [w / 2, h / 2]; // store half-dimension as that's what's needed in calculations below
-    this.angle = a;
+  constructor(x, y, angle, width, height) {
+    /** Half-width and half-height. */
+    _defineProperty(this, "dimension", void 0);
+    /** Rotation angle in radians. */
+    _defineProperty(this, "angle", void 0);
+    /** Box center. */
+    _defineProperty(this, "centroid", void 0);
+    /** Flattened corner coordinates. */
+    _defineProperty(this, "quad", void 0);
+    /** First normalized separating axis. */
+    _defineProperty(this, "axis_0", void 0);
+    /** Second normalized separating axis. */
+    _defineProperty(this, "axis_1", void 0);
+    this.dimension = [width / 2, height / 2];
+    this.angle = angle;
     this.centroid = [x, y];
-    this.quad = null;
-    this.axis_0 = null;
-    this.axis_1 = null;
     this.update();
   }
+
+  /** Returns a serializable representation of the box. */
   toJSON() {
     return {
       x: this.centroid[0],
@@ -11587,95 +11541,65 @@ class OBB {
       h: this.dimension[1]
     };
   }
-  getExtent() {
-    // special handling to skip calculations for 0-angle
-    if (this.angle === 0) {
-      return [this.quad[0], this.quad[1],
-      // lower-left
-      this.quad[4], this.quad[5] // upper-right
-      ];
-    }
-    let aabb = [Math.min(this.quad[0], this.quad[2], this.quad[4], this.quad[6]),
-    // min x
-    Math.min(this.quad[1], this.quad[3], this.quad[5], this.quad[7]),
-    // min y
-    Math.max(this.quad[0], this.quad[2], this.quad[4], this.quad[6]),
-    // max x
-    Math.max(this.quad[1], this.quad[3], this.quad[5], this.quad[7]) // max y
-    ];
-    return aabb;
-  }
-  updateAxes() {
-    // upper-left to upper-right
-    this.axis_0 = Vector.normalize([this.quad[4] - this.quad[6], this.quad[5] - this.quad[7]]);
 
-    // lower-right to upper-right
+  /** Returns the axis-aligned extent containing the box. */
+  getExtent() {
+    if (this.angle === 0) {
+      return [this.quad[0], this.quad[1], this.quad[4], this.quad[5]];
+    }
+    return [Math.min(this.quad[0], this.quad[2], this.quad[4], this.quad[6]), Math.min(this.quad[1], this.quad[3], this.quad[5], this.quad[7]), Math.max(this.quad[0], this.quad[2], this.quad[4], this.quad[6]), Math.max(this.quad[1], this.quad[3], this.quad[5], this.quad[7])];
+  }
+
+  /** Recalculates the normalized box axes. */
+  updateAxes() {
+    this.axis_0 = Vector.normalize([this.quad[4] - this.quad[6], this.quad[5] - this.quad[7]]);
     this.axis_1 = Vector.normalize([this.quad[4] - this.quad[2], this.quad[5] - this.quad[3]]);
   }
-  update() {
-    const c = this.centroid;
-    const w2 = this.dimension[0];
-    const h2 = this.dimension[1];
 
-    // special handling to skip calculations for 0-angle
+  /** Recalculates corners and axes from the current center, dimensions, and angle. */
+  update() {
+    const [centerX, centerY] = this.centroid;
+    const [halfWidth, halfHeight] = this.dimension;
     if (this.angle === 0) {
-      // quad is a flat array storing 4 [x, y] vectors
-      this.quad = [c[0] - w2, c[1] - h2,
-      // lower-left
-      c[0] + w2, c[1] - h2,
-      // lower-right
-      c[0] + w2, c[1] + h2,
-      // upper-right
-      c[0] - w2, c[1] + h2 // upper-left
-      ];
+      this.quad = [centerX - halfWidth, centerY - halfHeight, centerX + halfWidth, centerY - halfHeight, centerX + halfWidth, centerY + halfHeight, centerX - halfWidth, centerY + halfHeight];
       this.axis_0 = ZERO_AXES[0];
       this.axis_1 = ZERO_AXES[1];
+      return;
     }
-    // calculate axes and enclosing quad
-    else {
-      let x0 = Math.cos(this.angle) * w2;
-      let x1 = Math.sin(this.angle) * w2;
-      let y0 = -Math.sin(this.angle) * h2;
-      let y1 = Math.cos(this.angle) * h2;
+    const widthX = Math.cos(this.angle) * halfWidth;
+    const widthY = Math.sin(this.angle) * halfWidth;
+    const heightX = -Math.sin(this.angle) * halfHeight;
+    const heightY = Math.cos(this.angle) * halfHeight;
+    this.quad = [centerX - widthX - heightX, centerY - widthY - heightY, centerX + widthX - heightX, centerY + widthY - heightY, centerX + widthX + heightX, centerY + widthY + heightY, centerX - widthX + heightX, centerY - widthY + heightY];
+    this.updateAxes();
+  }
 
-      // quad is a flat array storing 4 [x, y] vectors
-      this.quad = [c[0] - x0 - y0, c[1] - x1 - y1,
-      // lower-left
-      c[0] + x0 - y0, c[1] + x1 - y1,
-      // lower-right
-      c[0] + x0 + y0, c[1] + x1 + y1,
-      // upper-right
-      c[0] - x0 + y0, c[1] - x1 + y1 // upper-left
-      ];
-      this.updateAxes();
-    }
+  /** Projects a box onto an axis and writes its minimum and maximum values. */
+  static projectToAxis(box, axis, projection) {
+    const dot0 = box.quad[0] * axis[0] + box.quad[1] * axis[1];
+    const dot1 = box.quad[2] * axis[0] + box.quad[3] * axis[1];
+    const dot2 = box.quad[4] * axis[0] + box.quad[5] * axis[1];
+    const dot3 = box.quad[6] * axis[0] + box.quad[7] * axis[1];
+    projection[0] = Math.min(dot0, dot1, dot2, dot3);
+    projection[1] = Math.max(dot0, dot1, dot2, dot3);
+    return projection;
   }
-  static projectToAxis(obb, axis, proj) {
-    // for each axis, project obb quad to it and find min and max values
-    let quad = obb.quad;
-    d0 = quad[0] * axis[0] + quad[1] * axis[1];
-    d1 = quad[2] * axis[0] + quad[3] * axis[1];
-    d2 = quad[4] * axis[0] + quad[5] * axis[1];
-    d3 = quad[6] * axis[0] + quad[7] * axis[1];
-    proj[0] = Math.min(d0, d1, d2, d3);
-    proj[1] = Math.max(d0, d1, d2, d3);
-    return proj;
-  }
-  static axisCollide(obb_a, obb_b, axis_0, axis_1) {
-    OBB.projectToAxis(obb_a, axis_0, proj_a);
-    OBB.projectToAxis(obb_b, axis_0, proj_b);
-    if (proj_b[0] > proj_a[1] || proj_b[1] < proj_a[0]) {
+
+  /** Tests two separating axes for overlap. */
+  static axisCollide(first, second, axis0, axis1) {
+    OBB.projectToAxis(first, axis0, projectionA);
+    OBB.projectToAxis(second, axis0, projectionB);
+    if (projectionB[0] > projectionA[1] || projectionB[1] < projectionA[0]) {
       return false;
     }
-    OBB.projectToAxis(obb_a, axis_1, proj_a);
-    OBB.projectToAxis(obb_b, axis_1, proj_b);
-    if (proj_b[0] > proj_a[1] || proj_b[1] < proj_a[0]) {
-      return false;
-    }
-    return true;
+    OBB.projectToAxis(first, axis1, projectionA);
+    OBB.projectToAxis(second, axis1, projectionB);
+    return !(projectionB[0] > projectionA[1] || projectionB[1] < projectionA[0]);
   }
-  static intersect(obb_a, obb_b) {
-    return OBB.axisCollide(obb_a, obb_b, obb_a.axis_0, obb_a.axis_1) && OBB.axisCollide(obb_a, obb_b, obb_b.axis_0, obb_b.axis_1);
+
+  /** Tests whether two oriented boxes intersect. */
+  static intersect(first, second) {
+    return OBB.axisCollide(first, second, first.axis_0, first.axis_1) && OBB.axisCollide(first, second, second.axis_0, second.axis_1);
   }
 }
 
@@ -37623,7 +37547,7 @@ return Tangram$1;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = 'dc2777ff1c531d96f58e5c48e555e702e05ed9bd';
+	Tangram.debug.SHA = 'eb48c065ed11c00981539a8b64827e2c3834c9db';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

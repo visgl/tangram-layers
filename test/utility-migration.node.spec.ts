@@ -10,6 +10,7 @@ import debugSettings, {
 import hashString from '../modules/tangram-renderer/src/utils/hash.js';
 import sliceObject from '../modules/tangram-renderer/src/utils/slice.js';
 import version from '../modules/tangram-renderer/src/utils/version.js';
+import Vector, {Vector as NamedVector} from '../modules/tangram-renderer/src/utils/vector.js';
 
 describe('migrated utility modules', () => {
   it('hashes strings deterministically', () => {
@@ -46,5 +47,14 @@ describe('migrated utility modules', () => {
     mergeDebugSettings({wireframe: !originalWireframe});
     expect(debugSettings.wireframe).toBe(!originalWireframe);
     mergeDebugSettings({wireframe: originalWireframe});
+  });
+
+  it('exposes typed vector operations through named and default exports', () => {
+    const vector = [3, 4];
+    expect(NamedVector).toBe(Vector);
+    expect(Vector.normalize(vector)).toBe(vector);
+    expect(vector).toEqual([0.6, 0.8]);
+    expect(Vector.mult(vector, [10, 5])).toEqual([6, 4]);
+    expect(Vector.cross([1], [2])).toBeUndefined();
   });
 });
