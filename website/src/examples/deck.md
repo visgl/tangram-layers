@@ -1,7 +1,8 @@
 ---
 sidebar_position: 2
-title: Deck + TangramLayer
-description: A deck.gl basemap integration powered by Tangram.
+title: MapView perspective
+description: A perspective deck.gl MapView powered by Tangram.
+hide_title: true
 ---
 
 <!--
@@ -10,17 +11,10 @@ SPDX-License-Identifier: MIT
 Copyright (c) vis.gl contributors
 -->
 
-
-import ExampleDeviceTabs from '@site/src/components/ExampleDeviceTabs';
 import DeckExample from '@site/src/components/DeckExample';
 
-Compare a Tangram basemap and deck.gl overlays on WebGPU or WebGL.
-
-The view selector includes supported flat and perspective `MapView` modes plus
-`GlobeView` and `FirstPersonView` capability previews. The latter two keep the
-deck.gl overlays visible and describe the renderer adapters still required
-before Tangram geometry can participate in those projections.
-
-<ExampleDeviceTabs />
-
-<DeckExample />
+<DeckExample
+  viewMode="mapPerspective"
+  title="MapView perspective"
+  description="deck.gl owns the pitched Web Mercator camera and supplies its matrices to the Tangram renderer."
+/>

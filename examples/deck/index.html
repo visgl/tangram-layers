@@ -22,80 +22,87 @@ Copyright (c) vis.gl contributors
     <link rel="stylesheet" href="./main.css?bridge=webgpu-tron-background">
   </head>
   <body class="tangram-deck-standalone">
-    <div id="deck-container"></div>
-    <aside id="controls">
-      <h1>TangramLayer bridge</h1>
-      <p id="status" role="status"></p>
-      <label class="control">
-        <span>Device</span>
-        <select id="device-type">
-          <option value="webgpu">WebGPU</option>
-          <option value="webgl">WebGL</option>
-        </select>
-      </label>
-      <label class="control">
-        <span>Basemap</span>
-        <select id="basemap-style">
-          <option value="streetsVector">Streets (vector)</option>
-          <option value="positronRaster">Positron (raster)</option>
-          <option value="tron">TRON 2.0 (vector, no key)</option>
-          <option value="tronNextzen">Original TRON 2.0 on Nextzen (existing key, WebGL)</option>
-        </select>
-      </label>
-      <label class="control">
-        <span>deck.gl view</span>
-        <select id="view-type">
-          <option value="mapFlat">MapView — flat</option>
-          <option value="mapPerspective">MapView — perspective</option>
-          <option value="globe">GlobeView — renderer adapter needed</option>
-          <option value="firstPerson">FirstPersonView — renderer adapter needed</option>
-        </select>
-      </label>
-      <label class="control checkbox-control">
-        <input id="basemap-visible" type="checkbox" checked>
-        Show TangramBasemapLayer
-      </label>
-      <form id="nextzen-key-form" hidden>
-        <label class="control" for="nextzen-api-key">
-          <span>Existing Nextzen API key</span>
-        </label>
-        <div class="key-input-row">
-          <input
-            id="nextzen-api-key"
-            name="nextzen-api-key"
-            type="password"
-            autocomplete="off"
-            spellcheck="false"
-          >
-          <button type="submit">Load</button>
+    <div id="deck-container">
+      <aside id="controls">
+        <h1>TangramLayer bridge</h1>
+        <div class="info-tabs" role="tablist" aria-label="Example information">
+          <button type="button" class="is-active" data-example-tab="controls" role="tab" aria-selected="true">Controls</button>
+          <button type="button" data-example-tab="about" role="tab" aria-selected="false">About</button>
         </div>
-        <p class="hint">Kept only in this browser tab; never written to source.</p>
-      </form>
-      <p class="hint">
-        Blue landmarks and the orange path are deck.gl layers. Right-drag or
-        Control-drag to tilt and rotate the shared camera.
+        <div data-example-tab-panel="controls">
+          <p id="status" role="status"></p>
+          <label class="control">
+            <span>Basemap</span>
+            <select id="basemap-style">
+              <option value="streetsVector">Streets (vector)</option>
+              <option value="positronRaster">Positron (raster)</option>
+              <option value="tron">TRON 2.0 (vector, no key)</option>
+              <option value="tronNextzen">Original TRON 2.0 on Nextzen (existing key, WebGL)</option>
+            </select>
+          </label>
+          <label class="control">
+            <span>deck.gl view</span>
+            <select id="view-type">
+              <option value="mapFlat">MapView — flat</option>
+              <option value="mapPerspective">MapView — perspective</option>
+              <option value="globe">GlobeView — renderer adapter needed</option>
+              <option value="firstPerson">FirstPersonView — renderer adapter needed</option>
+            </select>
+          </label>
+          <label class="control checkbox-control">
+            <input id="basemap-visible" type="checkbox" checked>
+            Show TangramBasemapLayer
+          </label>
+          <form id="nextzen-key-form" hidden>
+            <label class="control" for="nextzen-api-key">
+              <span>Existing Nextzen API key</span>
+            </label>
+            <div class="key-input-row">
+              <input
+                id="nextzen-api-key"
+                name="nextzen-api-key"
+                type="password"
+                autocomplete="off"
+                spellcheck="false"
+              >
+              <button type="submit">Load</button>
+            </div>
+            <p class="hint">Kept only in this browser tab; never written to source.</p>
+          </form>
+        </div>
+        <div data-example-tab-panel="about" hidden>
+          <p class="example-description">Tangram renders a basemap into deck.gl’s active luma.gl device and camera.</p>
+          <p class="hint">Blue landmarks and the orange path are deck.gl layers.</p>
+          <p class="source-link">
+            <a
+              href="https://github.com/visgl/tangram-layers/blob/master/examples/deck/app.js"
+              target="_blank"
+              rel="noopener noreferrer"
+            >View TangramLayer demo source</a>
+          </p>
+          <p id="tron-source-link" class="source-link" hidden>
+            Style source:
+            <a
+              href="https://github.com/tangrams/tron-style"
+              target="_blank"
+              rel="noopener noreferrer"
+            >tangrams/tron-style</a>
+          </p>
+        </div>
+      </aside>
+      <div class="canvas-toolbar">
+        <div class="canvas-device-tabs" role="tablist" aria-label="Rendering device">
+          <button type="button" data-device-type="webgpu" role="tab">WebGPU</button>
+          <button type="button" data-device-type="webgl" role="tab">WebGL</button>
+        </div>
+        <button id="example-fullscreen" class="canvas-fullscreen" type="button" aria-label="Open fullscreen example" title="Fullscreen">⛶</button>
+      </div>
+      <p id="attribution">
+        &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>
+        <span id="carto-attribution">&copy; Basemap data providers</span>
+        <span id="nextzen-attribution" hidden>&copy; <a href="https://www.nextzen.org/">Nextzen</a></span>
       </p>
-      <p class="source-link">
-        <a
-          href="https://github.com/visgl/tangram-layers/blob/master/examples/deck/app.js"
-          target="_blank"
-          rel="noopener noreferrer"
-        >View TangramBasemapLayer demo source</a>
-      </p>
-      <p id="tron-source-link" class="source-link" hidden>
-        Style source:
-        <a
-          href="https://github.com/tangrams/tron-style"
-          target="_blank"
-          rel="noopener noreferrer"
-        >tangrams/tron-style</a>
-      </p>
-    </aside>
-    <p id="attribution">
-      &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>
-      <span id="carto-attribution">&copy; Basemap data providers</span>
-      <span id="nextzen-attribution" hidden>&copy; <a href="https://www.nextzen.org/">Nextzen</a></span>
-    </p>
+    </div>
     <script type="importmap">
       {
         "imports": {

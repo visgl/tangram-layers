@@ -97,6 +97,38 @@ describe('Renderer', function () {
         assert.isTrue(scene.updateScene.secondCall.calledWith({ renderPass: { id: 'right' } }));
     });
 
+    it('renders each selected view when camera and viewport values are identical', function () {
+        const renderer = Renderer.create({});
+        const scene = renderer.scene;
+        const dirty_states = [];
+        sinon.stub(scene, 'updateScene').callsFake(() => {
+            dirty_states.push(scene.dirty);
+            scene.dirty = false;
+            return dirty_states[dirty_states.length - 1];
+        });
+
+        const frame = new HostFrame({
+            viewport: { width: 800, height: 600 },
+            geographicAnchor: { longitude: -74, latitude: 40.7, zoom: 16 },
+            renderViews: [
+                {
+                    id: 'left-eye',
+                    viewport: { width: 800, height: 600 },
+                    camera: { view: IDENTITY_MATRIX, projection: IDENTITY_MATRIX, position: [0, 0, 0] }
+                },
+                {
+                    id: 'right-eye',
+                    viewport: { width: 800, height: 600 },
+                    camera: { view: IDENTITY_MATRIX, projection: IDENTITY_MATRIX, position: [0, 0, 0] }
+                }
+            ]
+        });
+
+        assert.isTrue(renderer.render({ frame, renderViewId: 'left-eye' }));
+        assert.isTrue(renderer.render({ renderViewId: 'right-eye' }));
+        assert.deepEqual(dirty_states, [true, true]);
+    });
+
     it('requests another host frame while an active style is animated', function () {
         const request_redraw = sinon.spy();
         const renderer = Renderer.create({}, { requestRedraw: request_redraw });

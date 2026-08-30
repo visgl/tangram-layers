@@ -19,6 +19,7 @@ module.exports = {
       items: [
         'get-started/getting-started',
         'developer-guide/architecture',
+        'developer-guide/view-integration',
         'developer-guide/bundling',
         {type: 'doc', id: 'developer-guide/legacy-concepts', label: 'Tangram concepts'}
       ]

@@ -38056,6 +38056,7 @@ class Renderer {
     const render_view = host_frame.getRenderView(renderViewId);
     const viewport = render_view.viewport;
     const anchor = host_frame.geographicAnchor;
+    const render_view_changed = this.active_render_view_id !== render_view.id;
     this.host_frame = host_frame;
     this.active_render_view_id = render_view.id;
     if (this.scene.view.size.css.width !== viewport.width || this.scene.view.size.css.height !== viewport.height) {
@@ -38068,6 +38069,9 @@ class Renderer {
     });
     this.scene.setCameraMatrices(render_view.camera);
     this.scene.view.buffer = host_frame.tileBuffer;
+    if (render_view_changed) {
+      this.scene.dirty = true;
+    }
     return host_frame;
   }
 
@@ -38171,7 +38175,7 @@ return Tangram$1;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = '6eae2228bcb1c1a3297e3505977ecc75d0beca31';
+	Tangram.debug.SHA = '88af7e9258146a778d80b774d674db303be1a08b';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

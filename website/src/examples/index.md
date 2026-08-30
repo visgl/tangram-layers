@@ -17,22 +17,22 @@ page, so the examples sidebar stays visible while you move between demos.
 ## TangramLayer examples
 
 <div className="example-tile-grid">
-  <a className="example-tile" href="/tangram-layers/examples/deck?view=mapPerspective">
+  <a className="example-tile" href="/tangram-layers/examples/deck">
     <span className="example-tile__eyebrow">TangramLayer</span>
     <strong>MapView perspective</strong>
     <span>deck.gl owns the pitched camera and supplies its matrices to the Tangram renderer.</span>
   </a>
-  <a className="example-tile" href="/tangram-layers/examples/deck?view=mapFlat">
+  <a className="example-tile" href="/tangram-layers/examples/deck-map-flat">
     <span className="example-tile__eyebrow">TangramLayer</span>
     <strong>MapView flat</strong>
     <span>An orthographic Web Mercator view using the same host-driven renderer contract.</span>
   </a>
-  <a className="example-tile" href="/tangram-layers/examples/deck?view=globe">
+  <a className="example-tile" href="/tangram-layers/examples/deck-globe">
     <span className="example-tile__eyebrow">Capability preview</span>
     <strong>GlobeView</strong>
     <span>Explore deck.gl’s globe and the remaining Tangram vertex-projection work.</span>
   </a>
-  <a className="example-tile" href="/tangram-layers/examples/deck?view=firstPerson">
+  <a className="example-tile" href="/tangram-layers/examples/deck-first-person">
     <span className="example-tile__eyebrow">Capability preview</span>
     <strong>FirstPersonView</strong>
     <span>Explore deck.gl’s first-person camera and the required geographic LOD anchor.</span>

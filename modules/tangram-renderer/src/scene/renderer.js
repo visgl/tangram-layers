@@ -46,6 +46,7 @@ export default class Renderer {
         const render_view = host_frame.getRenderView(renderViewId);
         const viewport = render_view.viewport;
         const anchor = host_frame.geographicAnchor;
+        const render_view_changed = this.active_render_view_id !== render_view.id;
 
         this.host_frame = host_frame;
         this.active_render_view_id = render_view.id;
@@ -60,6 +61,9 @@ export default class Renderer {
         });
         this.scene.setCameraMatrices(render_view.camera);
         this.scene.view.buffer = host_frame.tileBuffer;
+        if (render_view_changed) {
+            this.scene.dirty = true;
+        }
         return host_frame;
     }
 
