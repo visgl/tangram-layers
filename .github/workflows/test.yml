@@ -113,6 +113,17 @@ jobs:
           --coverage.thresholds.branches=25
           --coverage.thresholds.functions=35
           --coverage.thresholds.lines=30
+      - name: Publish coverage to job summary
+        if: always()
+        run: node scripts/write-coverage-summary.mjs
+      - name: Publish renderer coverage to Coveralls
+        if: success()
+        uses: coverallsapp/github-action@648a8eb78e6d50909eff900e4ec85cab4524a45b # v2.3.6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          file: coverage/lcov.info
+          format: lcov
+          fail-on-error: false
       - name: Upload renderer coverage
         if: always()
         uses: actions/upload-artifact@v4
