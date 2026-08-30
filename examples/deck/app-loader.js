@@ -20,6 +20,7 @@ export async function initializeCurrentDeckExample({
   moduleUrl,
   getActiveMountId,
   embeddedViewMode,
+  runtimeOptions,
   loadRuntime = (runtimeUrl) => import(runtimeUrl)
 }) {
   const loaderUrl = new URL(moduleUrl);
@@ -35,6 +36,6 @@ export async function initializeCurrentDeckExample({
     return false;
   }
 
-  runtime.initializeDeckExample({embeddedViewMode});
+  runtime.initializeDeckExample({embeddedViewMode, ...runtimeOptions});
   return true;
 }

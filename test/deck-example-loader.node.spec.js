@@ -42,4 +42,24 @@ describe('deck example loader', () => {
     ).toBe('mapPerspective');
     expect(resolveDeckExampleViewMode({queryViewMode: 'globe', viewModes})).toBe('globe');
   });
+
+  it('passes host presentation options to the shared deck runtime', async () => {
+    const initializeDeckExample = vi.fn();
+
+    await expect(
+      initializeCurrentDeckExample({
+        moduleUrl: 'https://example.test/examples/deck/app.js?mount=hero-1',
+        getActiveMountId: () => 'hero-1',
+        embeddedViewMode: 'mapPerspective',
+        runtimeOptions: {basemapId: 'tron', showOverlays: false},
+        loadRuntime: async () => ({initializeDeckExample})
+      })
+    ).resolves.toBe(true);
+
+    expect(initializeDeckExample).toHaveBeenCalledWith({
+      embeddedViewMode: 'mapPerspective',
+      basemapId: 'tron',
+      showOverlays: false
+    });
+  });
 });

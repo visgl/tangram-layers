@@ -31,8 +31,14 @@
   pointer-events: none;
 }
 
-.tangram-home-live-map .leaflet-control-container {
-  display: none;
+.tangram-home-live-map #deck-container,
+.tangram-home-live-map canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.tangram-home-live-map #attribution {
+  opacity: 0.72;
 }
 
 .hero--primary .container {

@@ -24,50 +24,59 @@ function appendScript(url, type = 'text/javascript') {
   });
 }
 
-/**
- * Mounts the classic Tangram TRON scene as a non-interactive homepage
- * background. It deliberately uses Tangram directly, without a deck.gl
- * overlay, so the homepage showcases the renderer itself.
- */
+let heroMountId = 0;
+
+/** Mounts the vector-backed, animated TRON deck example behind the homepage hero. */
 export default function TronHeroBackground() {
-  const classicBaseUrl = useBaseUrl('/examples/classic/');
-  const mapElement = useRef(null);
+  const deckExampleBaseUrl = useBaseUrl('/examples/deck/');
+  const tangramLayersUrl = useBaseUrl('/modules/tangram-layers/dist/index.js');
+  const tangramRendererUrl = useBaseUrl('/modules/tangram-renderer/dist/index.js');
+  const backgroundElement = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
-    const mapElementId = `tangram-home-tron-${Date.now()}`;
-    if (!mapElement.current) {
+    const mountId = `hero-${++heroMountId}`;
+    if (!backgroundElement.current) {
       return undefined;
     }
-    mapElement.current.id = mapElementId;
 
-    const stylesheetElements = [
-      appendStylesheet(`${classicBaseUrl}css/main.css`),
-      appendStylesheet('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.2.0/leaflet.css')
-    ];
+    const stylesheetElements = [appendStylesheet(`${deckExampleBaseUrl}main.css`)];
     const scriptElements = [];
-    window.tangramClassicBaseUrl = classicBaseUrl;
-    window.tangramClassicScene = 'styles/local-tron.yaml';
-    window.tangramClassicMapId = mapElementId;
+    document.body.classList.add('tangram-deck-embedded');
+    window.tangramExampleBaseUrl = new URL(deckExampleBaseUrl, window.location.origin).href;
+    window.tangramExampleViewMode = 'mapPerspective';
+    window.tangramExampleBasemapId = 'tron';
+    window.tangramExampleShowOverlays = false;
+    window.tangramDeckExampleMountId = mountId;
+
+    const importMapElement = document.createElement('script');
+    importMapElement.type = 'importmap';
+    importMapElement.textContent = JSON.stringify({
+      imports: {
+        '@deck.gl/core': 'https://esm.sh/deck.gl@9.4.0-alpha.2?bundle&external=@luma.gl/core',
+        '@deck.gl/layers': 'https://esm.sh/deck.gl@9.4.0-alpha.2?bundle&external=@luma.gl/core',
+        '@luma.gl/core': 'https://esm.sh/@luma.gl/core@9.4.0-alpha.2?bundle',
+        '@vis.gl/tangram-layers': `${tangramLayersUrl}?homepage=1`,
+        '@vis.gl/tangram-renderer': `${tangramRendererUrl}?homepage=1`
+      }
+    });
+    document.head.appendChild(importMapElement);
+    scriptElements.push(importMapElement);
 
     (async () => {
       try {
-        for (const [url, type] of [
-          ['https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.2.0/leaflet.js', 'text/javascript'],
-          [`${classicBaseUrl}lib/keymaster.js`, 'text/javascript'],
-          [`${classicBaseUrl}main.js?home=tron`, 'module']
-        ]) {
-          const scriptElement = await appendScript(url, type);
-          scriptElements.push(scriptElement);
-          if (cancelled) {
-            scriptElement.remove();
-            return;
-          }
+        const scriptElement = await appendScript(
+          `${deckExampleBaseUrl}app.js?homepage=1&mount=${mountId}`,
+          'module'
+        );
+        scriptElements.push(scriptElement);
+        if (cancelled) {
+          scriptElement.remove();
         }
       } catch (error) {
         if (!cancelled) {
-          // The visual is progressive enhancement; keep the hero usable if
-          // the remote Leaflet dependency is unavailable.
+          // The live visual is progressive enhancement; keep the hero usable
+          // if a browser cannot initialize the requested GPU backend.
           console.warn(error);
         }
       }
@@ -75,22 +84,48 @@ export default function TronHeroBackground() {
 
     return () => {
       cancelled = true;
-      window.tangramClassicDestroy?.();
+      if (window.tangramDeckExampleMountId === mountId) {
+        window.tangramDeckExampleDestroy?.();
+      }
       stylesheetElements.forEach((linkElement) => {
         linkElement.remove();
       });
       scriptElements.forEach((scriptElement) => {
         scriptElement.remove();
       });
-      delete window.tangramClassicBaseUrl;
-      delete window.tangramClassicScene;
-      delete window.tangramClassicMapId;
-      delete window.tangramClassicDestroy;
-      delete window.map;
-      delete window.layer;
-      delete window.scene;
+      document.body.classList.remove('tangram-deck-embedded');
+      if (window.tangramDeckExampleMountId === mountId) {
+        delete window.tangramExampleBaseUrl;
+        delete window.tangramExampleViewMode;
+        delete window.tangramExampleBasemapId;
+        delete window.tangramExampleShowOverlays;
+        delete window.tangramDeckExampleMountId;
+        delete window.tangramDeckExampleDestroy;
+      }
     };
-  }, [classicBaseUrl]);
+  }, [deckExampleBaseUrl, tangramLayersUrl, tangramRendererUrl]);
 
-  return <div ref={mapElement} className="tangram-home-live-map" aria-hidden="true" />;
+  return (
+    <div ref={backgroundElement} className="tangram-home-live-map" aria-hidden="true">
+      <div id="deck-container">
+        <div className="tangram-home-runtime-controls" hidden>
+          <p id="status" />
+          <select id="basemap-style" defaultValue="tron">
+            <option value="tron">TRON 2.0</option>
+          </select>
+          <input id="basemap-visible" type="checkbox" defaultChecked />
+          <form id="nextzen-key-form">
+            <input id="nextzen-api-key" defaultValue="" />
+          </form>
+          <span id="carto-attribution" />
+          <span id="nextzen-attribution" />
+          <span id="tron-source-link" />
+        </div>
+        <p id="attribution">
+          &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>
+          <span id="carto-attribution-label"> &copy; Basemap data providers</span>
+        </p>
+      </div>
+    </div>
+  );
 }
