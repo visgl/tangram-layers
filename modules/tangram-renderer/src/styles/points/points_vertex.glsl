@@ -13,7 +13,9 @@ uniform float u_device_pixel_ratio;
 uniform float u_visible_time;
 uniform bool u_view_panning;
 uniform float u_view_pan_snap_timer;
-
+#ifndef TANGRAM_UNIFORM_BLOCK_TANGRAMVIEW
+uniform int u_projection_mode;
+#endif
 uniform mat4 u_model;
 uniform mat4 u_modelView;
 uniform mat3 u_normalMatrix;
@@ -64,6 +66,30 @@ varying float v_alpha_factor;
 vec2 rotate2D(vec2 _st, float _angle) {
     return mat2(cos(_angle),-sin(_angle),
                 sin(_angle),cos(_angle)) * _st;
+}
+
+vec3 tangramGlobePosition(vec3 mercator_position) {
+    const float MERCATOR_RADIUS = 6378137.;
+    const float GLOBE_EARTH_RADIUS = 6370972.;
+    const float GLOBE_RADIUS = 256.;
+    const float HALF_PI = 1.5707963;
+    float longitude = mercator_position.x / MERCATOR_RADIUS;
+    float latitude = 2. * atan(exp(mercator_position.y / MERCATOR_RADIUS)) - HALF_PI;
+    float radius = (mercator_position.z / GLOBE_EARTH_RADIUS + 1.) * GLOBE_RADIUS;
+    float latitude_cosine = cos(latitude);
+    return vec3(
+        sin(longitude) * latitude_cosine,
+        -cos(longitude) * latitude_cosine,
+        sin(latitude)
+    ) * radius;
+}
+
+vec4 tangramModelView(vec4 local_position, out vec4 world_position) {
+    world_position = u_model * local_position;
+    if (u_projection_mode == 1) {
+        return vec4(tangramGlobePosition(world_position.xyz), 1.);
+    }
+    return u_modelView * local_position;
 }
 
 #ifdef TANGRAM_CURVED_LABEL
@@ -117,7 +143,8 @@ void main() {
     #endif
 
     // Position
-    vec4 position = u_modelView * vec4(a_position.xyz, 1.);
+    vec4 world_position;
+    vec4 position = tangramModelView(vec4(a_position.xyz, 1.), world_position);
 
     // Apply positioning and scaling in screen space
     vec2 _shape = a_shape.xy / 256.;                 // values have an 8-bit fraction
@@ -157,7 +184,7 @@ void main() {
     #endif
 
     // World coordinates for 3d procedural textures
-    v_world_position = u_model * position;
+    v_world_position = world_position;
     v_world_position.xy += _shape * u_meters_per_pixel;
     v_world_position = wrapWorldPosition(v_world_position);
 

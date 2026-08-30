@@ -13,7 +13,9 @@ describe('Polygon WGSL', function () {
         expect(source).toContain('@location(1) a_normal: vec4<f32>');
         expect(source).toContain('@location(2) a_color: vec4<f32>');
         expect(source).toContain('TangramCamera.u_projection');
-        expect(source).toContain('TangramTile.u_modelView');
+        expect(source).toContain('TangramTile.u_modelView * local_position');
+        expect(source).toContain('TangramView.u_projection_mode == 1');
+        expect(source).toContain('tangramGlobePosition');
         expect(source).toContain('let surface_normal = normalize(attributes.a_normal.xyz)');
         expect(source).toContain('let side_amount = 1.0 - smoothstep');
         expect(source).toContain('return input.color;');

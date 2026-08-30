@@ -23,9 +23,13 @@ export type GeographicAnchor = {
 };
 
 /** Geographic projection used by host-provided positions and camera matrices. */
-export type HostProjection = {
-  type: 'web-mercator' | 'globe';
-};
+export type HostProjection =
+  | {type: 'web-mercator'}
+  | {
+      type: 'globe';
+      /** Geographic bounds visible to the host camera: west, south, east, north. */
+      visibleBounds: readonly [number, number, number, number];
+    };
 
 export type HostCamera = {
   view: Matrix4;

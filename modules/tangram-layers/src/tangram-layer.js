@@ -157,6 +157,58 @@ export function getFirstPersonViewFrame(viewport, options = {}) {
 }
 
 /**
+ * Converts a deck.gl GlobeViewport into Tangram's host-frame contract.
+ *
+ * Globe matrices consume deck common-space coordinates directly. Tangram's
+ * renderer converts its EPSG:3857 tile vertices to deck's radius-256 globe in
+ * the vertex shader before applying these matrices.
+ *
+ * @param {object} viewport deck.gl GlobeViewport.
+ * @returns {object} Tangram HostFrame fields for a globe render view.
+ */
+export function getGlobeViewFrame(viewport) {
+  if (
+    !viewport ||
+    !Number.isFinite(viewport.width) ||
+    !Number.isFinite(viewport.height) ||
+    !viewport.viewMatrix ||
+    viewport.viewMatrix.length !== 16 ||
+    !viewport.projectionMatrix ||
+    viewport.projectionMatrix.length !== 16 ||
+    typeof viewport.getBounds !== 'function'
+  ) {
+    throw new Error('deck GlobeViewport matrices, size, and visible bounds are required');
+  }
+
+  const visibleBounds = viewport.getBounds({z: 0});
+  if (
+    !Array.isArray(visibleBounds) ||
+    visibleBounds.length !== 4 ||
+    visibleBounds.some((value) => !Number.isFinite(value))
+  ) {
+    throw new Error('deck GlobeViewport must provide finite geographic bounds');
+  }
+
+  return {
+    viewport: {width: viewport.width, height: viewport.height},
+    view: {
+      longitude: viewport.longitude,
+      latitude: viewport.latitude,
+      zoom: viewport.zoom + DECK_TO_TANGRAM_ZOOM_OFFSET
+    },
+    projection: {type: 'globe', visibleBounds},
+    camera: {
+      view: new Float64Array(viewport.viewMatrix),
+      projection: new Float32Array(
+        multiplyMatrices(viewport.projectionMatrix, viewport.viewMatrix)
+      ),
+      position: [0, 0, 0]
+    },
+    tileBuffer: 0
+  };
+}
+
+/**
  * Creates an experimental deck.gl layer class that renders Tangram through
  * Tangram's luma.gl device renderer.
  *
@@ -411,9 +463,11 @@ export function createTangramLayerClass({Layer, ClassicWebGLRenderer, Renderer})
       record.canvasWidth = width;
       record.canvasHeight = height;
       record.renderer.setFrame(
-        isFirstPersonViewport(viewport)
-          ? getFirstPersonViewFrame(viewport, {width, height})
-          : getMapViewFrame(viewport, {width, height})
+        isGlobeViewport(viewport)
+          ? {...getGlobeViewFrame(viewport), viewport: {width, height}}
+          : isFirstPersonViewport(viewport)
+            ? getFirstPersonViewFrame(viewport, {width, height})
+            : getMapViewFrame(viewport, {width, height})
       );
     }
 
@@ -511,11 +565,8 @@ function validateViewport(viewport, viewports) {
   if (viewports.length !== 1) {
     return new Error('only one deck.gl viewport is supported');
   }
-  if (
-    viewport.projectionMode != null &&
-    viewport.projectionMode !== 1 &&
-    viewport.projectionMode !== 4
-  ) {
+  const globe = isGlobeViewport(viewport);
+  if (!globe && viewport.projectionMode != null && viewport.projectionMode !== 1) {
     return new Error('a Web Mercator viewport is required');
   }
   if (
@@ -534,7 +585,9 @@ function validateViewport(viewport, viewports) {
     return new Error('bearing and pitch must describe a finite deck.gl camera');
   }
   try {
-    if (isFirstPersonViewport(viewport)) {
+    if (globe) {
+      getGlobeViewFrame(viewport);
+    } else if (isFirstPersonViewport(viewport)) {
       getFirstPersonViewFrame(viewport);
     } else {
       getExternalCameraFrame(viewport);
@@ -554,6 +607,7 @@ function getMapViewFrame(viewport, {width, height}) {
       latitude: viewport.latitude,
       zoom: viewport.zoom + DECK_TO_TANGRAM_ZOOM_OFFSET
     },
+    projection: {type: 'web-mercator'},
     camera: getExternalCameraFrame(viewport),
     tileBuffer: Math.min(4, Math.ceil((Math.tan(pitch) * viewport.height) / 256))
   };
@@ -586,6 +640,14 @@ function getForwardGroundIntersection(viewport, pixel) {
     return null;
   }
   return viewport.unproject(pixel, {targetZ: 0});
+}
+
+function isGlobeViewport(viewport) {
+  return Boolean(
+    viewport &&
+      (viewport.constructor?.displayName === 'GlobeViewport' ||
+        viewport.constructor?.name === 'GlobeViewport')
+  );
 }
 
 function multiplyMatrices(left, right) {

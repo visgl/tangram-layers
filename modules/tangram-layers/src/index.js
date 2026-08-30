@@ -7,6 +7,7 @@ import {ClassicWebGLRenderer} from '@vis.gl/tangram-renderer';
 import createTangramLayerClass, {
   getExternalCameraFrame,
   getFirstPersonViewFrame,
+  getGlobeViewFrame,
   injectNextzenApiKey
 } from './tangram-layer';
 
@@ -21,6 +22,7 @@ export {
   createTangramLayerClass,
   getExternalCameraFrame,
   getFirstPersonViewFrame,
+  getGlobeViewFrame,
   injectNextzenApiKey
 };
 

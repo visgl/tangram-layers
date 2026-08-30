@@ -6,6 +6,14 @@ import {describe, expect, it} from 'vitest';
 import ShaderProgram from '../src/gl/shader_program';
 
 describe('ShaderProgram portable compilation', function () {
+    it('serializes numeric defines with GLSL-safe precision', function () {
+        expect(ShaderProgram.buildDefineString({
+            ENABLED: true,
+            COUNT: 2,
+            HALF_PI: 1.5707963267948966
+        })).toBe('#define ENABLED\n#define COUNT 2.0\n#define HALF_PI 1.57079632679\n');
+    });
+
     it('creates WGSL resources without reading or linking a WebGL context', function () {
         const shader_options = [];
         const shader_resources = [];

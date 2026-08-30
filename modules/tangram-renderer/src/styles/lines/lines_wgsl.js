@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import Geo from '../../utils/geo';
+import {GLOBE_PROJECTION_WGSL} from '../globe_projection_wgsl';
 
 const LAYER_DELTA = 1 / (1 << 14);
 const ATTRIBUTE_SCALE = 1024;
@@ -71,6 +72,7 @@ export function buildLinesWGSL({ animated = false } = {}) {
     return `
 @group(0) @binding(3) var u_texture: texture_2d<f32>;
 @group(0) @binding(4) var u_textureSampler: sampler;
+${GLOBE_PROJECTION_WGSL}
 
 struct LineAttributes {
     @location(0) a_position: vec4<i32>,
@@ -124,8 +126,7 @@ fn vertexMain(attributes: LineAttributes) -> LineVaryings {
         f32(attributes.a_z_and_offset_scale.x) / ${Geo.height_scale}.0,
         1.0
     );
-    var clip_position = TangramCamera.u_projection *
-        (TangramTile.u_modelView * local_position);
+    var clip_position = TangramCamera.u_projection * tangramModelView(local_position);
     let layer = f32(attributes.a_position.w) +
         TangramTile.u_tile_proxy_order_offset + 1.0;
     clip_position.z -= layer * ${LAYER_DELTA} * clip_position.w;

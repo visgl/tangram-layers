@@ -42,6 +42,7 @@ export default class View {
         this.aspect = null;
 
         this.buffer = 0;
+        this.projection = { type: 'web-mercator' };
         // Host-driven renderers own camera projection. `externalCamera` remains
         // as a compatibility alias while callers migrate to the explicit mode.
         this.camera_mode = options.cameraMode || (options.externalCamera === true ? 'external' : 'scene');
@@ -132,6 +133,16 @@ export default class View {
         };
         this.aspect = this.size.css.width / this.size.css.height;
         this.updateBounds();
+    }
+
+    // Set the host projection and its geographic visibility metadata.
+    setProjection (projection = { type: 'web-mercator' }) {
+        if (projectionsEqual(this.projection, projection)) {
+            return false;
+        }
+        this.projection = projection;
+        this.updateBounds();
+        return true;
     }
 
     // Set the map view, can be passed an object with lat/lng and/or zoom
@@ -246,6 +257,10 @@ export default class View {
             return [];
         }
 
+        if (this.projection.type === 'globe') {
+            return this.findVisibleGlobeTileCoordinates();
+        }
+
         let z = this.tile_zoom;
         let sw = Geo.tileForMeters([this.bounds.sw.x, this.bounds.sw.y], z);
         let ne = Geo.tileForMeters([this.bounds.ne.x, this.bounds.ne.y], z);
@@ -267,6 +282,35 @@ export default class View {
             }
         }
         return coords;
+    }
+
+    findVisibleGlobeTileCoordinates () {
+        const [west, south, east, north] = this.projection.visibleBounds;
+        const z = this.tile_zoom;
+        const tileCount = Math.pow(2, z);
+        const northY = latitudeToTileY(north, z);
+        const southY = latitudeToTileY(south, z);
+        const yStart = Math.max(0, Math.min(northY, southY) - this.buffer);
+        const yEnd = Math.min(tileCount - 1, Math.max(northY, southY) + this.buffer);
+        const longitudeRanges = splitLongitudeRange(west, east);
+        const coordinates = [];
+        const seen = new Set();
+
+        for (const [rangeWest, rangeEast] of longitudeRanges) {
+            const xStart = longitudeToTileX(rangeWest, z) - this.buffer;
+            const xEnd = longitudeToTileX(rangeEast, z) + this.buffer;
+            for (let x = xStart; x <= xEnd; x++) {
+                const wrappedX = ((x % tileCount) + tileCount) % tileCount;
+                for (let y = yStart; y <= yEnd; y++) {
+                    const key = `${wrappedX}/${y}/${z}`;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        coordinates.push(TileID.coord({ x: wrappedX, y, z }));
+                    }
+                }
+            }
+        }
+        return coordinates;
     }
 
     // Remove tiles too far outside of view
@@ -292,6 +336,10 @@ export default class View {
             const preserve_tiles_within_zoom = (tile.preserve_tiles_within_zoom != null ?
                 tile.preserve_tiles_within_zoom : this.preserve_tiles_within_zoom); // optionally tile source specific
             if (zdiff > preserve_tiles_within_zoom) {
+                return true;
+            }
+
+            if (this.projection.type === 'globe') {
                 return true;
             }
 
@@ -363,7 +411,8 @@ export default class View {
                 u_meters_per_pixel: this.meters_per_pixel,
                 u_device_pixel_ratio: Utils.device_pixel_ratio,
                 u_view_pan_snap_timer: this.pan_snap_timer,
-                u_view_panning: this.panning
+                u_view_panning: this.panning,
+                u_projection_mode: this.projection.type === 'globe' ? 1 : 0
             });
         }
         else {
@@ -373,6 +422,7 @@ export default class View {
             program.uniform('1f', 'u_device_pixel_ratio', Utils.device_pixel_ratio);
             program.uniform('1f', 'u_view_pan_snap_timer', this.pan_snap_timer);
             program.uniform('1i', 'u_view_panning', this.panning);
+            program.uniform('1i', 'u_projection_mode', this.projection.type === 'globe' ? 1 : 0);
         }
 
         this.camera.setupProgram(program, uniform_buffers.TangramCamera);
@@ -383,4 +433,50 @@ export default class View {
         return (this.pan_snap_timer <= VIEW_PAN_SNAP_TIME);
     }
 
+}
+
+function projectionsEqual(previous, next) {
+    if (previous === next) {
+        return true;
+    }
+    if (!previous || !next || previous.type !== next.type) {
+        return false;
+    }
+    if (next.type !== 'globe') {
+        return true;
+    }
+    const previousBounds = previous.visibleBounds;
+    const nextBounds = next.visibleBounds;
+    return Array.isArray(previousBounds) && Array.isArray(nextBounds) &&
+        previousBounds.length === nextBounds.length &&
+        previousBounds.every((value, index) => value === nextBounds[index]);
+}
+
+function splitLongitudeRange(west, east) {
+    if (east - west >= 360) {
+        return [[-180, 180 - Number.EPSILON]];
+    }
+    const normalizedWest = normalizeLongitude(west);
+    const normalizedEast = normalizeLongitude(east);
+    return normalizedWest <= normalizedEast
+        ? [[normalizedWest, normalizedEast]]
+        : [[normalizedWest, 180 - Number.EPSILON], [-180, normalizedEast]];
+}
+
+function normalizeLongitude(longitude) {
+    return ((longitude + 180) % 360 + 360) % 360 - 180;
+}
+
+function longitudeToTileX(longitude, zoom) {
+    const tileCount = Math.pow(2, zoom);
+    return Math.min(tileCount - 1, Math.max(0,
+        Math.floor(((longitude + 180) / 360) * tileCount)));
+}
+
+function latitudeToTileY(latitude, zoom) {
+    const tileCount = Math.pow(2, zoom);
+    const clampedLatitude = Math.max(-85.05112878, Math.min(85.05112878, latitude));
+    const radians = clampedLatitude * Math.PI / 180;
+    const y = (1 - Math.asinh(Math.tan(radians)) / Math.PI) / 2;
+    return Math.min(tileCount - 1, Math.max(0, Math.floor(y * tileCount)));
 }
