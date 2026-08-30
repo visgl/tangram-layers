@@ -8,7 +8,11 @@ import {webgpuAdapter} from 'https://esm.sh/@luma.gl/webgpu@9.4.0-alpha.1?bundle
 import {TangramLayer} from '@vis.gl/tangram-layers';
 import {resolveDeckExampleViewMode} from './app-loader.js';
 
-export function initializeDeckExample({embeddedViewMode} = {}) {
+export function initializeDeckExample({
+  embeddedViewMode,
+  basemapId: configuredBasemapId,
+  showOverlays = true
+} = {}) {
   const exampleBaseUrl = window.tangramExampleBaseUrl || new URL('./', import.meta.url).href;
 
   function resolveExampleAsset(relativePath) {
@@ -176,9 +180,10 @@ export function initializeDeckExample({embeddedViewMode} = {}) {
     button.classList.toggle('is-active', isActive);
     button.setAttribute('aria-selected', String(isActive));
   }
-  const defaultBasemapId = 'tron';
+  const defaultBasemapId = configuredBasemapId || 'tron';
   const requestedBasemapId = searchParams.get('basemap');
   const initialBasemapId =
+    !configuredBasemapId &&
     requestedBasemapId &&
     BASEMAPS[requestedBasemapId] &&
     BASEMAPS[requestedBasemapId].deviceTypes.includes(deviceType)
@@ -225,30 +230,32 @@ export function initializeDeckExample({embeddedViewMode} = {}) {
         })
       );
     }
-    layers.push(
-      new PathLayer({
-        id: 'alignment-path',
-        data: [{path: overlayPath}],
-        getPath: (object) => object.path,
-        getColor: () => [255, 96, 32, 220],
-        getWidth: () => 6,
-        widthUnits: 'pixels',
-        parameters: overlayParameters
-      }),
-      new ScatterplotLayer({
-        id: 'alignment-landmarks',
-        data: overlayLandmarks,
-        getPosition: (object) => object.coordinates,
-        getRadius: () => (usesGlobeOverlay ? 7 : 35),
-        radiusUnits: usesGlobeOverlay ? 'pixels' : 'meters',
-        getFillColor: () => [30, 144, 255, 220],
-        getLineColor: () => [255, 255, 255, 255],
-        lineWidthMinPixels: 2,
-        stroked: true,
-        pickable: true,
-        parameters: overlayParameters
-      })
-    );
+    if (showOverlays) {
+      layers.push(
+        new PathLayer({
+          id: 'alignment-path',
+          data: [{path: overlayPath}],
+          getPath: (object) => object.path,
+          getColor: () => [255, 96, 32, 220],
+          getWidth: () => 6,
+          widthUnits: 'pixels',
+          parameters: overlayParameters
+        }),
+        new ScatterplotLayer({
+          id: 'alignment-landmarks',
+          data: overlayLandmarks,
+          getPosition: (object) => object.coordinates,
+          getRadius: () => (usesGlobeOverlay ? 7 : 35),
+          radiusUnits: usesGlobeOverlay ? 'pixels' : 'meters',
+          getFillColor: () => [30, 144, 255, 220],
+          getLineColor: () => [255, 255, 255, 255],
+          lineWidthMinPixels: 2,
+          stroked: true,
+          pickable: true,
+          parameters: overlayParameters
+        })
+      );
+    }
     return layers;
   }
 

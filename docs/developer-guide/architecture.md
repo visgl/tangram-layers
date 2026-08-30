@@ -6,6 +6,9 @@ Copyright (c) vis.gl contributors
 
 # Architecture
 
+The renderer owns Tangram scenes and GPU resources. The layer package adapts it
+to deck.gl's device, viewport, and render-pass lifecycle.
+
 The monorepo has two intentionally separate layers:
 
 1. `@vis.gl/tangram-renderer` contains scene loading, tile management, style

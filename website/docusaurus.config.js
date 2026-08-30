@@ -8,7 +8,7 @@ const path = require('path');
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'Tangram layers',
+  title: 'tangram.gl',
   tagline: 'Tangram rendering and deck.gl basemap integration',
   url: 'https://visgl.github.io',
   baseUrl: '/tangram.gl/',
@@ -67,7 +67,7 @@ const config = {
 
   themeConfig: {
     navbar: {
-      title: 'Tangram layers',
+      title: 'tangram.gl',
       items: [
         {to: '/docs', label: 'Docs', position: 'left'},
         {
