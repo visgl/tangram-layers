@@ -41,7 +41,10 @@ module.exports = {
               id: 'api-reference/tangram-renderer',
               label: 'Package overview'
             },
+            {type: 'doc', id: 'api-reference/classic-api', label: 'Classic Tangram API'},
+            {type: 'doc', id: 'api-reference/scene', label: 'Scene API'},
             {type: 'doc', id: 'api-reference/renderer', label: 'Renderer API'},
+            {type: 'doc', id: 'api-reference/host-frame', label: 'HostFrame API'},
             {type: 'doc', id: 'api-reference/styling', label: 'Styling reference'}
           ]
         },

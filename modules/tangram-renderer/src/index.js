@@ -4,6 +4,7 @@
 import {leafletLayer} from './leaflet_layer';
 import Scene from './scene/scene';
 import ClassicWebGLRenderer from './scene/renderer';
+import HostFrame from './scene/host_frame';
 import LumaDeviceRenderer from './gpu/luma_device_renderer';
 
 // Additional modules are exposed for debugging
@@ -49,6 +50,7 @@ const debug = {
     Light,
     Scene,
     ClassicWebGLRenderer,
+    HostFrame,
     LumaDeviceRenderer,
     WorkerBroker,
     Task,
@@ -66,6 +68,7 @@ const Tangram = {
     Scene,
     ClassicWebGLRenderer,
     Renderer: ClassicWebGLRenderer,
+    HostFrame,
     LumaDeviceRenderer,
     debug,
     version

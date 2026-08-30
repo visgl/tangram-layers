@@ -1,5 +1,6 @@
 import { assert } from 'chai';
 import Renderer from '../src/scene/renderer';
+import HostFrame from '../src/scene/host_frame';
 
 const IDENTITY_MATRIX = [
     1, 0, 0, 0,
@@ -48,6 +49,80 @@ describe('Renderer', function () {
         assert.isTrue(renderer.scene.dirty);
         assert.isTrue(renderer.scene.updateScene.calledWith({ renderPass: render_pass }));
         assert.isTrue(renderer.scene.processTasks.calledOnce);
+    });
+
+    it('selects multiple render views over shared geographic state', function () {
+        const renderer = Renderer.create({});
+        const scene = renderer.scene;
+        sinon.spy(scene, 'resizeMap');
+        sinon.spy(scene.view, 'setView');
+        sinon.spy(scene, 'setCameraMatrices');
+        sinon.stub(scene, 'updateScene').returns(true);
+
+        const left_view = IDENTITY_MATRIX.slice();
+        const right_view = IDENTITY_MATRIX.slice();
+        left_view[12] = -0.03;
+        right_view[12] = 0.03;
+        const frame = new HostFrame({
+            viewport: { width: 1600, height: 600 },
+            geographicAnchor: { longitude: -74, latitude: 40.7, zoom: 16 },
+            renderViews: [
+                {
+                    id: 'left-eye',
+                    viewport: { x: 0, y: 0, width: 800, height: 600 },
+                    camera: { view: left_view, projection: IDENTITY_MATRIX, position: [-0.03, 0, 0] }
+                },
+                {
+                    id: 'right-eye',
+                    viewport: { x: 800, y: 0, width: 800, height: 600 },
+                    camera: { view: right_view, projection: IDENTITY_MATRIX, position: [0.03, 0, 0] }
+                }
+            ]
+        });
+
+        renderer.render({ frame, renderViewId: 'left-eye', renderPass: { id: 'left' } });
+        renderer.render({ renderViewId: 'right-eye', renderPass: { id: 'right' } });
+
+        assert.strictEqual(renderer.host_frame, frame);
+        assert.strictEqual(renderer.active_render_view_id, 'right-eye');
+        assert.isTrue(scene.resizeMap.calledWith(800, 600));
+        assert.isTrue(scene.view.setView.alwaysCalledWith({ lng: -74, lat: 40.7, zoom: 16 }));
+        assert.closeTo(scene.setCameraMatrices.firstCall.args[0].position[0], -0.03, 1e-10);
+        assert.closeTo(scene.setCameraMatrices.secondCall.args[0].position[0], 0.03, 1e-10);
+        assert.isTrue(scene.updateScene.firstCall.calledWith({ renderPass: { id: 'left' } }));
+        assert.isTrue(scene.updateScene.secondCall.calledWith({ renderPass: { id: 'right' } }));
+    });
+
+    it('renders each selected view when camera and viewport values are identical', function () {
+        const renderer = Renderer.create({});
+        const scene = renderer.scene;
+        const dirty_states = [];
+        sinon.stub(scene, 'updateScene').callsFake(() => {
+            dirty_states.push(scene.dirty);
+            scene.dirty = false;
+            return dirty_states[dirty_states.length - 1];
+        });
+
+        const frame = new HostFrame({
+            viewport: { width: 800, height: 600 },
+            geographicAnchor: { longitude: -74, latitude: 40.7, zoom: 16 },
+            renderViews: [
+                {
+                    id: 'left-eye',
+                    viewport: { width: 800, height: 600 },
+                    camera: { view: IDENTITY_MATRIX, projection: IDENTITY_MATRIX, position: [0, 0, 0] }
+                },
+                {
+                    id: 'right-eye',
+                    viewport: { width: 800, height: 600 },
+                    camera: { view: IDENTITY_MATRIX, projection: IDENTITY_MATRIX, position: [0, 0, 0] }
+                }
+            ]
+        });
+
+        assert.isTrue(renderer.render({ frame, renderViewId: 'left-eye' }));
+        assert.isTrue(renderer.render({ renderViewId: 'right-eye' }));
+        assert.deepEqual(dirty_states, [true, true]);
     });
 
     it('requests another host frame while an active style is animated', function () {

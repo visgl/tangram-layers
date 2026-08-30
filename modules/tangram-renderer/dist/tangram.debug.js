@@ -36578,6 +36578,183 @@ function extendLeaflet(options) {
   }
 }
 
+var DEFAULT_RENDER_VIEW_ID = 'default';
+
+/**
+ * Host-owned state for one Tangram frame.
+ *
+ * Geographic state and tile selection are shared by every render view. Each
+ * render view supplies its own viewport and camera matrices, allowing a host to
+ * draw the same loaded scene into multiple eyes without duplicating scene or
+ * tile state.
+ */
+var HostFrame = /*#__PURE__*/function () {
+  /**
+   * @param {object} options Host frame options.
+   * @param {{width: number, height: number}} options.viewport Full render-target size.
+   * @param {{longitude: number, latitude: number, altitude?: number, zoom: number}} options.geographicAnchor Shared geographic anchor and LOD zoom.
+   * @param {Array<object>} options.renderViews Per-view viewport and camera state.
+   * @param {string} [options.activeRenderViewId] Default render view.
+   * @param {number} [options.tileBuffer=0] Extra Web Mercator tile buffer.
+   */
+  function HostFrame() {
+    var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+      viewport = _ref.viewport,
+      geographicAnchor = _ref.geographicAnchor,
+      renderViews = _ref.renderViews,
+      activeRenderViewId = _ref.activeRenderViewId,
+      _ref$tileBuffer = _ref.tileBuffer,
+      tileBuffer = _ref$tileBuffer === void 0 ? 0 : _ref$tileBuffer;
+    topojson._classCallCheck(this, HostFrame);
+    this.viewport = normalizeViewport(viewport, 'HostFrame viewport');
+    this.geographicAnchor = normalizeGeographicAnchor(geographicAnchor);
+    this.renderViews = normalizeRenderViews(renderViews, this.viewport);
+    this.tileBuffer = normalizeTileBuffer(tileBuffer);
+    this.activeRenderViewId = activeRenderViewId || this.renderViews[0].id;
+    this.getRenderView(this.activeRenderViewId);
+  }
+
+  /**
+   * Normalizes either a HostFrame or the original `{viewport, view, camera}`
+   * frame shape.
+   *
+   * @param {HostFrame|object} frame Host frame or legacy frame object.
+   * @returns {HostFrame} Normalized host frame.
+   */
+  return topojson._createClass(HostFrame, [{
+    key: "getRenderView",
+    value:
+    /**
+     * Returns a render view by id.
+     *
+     * @param {string} [renderViewId] View id, or the active view when omitted.
+     * @returns {object} Normalized render view.
+     */
+    function getRenderView() {
+      var renderViewId = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.activeRenderViewId;
+      var renderView = this.renderViews.find(function (candidate) {
+        return candidate.id === renderViewId;
+      });
+      if (!renderView) {
+        throw new Error("HostFrame render view '".concat(renderViewId, "' was not found"));
+      }
+      return renderView;
+    }
+  }], [{
+    key: "from",
+    value: function from(frame) {
+      if (frame instanceof HostFrame) {
+        return frame;
+      }
+      if (frame && (frame.renderViews || frame.geographicAnchor)) {
+        return new HostFrame(frame);
+      }
+      return HostFrame.fromLegacy(frame);
+    }
+
+    /**
+     * Converts the original renderer frame shape into a HostFrame.
+     *
+     * @param {object} frame Legacy frame object.
+     * @returns {HostFrame} Normalized host frame.
+     */
+  }, {
+    key: "fromLegacy",
+    value: function fromLegacy() {
+      var _ref2 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        viewport = _ref2.viewport,
+        view = _ref2.view,
+        camera = _ref2.camera,
+        _ref2$tileBuffer = _ref2.tileBuffer,
+        tileBuffer = _ref2$tileBuffer === void 0 ? 0 : _ref2$tileBuffer;
+      return new HostFrame({
+        viewport: viewport,
+        geographicAnchor: view && {
+          longitude: view.longitude,
+          latitude: view.latitude,
+          altitude: view.altitude || 0,
+          zoom: view.zoom
+        },
+        renderViews: [{
+          id: DEFAULT_RENDER_VIEW_ID,
+          viewport: viewport,
+          camera: camera
+        }],
+        activeRenderViewId: DEFAULT_RENDER_VIEW_ID,
+        tileBuffer: tileBuffer
+      });
+    }
+  }]);
+}();
+function normalizeRenderViews(renderViews, fallbackViewport) {
+  if (!Array.isArray(renderViews) || renderViews.length === 0) {
+    throw new Error('HostFrame requires at least one render view');
+  }
+  var ids = new Set();
+  return renderViews.map(function (renderView, index) {
+    if (!renderView || topojson._typeof(renderView) !== 'object') {
+      throw new Error("HostFrame render view ".concat(index, " is invalid"));
+    }
+    var id = renderView.id || (index === 0 ? DEFAULT_RENDER_VIEW_ID : "view-".concat(index));
+    if (ids.has(id)) {
+      throw new Error("HostFrame render view id '".concat(id, "' is duplicated"));
+    }
+    ids.add(id);
+    return {
+      id: id,
+      viewport: normalizeViewport(renderView.viewport || fallbackViewport, "HostFrame render view '".concat(id, "' viewport")),
+      camera: normalizeCamera(renderView.camera, id)
+    };
+  });
+}
+function normalizeViewport(viewport, label) {
+  if (!viewport || !isPositiveNumber(viewport.width) || !isPositiveNumber(viewport.height)) {
+    throw new Error("".concat(label, " requires positive width and height"));
+  }
+  return {
+    x: normalizeFiniteNumber(viewport.x, 0),
+    y: normalizeFiniteNumber(viewport.y, 0),
+    width: viewport.width,
+    height: viewport.height
+  };
+}
+function normalizeGeographicAnchor(anchor) {
+  if (!anchor || !Number.isFinite(anchor.longitude) || !Number.isFinite(anchor.latitude) || !Number.isFinite(anchor.zoom)) {
+    throw new Error('HostFrame geographic anchor requires finite longitude, latitude, and zoom');
+  }
+  return {
+    longitude: anchor.longitude,
+    latitude: anchor.latitude,
+    altitude: normalizeFiniteNumber(anchor.altitude, 0),
+    zoom: anchor.zoom
+  };
+}
+function normalizeCamera(camera, renderViewId) {
+  if (!camera || !isMatrix(camera.view) || !isMatrix(camera.projection) || !camera.position || camera.position.length !== 3) {
+    throw new Error("HostFrame render view '".concat(renderViewId, "' requires camera matrices and position"));
+  }
+  return {
+    view: new Float64Array(camera.view),
+    projection: new Float32Array(camera.projection),
+    position: Array.from(camera.position)
+  };
+}
+function normalizeTileBuffer(tileBuffer) {
+  if (!Number.isFinite(tileBuffer) || tileBuffer < 0) {
+    throw new Error('HostFrame tileBuffer must be a finite non-negative number');
+  }
+  return tileBuffer;
+}
+function isMatrix(matrix) {
+  return matrix && matrix.length === 16;
+}
+function isPositiveNumber(value) {
+  return Number.isFinite(value) && value > 0;
+}
+function normalizeFiniteNumber(value, fallback) {
+  return Number.isFinite(value) ? value : fallback;
+}
+
 // Do not name these variables the same as the global objects - will break bundling
 var window_ = globalThis;
 var process_ = globalThis.process || {};
@@ -39891,6 +40068,8 @@ var Renderer = /*#__PURE__*/function () {
       disableRenderLoop: true,
       cameraMode: 'external'
     }));
+    this.host_frame = null;
+    this.active_render_view_id = null;
   }
   return topojson._createClass(Renderer, [{
     key: "subscribe",
@@ -39909,27 +40088,26 @@ var Renderer = /*#__PURE__*/function () {
      */
   }, {
     key: "setFrame",
-    value: function setFrame() {
-      var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        viewport = _ref.viewport,
-        view = _ref.view,
-        camera = _ref.camera,
-        _ref$tileBuffer = _ref.tileBuffer,
-        tileBuffer = _ref$tileBuffer === void 0 ? 0 : _ref$tileBuffer;
-      if (viewport && (this.scene.view.size.css.width !== viewport.width || this.scene.view.size.css.height !== viewport.height)) {
+    value: function setFrame(frame) {
+      var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+        renderViewId = _ref.renderViewId;
+      var host_frame = HostFrame.from(frame);
+      var render_view = host_frame.getRenderView(renderViewId);
+      var viewport = render_view.viewport;
+      var anchor = host_frame.geographicAnchor;
+      this.host_frame = host_frame;
+      this.active_render_view_id = render_view.id;
+      if (this.scene.view.size.css.width !== viewport.width || this.scene.view.size.css.height !== viewport.height) {
         this.scene.resizeMap(viewport.width, viewport.height);
       }
-      if (view) {
-        this.scene.view.setView({
-          lng: view.longitude,
-          lat: view.latitude,
-          zoom: view.zoom
-        });
-      }
-      if (camera) {
-        this.scene.setCameraMatrices(camera);
-      }
-      this.scene.view.buffer = tileBuffer;
+      this.scene.view.setView({
+        lng: anchor.longitude,
+        lat: anchor.latitude,
+        zoom: anchor.zoom
+      });
+      this.scene.setCameraMatrices(render_view.camera);
+      this.scene.view.buffer = host_frame.tileBuffer;
+      return host_frame;
     }
 
     /**
@@ -39942,10 +40120,20 @@ var Renderer = /*#__PURE__*/function () {
         frame = _ref2.frame,
         _ref2$renderPass = _ref2.renderPass,
         renderPass = _ref2$renderPass === void 0 ? null : _ref2$renderPass,
+        renderViewId = _ref2.renderViewId,
         _ref2$force = _ref2.force,
         force = _ref2$force === void 0 ? false : _ref2$force;
       if (frame) {
-        this.setFrame(frame);
+        this.setFrame(frame, {
+          renderViewId: renderViewId
+        });
+      } else if (renderViewId) {
+        if (!this.host_frame) {
+          throw new Error('Renderer requires a HostFrame before selecting a render view');
+        }
+        this.setFrame(this.host_frame, {
+          renderViewId: renderViewId
+        });
       }
       if (force) {
         this.scene.dirty = true;
@@ -39997,6 +40185,7 @@ var debug = {
   Light: topojson.Light,
   Scene: Scene,
   ClassicWebGLRenderer: Renderer,
+  HostFrame: HostFrame,
   LumaDeviceRenderer: LumaDeviceRenderer,
   WorkerBroker: topojson.WorkerBroker,
   Task: topojson.Task,
@@ -40013,6 +40202,7 @@ var Tangram$1 = {
   Scene: Scene,
   ClassicWebGLRenderer: Renderer,
   Renderer: Renderer,
+  HostFrame: HostFrame,
   LumaDeviceRenderer: LumaDeviceRenderer,
   debug: debug,
   version: topojson.version
@@ -40032,7 +40222,7 @@ return Tangram$1;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = '6dbff8341ea83616c22d0b88a6288e6d49a402f1';
+	Tangram.debug.SHA = 'eab7ce8d4c8421cab98e9f05836e24b02d8a4a16';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

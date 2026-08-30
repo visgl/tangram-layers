@@ -6,6 +6,7 @@ import TangramLayer, {
 } from '@vis.gl/tangram-layers';
 import Tangram, {
   ClassicWebGLRenderer,
+  HostFrame,
   LumaDeviceRenderer,
   Renderer,
   Scene
@@ -19,6 +20,7 @@ describe('published package entrypoints', () => {
     expect(Scene).toBeTypeOf('function');
     expect(ClassicWebGLRenderer).toBeTypeOf('function');
     expect(Renderer).toBe(ClassicWebGLRenderer);
+    expect(HostFrame).toBeTypeOf('function');
     expect(LumaDeviceRenderer).toBeTypeOf('function');
   });
 

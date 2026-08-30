@@ -34,7 +34,13 @@ website.
 ### `@vis.gl/tangram-renderer`
 
 - [Package overview](api-reference/tangram-renderer.md) — renderer exports.
+- [Classic Tangram API](api-reference/classic-api.md) — retained default and
+  Leaflet integration APIs.
+- [Scene API](api-reference/scene.md) — runtime scene configuration, queries,
+  events, and lifetime.
 - [Renderer API](api-reference/renderer.md) — host-device integration.
+- [HostFrame API](api-reference/host-frame.md) — shared geographic state and
+  one or more host camera views.
 - [Styling reference](api-reference/styling.md) — scene, source, layer, draw, and filter syntax.
 
 ### `@vis.gl/tangram-layers`
