@@ -18,7 +18,7 @@ export default function Home() {
             <Link className="button button--secondary button--lg" to="/docs">
               Read the docs
             </Link>{' '}
-            <a className="button button--outline button--lg" href="/tangram-layers/examples/deck">
+            <a className="button button--outline button--lg" href="/tangram.gl/examples/deck">
               Open the live example
             </a>
           </div>

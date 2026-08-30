@@ -25,7 +25,7 @@
   "sideEffects": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/visgl/tangram-layers.git",
+    "url": "https://github.com/visgl/tangram.gl.git",
     "directory": "modules/tangram-renderer"
   },
   "license": "MIT",

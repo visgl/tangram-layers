@@ -11,10 +11,10 @@ const config = {
   title: 'Tangram layers',
   tagline: 'Tangram rendering and deck.gl basemap integration',
   url: 'https://visgl.github.io',
-  baseUrl: '/tangram-layers/',
+  baseUrl: '/tangram.gl/',
   favicon: '/favicon.png',
   organizationName: 'visgl',
-  projectName: 'tangram-layers',
+  projectName: 'tangram.gl',
   onBrokenLinks: 'warn',
   headTags: [
     {
@@ -40,7 +40,7 @@ const config = {
           path: path.resolve(__dirname, '../docs'),
           routeBasePath: 'docs',
           sidebarPath: path.resolve(__dirname, 'sidebars.js'),
-          editUrl: 'https://github.com/visgl/tangram-layers/tree/master/'
+          editUrl: 'https://github.com/visgl/tangram.gl/tree/master/'
         },
         blog: false,
         theme: {
@@ -76,7 +76,7 @@ const config = {
           position: 'left'
         },
         {
-          href: 'https://github.com/visgl/tangram-layers',
+          href: 'https://github.com/visgl/tangram.gl',
           label: 'GitHub',
           position: 'right'
         }
@@ -89,13 +89,13 @@ const config = {
           title: 'Resources',
           items: [
             {label: 'Documentation', to: '/docs'},
-            {label: 'Deck example', href: '/tangram-layers/examples/deck'}
+            {label: 'Deck example', href: '/tangram.gl/examples/deck'}
           ]
         },
         {
           title: 'Project',
           items: [
-            {label: 'GitHub', href: 'https://github.com/visgl/tangram-layers'},
+            {label: 'GitHub', href: 'https://github.com/visgl/tangram.gl'},
             {label: 'Original Tangram repository', href: 'https://github.com/tangrams/tangram'},
             {label: 'Mapzen organization', href: 'https://github.com/mapzen'},
             {label: 'vis.gl', href: 'https://vis.gl/'}
