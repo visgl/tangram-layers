@@ -10,6 +10,7 @@ import {pathToFileURL} from 'node:url';
 const SPDX_LINE = 'SPDX-License-Identifier: MIT';
 const TANGRAM_COPYRIGHT = 'Copyright (c) 2013-2016 Brett Camper and Mapzen';
 const VISGL_COPYRIGHT = 'Copyright (c) vis.gl contributors';
+const VISGL_2026_COPYRIGHT = 'Copyright (c) 2026 vis.gl contributors';
 
 const LINE_COMMENT_EXTENSIONS = new Set(['.cjs', '.glsl', '.js', '.mjs', '.ts']);
 const HASH_COMMENT_EXTENSIONS = new Set(['.yaml', '.yml']);
@@ -148,6 +149,15 @@ const TANGRAM_RENDERER_FILES = new Set([
   'modules/tangram-renderer/test/vertex_layout.browser.spec.js'
 ]);
 
+// Tangram-derived files that have received substantive vis.gl modifications.
+// Keep the original Tangram notice and append the vis.gl modification notice.
+const VISGL_MODIFIED_TANGRAM_FILES = new Set([
+  'modules/tangram-renderer/src/utils/errors.ts',
+  'modules/tangram-renderer/src/utils/functions.ts',
+  'modules/tangram-renderer/src/utils/merge.ts',
+  'modules/tangram-renderer/src/utils/props.ts'
+]);
+
 const TANGRAM_ROOT_FILES = new Set([
   '.editorconfig',
   '.eslintrc.cjs',
@@ -226,9 +236,12 @@ export function isTangramInherited(filePath) {
 }
 
 export function getHeader(filePath, commentStyle) {
-  const projectName = isTangramInherited(filePath) ? 'Tangram' : 'tangram-layers';
-  const copyright = isTangramInherited(filePath) ? TANGRAM_COPYRIGHT : VISGL_COPYRIGHT;
-  const lines = [projectName, SPDX_LINE, copyright];
+  const isInherited = isTangramInherited(filePath);
+  const projectName = isInherited ? 'Tangram' : 'tangram-layers';
+  const lines = [projectName, SPDX_LINE, isInherited ? TANGRAM_COPYRIGHT : VISGL_COPYRIGHT];
+  if (VISGL_MODIFIED_TANGRAM_FILES.has(filePath)) {
+    lines.push(VISGL_2026_COPYRIGHT);
+  }
 
   switch (commentStyle) {
     case 'line':
