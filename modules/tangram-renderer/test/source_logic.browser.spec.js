@@ -1,6 +1,6 @@
-// Tangram
+// tangram-layers
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) vis.gl contributors
 
 import {describe, expect, test} from 'vitest';
 import sampleTopoJSONResponse from './fixtures/sample-topojson-response.json';
