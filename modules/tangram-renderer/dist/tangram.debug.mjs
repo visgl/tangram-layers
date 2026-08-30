@@ -3262,33 +3262,33 @@ var VertexArrayObject = {
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 // Deep/recursive merge of one or more source objects into a destination object
-function mergeObjects(dest, ...sources) {
-  for (let s = 0; s < sources.length; s++) {
-    let source = sources[s];
+
+function isMergeableObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+function mergeObjects(destination, ...sources) {
+  const destinationRecord = destination;
+  for (const source of sources) {
     if (!source) {
       continue;
     }
-    for (let key in source) {
-      let value = source[key];
-      // Recursively merge the source into the destination if it is a a non-null key/value object
-      // (e.g. don't merge arrays, those are treated as scalar values; null values will overwrite/erase
-      // the previous destination value)
-      if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-        if (dest[key] !== null && typeof dest[key] === 'object' && !Array.isArray(dest[key])) {
-          dest[key] = mergeObjects(dest[key], value);
-        } else {
-          dest[key] = mergeObjects({}, value); // destination not an object, overwrite
-        }
+    for (const key in source) {
+      const sourceRecord = source;
+      const value = sourceRecord[key];
+
+      // Recursively merge the source into the destination if it is a non-null key/value object.
+      // Arrays are treated as scalar values; null values overwrite the previous destination value.
+      if (isMergeableObject(value)) {
+        const destinationValue = destinationRecord[key];
+        destinationRecord[key] = isMergeableObject(destinationValue) ? mergeObjects(destinationValue, value) : mergeObjects({}, value);
       }
-      // Overwrite the previous destination value if the source property is: a scalar (number/string),
-      // an array, or a null value
+      // Undefined source properties are ignored. All other values overwrite the destination.
       else if (value !== undefined) {
-        dest[key] = value;
+        destinationRecord[key] = value;
       }
-      // Undefined source properties are ignored
     }
   }
-  return dest;
+  return destination;
 }
 
 // Tangram
@@ -3591,7 +3591,6 @@ Geo.ringWinding = function (ring) {
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-
 // cache of functions, keyed by unique source
 const cache = {
   functions: {},
@@ -3605,50 +3604,51 @@ function clearFunctionStringCache() {
 }
 
 // Recursively parse an object, compiling string properties that look like functions
-function compileFunctionStrings(obj, wrap) {
+function compileFunctionStrings(value, wrap) {
   // Convert string
-  if (typeof obj === 'string') {
-    obj = compileFunctionString(obj, wrap);
+  if (typeof value === 'string') {
+    return compileFunctionString(value, wrap);
   }
   // Loop through object properties
-  else if (obj != null && typeof obj === 'object') {
-    for (let p in obj) {
-      obj[p] = compileFunctionStrings(obj[p], wrap);
+  if (value != null && typeof value === 'object') {
+    const record = value;
+    for (const property in record) {
+      record[property] = compileFunctionStrings(record[property], wrap);
     }
   }
-  return obj;
+  return value;
 }
 
 // Compile a string that looks like a function
-function compileFunctionString(val, wrap) {
+function compileFunctionString(value, wrap) {
   // Parse function signature and body
-  let fmatch = typeof val === 'string' && val.match(/^\s*function[^(]*\(([^)]*)\)\s*?\{([\s\S]*)\}$/m);
-  if (fmatch && fmatch.length > 2) {
+  const functionMatch = typeof value === 'string' && value.match(/^\s*function[^(]*\(([^)]*)\)\s*?\{([\s\S]*)\}$/m);
+  if (functionMatch && functionMatch.length > 2) {
     try {
       // function body
-      const body = fmatch[2];
-      const source = typeof wrap === 'function' ? wrap(body) : body; // optionally wrap source
+      const body = functionMatch[2];
+      const source = wrap ? wrap(body) : body;
 
       // compile and cache by unique function source
       const key = hashString(source);
       if (cache.functions[key] === undefined) {
         // function arguments extracted from signature
-        let args = fmatch[1].length > 0 && fmatch[1].split(',').map(x => x.trim()).filter(x => x);
-        args = args.length > 0 ? args : ['context']; // default to single 'context' argument
-
-        cache.functions[key] = new Function(args.toString(), source); // jshint ignore:line
-        cache.functions[key].source = body; // save original, un-wrapped function body source
+        const parsedArguments = functionMatch[1].split(',').map(argument => argument.trim()).filter(Boolean);
+        const functionArguments = parsedArguments.length > 0 ? parsedArguments : ['context'];
+        const compiledFunction = new Function(functionArguments.toString(), source);
+        compiledFunction.source = body;
+        cache.functions[key] = compiledFunction;
         cache.num_functions++;
       } else {
         cache.num_cached++;
       }
       return cache.functions[key];
-    } catch (e) {
-      // fall-back to original value if parsing failed
-      return val;
+    } catch (_unused) {
+      // fall back to original value if parsing failed
+      return value;
     }
   }
-  return val;
+  return value;
 }
 
 var csscolorparser = {};
@@ -23226,18 +23226,19 @@ function align(value, alignment) {
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 // Get a value for a nested property with path provided as an array (`a.b.c` => ['a', 'b', 'c'])
+
 function getPropertyPath(object, path) {
   var _getPropertyPathTarge;
-  const prop = path[path.length - 1];
-  return (_getPropertyPathTarge = getPropertyPathTarget(object, path)) === null || _getPropertyPathTarge === void 0 ? void 0 : _getPropertyPathTarge[prop];
+  const property = path[path.length - 1];
+  return (_getPropertyPathTarge = getPropertyPathTarget(object, path)) === null || _getPropertyPathTarge === void 0 ? void 0 : _getPropertyPathTarge[property];
 }
 
 // Set a value for a nested property with path provided as an array (`a.b.c` => ['a', 'b', 'c'])
 function setPropertyPath(object, path, value) {
-  const prop = path[path.length - 1];
+  const property = path[path.length - 1];
   const target = getPropertyPathTarget(object, path);
   if (target) {
-    target[prop] = value;
+    target[property] = value;
   }
 }
 
@@ -23248,9 +23249,9 @@ function getPropertyPathTarget(object, path) {
     return;
   }
   let target = object;
-  for (let i = 0; i < path.length - 1; i++) {
-    const prop = path[i];
-    target = target[prop];
+  for (let index = 0; index < path.length - 1; index++) {
+    const property = path[index];
+    target = target[property];
     if (target == null) {
       return;
     }
@@ -37615,7 +37616,7 @@ return Tangram$1;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = '0b6df144a8490c1a4a4b41af8560a80a3c888ae0';
+	Tangram.debug.SHA = 'd410f75b2175d206e120d6a9346a1c910e89a486';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}
