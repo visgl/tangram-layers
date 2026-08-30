@@ -79,6 +79,9 @@ jobs:
 
   test-coverage:
     name: Renderer coverage
+    permissions:
+      contents: read
+      checks: write
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repository
