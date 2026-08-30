@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Loads each of the chunks produced by the first Rollup pass.
 // The custom AMD define() in intro.js will combined the shared
 // and worker chunks into a worker bundle that can be instantiated

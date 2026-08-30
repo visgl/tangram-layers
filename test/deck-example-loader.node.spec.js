@@ -1,3 +1,7 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {describe, expect, it, vi} from 'vitest';
 import {
   initializeCurrentDeckExample,

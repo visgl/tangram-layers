@@ -1,3 +1,7 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {initializeCurrentDeckExample} from './app-loader.js';
 
 await initializeCurrentDeckExample({

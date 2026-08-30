@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 /*jshint worker: true*/
 
 // WorkerBroker routes messages between web workers and the main thread, allowing for simpler

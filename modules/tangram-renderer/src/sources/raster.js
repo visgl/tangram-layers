@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 import DataSource, {NetworkTileSource} from './data_source';
 import {TileID} from '../tile/tile_id';
 import Geo from '../utils/geo';

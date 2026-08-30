@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Text directionality (right-to-left, bi-directional) and segmentation (curved labels, Arabic handling)
 
 // Right-to-left / bi-directional text handling

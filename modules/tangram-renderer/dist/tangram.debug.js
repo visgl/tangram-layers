@@ -1,3 +1,6 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
 typeof define === 'function' && define.amd ? define(factory) :
@@ -86,6 +89,10 @@ function _nonIterableRest() {
 function _slicedToArray(r, e) {
   return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray$2(r, e) || _nonIterableRest();
 }
+
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 /*jshint worker: true*/
 
@@ -177,6 +184,10 @@ function _createClass(e, r, t) {
 }
 
 var version$1 = "1.0.0-alpha.0";
+
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 var version = 'v' + version$1;
 
@@ -956,6 +967,10 @@ Utils.toCSSColor = function (color) {
   }
 };
 
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 var debugSettings;
 var debugSettings$1 = debugSettings = {
   // draws a blue rectangle border around the collision box of a label
@@ -976,6 +991,11 @@ var debugSettings$1 = debugSettings = {
 function mergeDebugSettings(settings) {
   Object.assign(debugSettings, settings);
 }
+
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 
 // Adds a base origin to relative URLs
 function addBaseURL(url, base) {
@@ -1117,6 +1137,10 @@ function getURLParameter(name, url) {
   return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
 }
 
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // import log from './log';
 
 var Task = {
@@ -1235,6 +1259,10 @@ var Task = {
   }
 };
 
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 function subscribeMixin(target) {
   var listeners = [];
   return Object.assign(target, {
@@ -1278,6 +1306,10 @@ function subscribeMixin(target) {
   });
 }
 
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 function sliceObject(obj, keys) {
   var sliced = {};
   keys.forEach(function (k) {
@@ -1285,6 +1317,10 @@ function sliceObject(obj, keys) {
   });
   return sliced;
 }
+
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 // WebGL context wrapper
 
@@ -2024,6 +2060,10 @@ Texture.resetBindings = function () {
 WorkerBroker$1.addTarget('Texture', Texture);
 subscribeMixin(Texture);
 
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 var GLSL = {};
 
 /**
@@ -2259,6 +2299,10 @@ GLSL.expandVec4 = function (v) {
   }
 };
 
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // WebGL extension wrapper
 // Stores extensions by name and GL context
 
@@ -2278,6 +2322,10 @@ function getExtension(gl, name) {
   }
   return exts[name];
 }
+
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 // http://werxltd.com/wp/2010/05/13/javascript-implementation-of-javas-string-hashcode-method/
 function hashString(string) {
@@ -3466,7 +3514,9 @@ function destroyShaderResource(shader) {
   }
 }
 
-// Creates a Vertex Array Object if the extension is available, or falls back on standard attribute calls
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 var native_extensions = new WeakMap();
 function getVertexArrayExtension(gl) {
@@ -3573,6 +3623,10 @@ var VertexArrayObject = {
   }
 };
 
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Deep/recursive merge of one or more source objects into a destination object
 function mergeObjects(dest) {
   for (var s = 0; s < (arguments.length <= 1 ? 0 : arguments.length - 1); s++) {
@@ -3602,6 +3656,10 @@ function mergeObjects(dest) {
   }
   return dest;
 }
+
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 // Miscellaneous geo functions
 
@@ -4247,6 +4305,10 @@ function requireCsscolorparser() {
 
 var csscolorparserExports = requireCsscolorparser();
 var parseCSSColor = /*@__PURE__*/getDefaultExportFromCjs(csscolorparserExports);
+
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 var StyleParser = {};
 
@@ -5225,6 +5287,10 @@ FeatureSelection.map_entry = 0;
 FeatureSelection.map_prefix = 0; // set by worker to worker id #
 FeatureSelection.defaultColor = [0, 0, 0, 1];
 
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // WebGL constants - need to import these separately to make them available in the web worker
 
 var gl;
@@ -5471,7 +5537,11 @@ function getTopology(draw_mode) {
   }
 }
 
-var material_source = `/*
+var material_source = `// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
+/*
 
 Defines globals:
 material
@@ -5878,6 +5948,10 @@ function _inherits(t, e) {
   }), e && _setPrototypeOf(t, e);
 }
 
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 /*** Vector functions - vectors provided as [x, y] or [x, y, z] arrays ***/
 
 var Vector;
@@ -6069,7 +6143,11 @@ Vector.dot = function (v1, v2) {
   return n;
 };
 
-var ambient_source = `/*
+var ambient_source = `// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
+/*
 
 Expected globals:
 light_accumulator_*
@@ -6085,7 +6163,11 @@ void calculateLight(in AmbientLight _light, in vec3 _eyeToPoint, in vec3 _normal
 }
 `;
 
-var directional_source = `/*
+var directional_source = `// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
+/*
 
 Expected globals:
 material
@@ -6122,7 +6204,11 @@ void calculateLight(in DirectionalLight _light, in vec3 _eyeToPoint, in vec3 _no
 }
 `;
 
-var point_source = `/*
+var point_source = `// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
+/*
 
 Expected globals:
 material
@@ -6224,7 +6310,11 @@ void calculateLight(in PointLight _light, in vec3 _eyeToPoint, in vec3 _normal) 
 }
 `;
 
-var spot_source = `/*
+var spot_source = `// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
+/*
 
 Expected globals:
 material
@@ -6706,6 +6796,10 @@ function _wrapNativeSuper(t) {
 
 function _callSuper$9(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct$9() ? Reflect.construct(o, [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
 function _isNativeReflectConstruct$9() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct$9 = function _isNativeReflectConstruct() { return !!t; })(); }
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 var MethodNotImplemented = /*#__PURE__*/function (_Error) {
   function MethodNotImplemented(methodName) {
     var _this;
@@ -7324,6 +7418,10 @@ var NetworkTileSource = /*#__PURE__*/function (_NetworkSource) {
   }]);
 }(NetworkSource);
 
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 var TileID = {
   coord: function coord(c) {
     return {
@@ -7806,6 +7904,10 @@ DataSource.register('Raster', function (source) {
   return RasterTileSource.urlHasTilePattern(source.url) ? RasterTileSource : RasterSource;
 });
 
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Rearranges element array for triangles into a new element array that draws a wireframe
 // Used for debugging
 function makeWireframeForTriangleElementData(element_data) {
@@ -7823,7 +7925,11 @@ function makeWireframeForTriangleElementData(element_data) {
   return wireframe_data;
 }
 
-var selection_fragment_source = `// Fragment shader for feature selection passes
+var selection_fragment_source = `// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
+// Fragment shader for feature selection passes
 // Renders in silhouette according to selection (picking) color, or black if none defined
 
 #ifdef TANGRAM_FEATURE_SELECTION
@@ -7839,7 +7945,11 @@ void main (void) {
 }
 `;
 
-var rasters_source = `// Uniforms defining raster textures and macros for accessing them
+var rasters_source = `// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
+// Uniforms defining raster textures and macros for accessing them
 
 #ifdef TANGRAM_FRAGMENT_SHADER
 uniform sampler2D u_rasters[TANGRAM_NUM_RASTER_SOURCES];    // raster tile texture samplers
@@ -8749,6 +8859,10 @@ function addLayerDebugEntry(target, layer, faeture_count, geom_count, styles, ba
   }
 }
 
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 var MAX_VALUE = Math.pow(2, 16) - 1;
 var has_element_index_uint = false;
 var VertexElements = /*#__PURE__*/function () {
@@ -9135,7 +9249,10 @@ function getVertexFormat(attrib) {
   return "".concat(type, "x").concat(attrib.size).concat(webgl_only ? '-webgl' : '');
 }
 
-// Geometry building functions
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 var tile_bounds = [{
   x: 0,
   y: 0
@@ -10022,7 +10139,11 @@ function triangulatePolygon(data) {
   return earcut(data.vertices, data.holes, data.dimensions);
 }
 
-var polygons_vs = `uniform vec2 u_resolution;
+var polygons_vs = `// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
+uniform vec2 u_resolution;
 uniform float u_time;
 uniform vec3 u_map_position;
 uniform vec4 u_tile_origin;
@@ -10185,7 +10306,11 @@ void main() {
 }
 `;
 
-var polygons_fs = `uniform vec2 u_resolution;
+var polygons_fs = `// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
+uniform vec2 u_resolution;
 uniform float u_time;
 uniform vec3 u_map_position;
 uniform vec4 u_tile_origin;
@@ -10329,6 +10454,10 @@ void main (void) {
 }
 `;
 
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 var LAYER_DELTA$1 = 1 / (1 << 14);
 
 /**
@@ -10347,7 +10476,9 @@ function buildPolygonsWGSL() {
   return "\n".concat(raster_declarations, "\nstruct PolygonAttributes {\n    @location(0) a_position: vec4<i32>,\n    @location(1) a_normal: vec4<f32>,\n    @location(2) a_color: vec4<f32>,\n};\n\nstruct PolygonVaryings {\n    @builtin(position) position: vec4<f32>,\n    @location(0) color: vec4<f32>,\n    @location(1) raster_uv: vec2<f32>,\n};\n\n@vertex\nfn vertexMain(attributes: PolygonAttributes) -> PolygonVaryings {\n    var output: PolygonVaryings;\n    let local_position = vec4<f32>(\n        f32(attributes.a_position.x),\n        f32(attributes.a_position.y),\n        f32(attributes.a_position.z) / ").concat(Geo$1.height_scale, ".0,\n        1.0\n    );\n    var clip_position = TangramCamera.u_projection *\n        (TangramTile.u_modelView * local_position);\n    let layer = f32(attributes.a_position.w) +\n        TangramTile.u_tile_proxy_order_offset + 1.0;\n    clip_position.z -= layer * ").concat(LAYER_DELTA$1, " * clip_position.w;\n\n    let surface_normal = normalize(attributes.a_normal.xyz);\n    let light_direction = normalize(vec3<f32>(0.35, -0.45, 0.82));\n    let diffuse = max(dot(surface_normal, light_direction), 0.0);\n    let side_amount = 1.0 - smoothstep(0.8, 0.98, abs(surface_normal.z));\n    let light = mix(1.0, 0.58 + 0.52 * diffuse, side_amount);\n\n    output.position = clip_position;\n    output.color = vec4<f32>(attributes.a_color.rgb * light, attributes.a_color.a);\n    output.raster_uv = vec2<f32>(\n        f32(attributes.a_position.x) / ").concat(Geo$1.tile_scale, ".0,\n        -f32(attributes.a_position.y) / ").concat(Geo$1.tile_scale, ".0\n    );\n    return output;\n}\n\n@fragment\nfn fragmentMain(input: PolygonVaryings) -> @location(0) vec4<f32> {\n").concat(raster_fragment, "}\n");
 }
 
-// Polygon rendering style
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 var Polygons = Object.create(Style);
 Object.assign(Polygons, {
@@ -10554,7 +10685,9 @@ Object.assign(Polygons, {
   }
 });
 
-// Geometry building functions
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 var zero_vec2 = [0, 0];
 
@@ -11133,6 +11266,10 @@ function permuteLine(line, startIndex) {
   return newLine;
 }
 
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Renders an array specifying a line pattern of alternating dashes and spaces,
 // similar to an SVG `dasharray` or Canvas setLineDash(), into a byte array of RGBA pixels
 // Returns:
@@ -11177,6 +11314,10 @@ function renderDashArray(pattern) {
   };
 }
 
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 var LAYER_DELTA = 1 / (1 << 14);
 var ATTRIBUTE_SCALE = 1024;
 
@@ -11205,7 +11346,9 @@ function buildLinesWGSL() {
   return "\n@group(0) @binding(3) var u_texture: texture_2d<f32>;\n@group(0) @binding(4) var u_textureSampler: sampler;\n\nstruct LineAttributes {\n    @location(0) a_position: vec4<i32>,\n    @location(1) a_extrude: vec2<i32>,\n    @location(2) a_offset: vec2<i32>,\n    @location(3) a_z_and_offset_scale: vec2<i32>,\n    @location(4) a_texcoord: vec2<f32>,\n    @location(5) a_color: vec4<f32>,\n};\n\nstruct LineVaryings {\n    @builtin(position) position: vec4<f32>,\n    @location(0) color: vec4<f32>,\n    @location(1) texcoord: vec2<f32>,\n};\n\n@vertex\nfn vertexMain(attributes: LineAttributes) -> LineVaryings {\n    var output: LineVaryings;\n    var extrusion = vec2<f32>(attributes.a_extrude);\n    var offset = vec2<f32>(attributes.a_offset);\n\n    var zoom_delta = clamp(\n        TangramView.u_map_position.z - TangramTile.u_tile_origin.z,\n        0.0,\n        4.0\n    );\n    zoom_delta += step(1.0, zoom_delta) * (1.0 - zoom_delta) +\n        mix(0.0, 2.0, clamp((zoom_delta - 2.0) / 2.0, 0.0, 1.0));\n\n    let midpoint_zoom_delta = (zoom_delta - 0.5) * 2.0;\n    let width_scale = f32(attributes.a_position.z) / ".concat(ATTRIBUTE_SCALE, ".0;\n    extrusion -= extrusion * width_scale * midpoint_zoom_delta;\n\n    let offset_width_scale =\n        f32(attributes.a_z_and_offset_scale.y) / ").concat(ATTRIBUTE_SCALE, ".0;\n    let offset_scale_direction = sign(step(0.0, offset_width_scale) - 0.5);\n    offset -= offset * abs(offset_width_scale) * (\n        (1.0 - step(0.0, offset_scale_direction)) -\n        (zoom_delta * -offset_scale_direction)\n    );\n\n    let screen_space_scale = exp2(\n        -zoom_delta - (TangramTile.u_tile_origin.z - TangramTile.u_tile_origin.w)\n    );\n    extrusion *= screen_space_scale;\n    offset *= screen_space_scale;\n\n    let local_position = vec4<f32>(\n        vec2<f32>(attributes.a_position.xy) + extrusion + offset,\n        f32(attributes.a_z_and_offset_scale.x) / ").concat(Geo$1.height_scale, ".0,\n        1.0\n    );\n    var clip_position = TangramCamera.u_projection *\n        (TangramTile.u_modelView * local_position);\n    let layer = f32(attributes.a_position.w) +\n        TangramTile.u_tile_proxy_order_offset + 1.0;\n    clip_position.z -= layer * ").concat(LAYER_DELTA, " * clip_position.w;\n\n    output.position = clip_position;\n    output.color = attributes.a_color;\n    output.texcoord = attributes.a_texcoord / 65535.0;\n    output.texcoord.y *= TangramLine.u_v_scale_adjust;\n    return output;\n}\n\n@fragment\nfn fragmentMain(input: LineVaryings) -> @location(0) vec4<f32> {\n    var color = input.color;\n    if (TangramLine.u_has_line_texture != 0u) {\n        let line_texcoord = vec2<f32>(\n            input.texcoord.x,\n            fract(input.texcoord.y / TangramLine.u_texture_ratio)\n        );\n        let line_color = textureSample(u_texture, u_textureSampler, line_texcoord);\n        let textured_color = color * line_color;\n        let dashed_color = mix(\n            TangramLine.u_dash_background_color,\n            color,\n            line_color.a\n        );\n        color = mix(\n            textured_color,\n            dashed_color,\n            clamp(TangramLine.u_has_dash, 0.0, 1.0)\n        );\n        if (color.a < 0.001) {\n            discard;\n        }\n    }\n").concat(animated_fragment, "\n    return color;\n}\n");
 }
 
-// Line rendering style
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 var Lines = Object.create(Style);
 var DASH_SCALE = 20; // adjustment factor for UV scale to for line dash patterns w/fractional pixel width
@@ -11902,7 +12045,10 @@ Object.assign(Lines, {
   }
 });
 
-// Point builders
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 
 // Scaling values to encode fractional values with fixed-point integer attributes
 var pre_angles_normalize = 128 / Math.PI;
@@ -11987,6 +12133,10 @@ function buildQuadForPoint(point, vertex_data, vertex_template, vindex, size, of
   return 2; // geom count is always two triangles, for one quad
 }
 
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Sets of values to match for directional and corner anchors
 var lefts = ['left', 'top-left', 'bottom-left'];
 var rights = ['right', 'top-right', 'bottom-right'];
@@ -12054,6 +12204,10 @@ var PointAnchor = {
   default_buffer: [2.5, 2.5, 1.5, 0.75],
   zero_buffer: [0, 0, 0, 0]
 };
+
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 // Do AABB `a` and `b` intersect?
 function boxIntersectsBox(a, b) {
@@ -12370,6 +12524,9 @@ function textLayoutToJSON(layout) {
   };
 }
 
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 var RepeatGroup = /*#__PURE__*/function () {
   function RepeatGroup(key, repeat_dist) {
     _classCallCheck(this, RepeatGroup);
@@ -12441,6 +12598,9 @@ var RepeatGroup = /*#__PURE__*/function () {
 }(); // Current set of repeat groups, grouped and keyed by tile
 RepeatGroup.groups = {};
 
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 var CollisionGrid = /*#__PURE__*/function () {
   function CollisionGrid(anchor, span) {
     _classCallCheck(this, CollisionGrid);
@@ -12483,6 +12643,10 @@ var CollisionGrid = /*#__PURE__*/function () {
     }
   }]);
 }();
+
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 var Collision = {
   tiles: {},
@@ -12832,7 +12996,9 @@ LabelPoint.PLACEMENT = {
   CENTROID: 3 // place labels at center of polygons
 };
 
-// Logic for placing point labels along a line geometry
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 var PLACEMENT$1 = LabelPoint.PLACEMENT;
 var default_spacing = 80; // spacing of points along line in pixels
@@ -12956,6 +13122,10 @@ function interpolateSegment(p, q, distance) {
   var ratio = distance / length;
   return [ratio * p[0] + (1 - ratio) * q[0], ratio * p[1] + (1 - ratio) * q[1]];
 }
+
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 var TextSettings = {
   // A key for grouping all labels of the same text style (e.g. same Canvas state, to minimize state changes)
@@ -13434,6 +13604,10 @@ var FontManager = {
     }.bind(this));
   }
 };
+
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 // Text directionality (right-to-left, bi-directional) and segmentation (curved labels, Arabic handling)
 
@@ -15386,6 +15560,10 @@ function requireCopy() {
 var copyExports = requireCopy();
 var mat4_copy = /*@__PURE__*/getDefaultExportFromCjs(copyExports);
 
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Partial import of gl-matrix via modularized stack-gl forks
 // https://github.com/toji/gl-matrix
 // https://github.com/stackgl
@@ -16218,7 +16396,11 @@ var View = /*#__PURE__*/function () {
   }]);
 }();
 
-var points_vs = `uniform vec2 u_resolution;
+var points_vs = `// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
+uniform vec2 u_resolution;
 uniform float u_time;
 uniform vec3 u_map_position;
 uniform vec4 u_tile_origin;
@@ -16420,7 +16602,11 @@ void main() {
 }
 `;
 
-var points_fs = `uniform vec2 u_resolution;
+var points_fs = `// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
+uniform vec2 u_resolution;
 uniform float u_time;
 uniform vec3 u_map_position;
 uniform vec4 u_tile_origin;
@@ -16544,6 +16730,10 @@ void main (void) {
     gl_FragColor = color;
 }
 `;
+
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
 
 /**
  * Build the portable point shader used by the luma.gl WebGPU renderer.
@@ -18301,6 +18491,10 @@ function getAbsAngleDiff(angle1, angle2) {
   return Math.abs(big - small);
 }
 
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 var PI = Math.PI;
 
 /**
@@ -18626,7 +18820,9 @@ Object.assign(TextStyle, {
 });
 TextStyle.texture_id = 0; // namespaces per-tile label textures
 
-// Raster tile rendering style
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 var RasterStyle = Object.create(Polygons);
 Object.assign(RasterStyle, {
@@ -18646,7 +18842,11 @@ Object.assign(RasterStyle, {
   }
 });
 
-var style_globals_source = `#ifdef TANGRAM_VERTEX_SHADER
+var style_globals_source = `// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
+#ifdef TANGRAM_VERTEX_SHADER
 
 // Apply layer ordering to avoid z-fighting
 void applyLayerOrder (float layer, inout vec4 position) {
@@ -18713,14 +18913,22 @@ vec3 worldNormal() {
 #endif
 `;
 
-var selection_globals_source = `// Vertex attribute + varying for feature selection
+var selection_globals_source = `// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
+// Vertex attribute + varying for feature selection
 #if defined(TANGRAM_FEATURE_SELECTION) && defined(TANGRAM_VERTEX_SHADER)
     attribute vec4 a_selection_color;
     varying vec4 v_selection_color;
 #endif
 `;
 
-var selection_vertex_source = `// Selection pass-specific rendering
+var selection_vertex_source = `// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
+// Selection pass-specific rendering
 #if defined(TANGRAM_FEATURE_SELECTION) && defined(TANGRAM_VERTEX_SHADER)
     if (a_selection_color.rgb == vec3(0.)) {
         // Discard by forcing invalid triangle if we're in the feature
@@ -19275,6 +19483,10 @@ var StyleManager = /*#__PURE__*/function () {
     }
   }]);
 }();
+
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 function notNull(x) {
   return x != null;
@@ -23860,6 +24072,10 @@ topojson.WorkerBroker.addTarget('self', SceneWorker);
 
 define(['./shared'], (function (topojson) { 'use strict';
 
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 // WebGL2 uniform buffer wrapper with std140-compatible CPU-side packing.
 
 var BLOCK_ALIGNMENT = 16;
@@ -24202,6 +24418,10 @@ var UniformBuffer = /*#__PURE__*/function () {
 function align(value, alignment) {
   return Math.ceil(value / alignment) * alignment;
 }
+
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 // Get a value for a nested property with path provided as an array (`a.b.c` => ['a', 'b', 'c'])
 function getPropertyPath(object, path) {
@@ -33612,6 +33832,10 @@ function meshSetString(tiles) {
   }));
 }
 
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 var RenderState = /*#__PURE__*/function () {
   function RenderState(value, setup) {
     topojson._classCallCheck(this, RenderState);
@@ -33921,6 +34145,11 @@ var MediaCapture = /*#__PURE__*/function () {
     }
   }]);
 }();
+
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 
 // Debug config and functions
 function setupSceneDebug(scene) {
@@ -36037,6 +36266,10 @@ function getMeshRenderState(_ref15) {
 Scene.id = 0; // unique id for a scene instance
 Scene.generation = 0; // id that is incremented each time a scene config is re-parsed
 
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Debounce a function
 // https://davidwalsh.name/javascript-debounce-function
 function debounce(func, wait) {
@@ -36577,6 +36810,10 @@ function extendLeaflet(options) {
     return new LeafletLayer(options);
   }
 }
+
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
 
 var DEFAULT_RENDER_VIEW_ID = 'default';
 
@@ -40095,6 +40332,7 @@ var Renderer = /*#__PURE__*/function () {
       var render_view = host_frame.getRenderView(renderViewId);
       var viewport = render_view.viewport;
       var anchor = host_frame.geographicAnchor;
+      var render_view_changed = this.active_render_view_id !== render_view.id;
       this.host_frame = host_frame;
       this.active_render_view_id = render_view.id;
       if (this.scene.view.size.css.width !== viewport.width || this.scene.view.size.css.height !== viewport.height) {
@@ -40107,6 +40345,9 @@ var Renderer = /*#__PURE__*/function () {
       });
       this.scene.setCameraMatrices(render_view.camera);
       this.scene.view.buffer = host_frame.tileBuffer;
+      if (render_view_changed) {
+        this.scene.dirty = true;
+      }
       return host_frame;
     }
 
@@ -40165,7 +40406,9 @@ var Renderer = /*#__PURE__*/function () {
   }]);
 }();
 
-/*jshint worker: true*/
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 
 // Make some modules accessible for debugging
@@ -40212,17 +40455,16 @@ return Tangram$1;
 
 }));
 
-// Loads each of the chunks produced by the first Rollup pass.
-// The custom AMD define() in intro.js will combined the shared
-// and worker chunks into a worker bundle that can be instantiated
-// via blob URL.
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 
 // This allows the rollup ESM build to work within a <script type="module"> tag
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = 'eab7ce8d4c8421cab98e9f05836e24b02d8a4a16';
+	Tangram.debug.SHA = '88af7e9258146a778d80b774d674db303be1a08b';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

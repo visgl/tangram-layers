@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 /*jshint worker: true*/
 
 import Utils from '../utils/utils';

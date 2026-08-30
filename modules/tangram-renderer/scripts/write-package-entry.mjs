@@ -1,10 +1,18 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {mkdir, writeFile} from 'node:fs/promises';
 import {dirname, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const outputPath = resolve(packageDirectory, 'dist/index.js');
-const packageEntry = `import Tangram from './tangram.debug.mjs';
+const packageEntry = `// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+import Tangram from './tangram.debug.mjs';
 
 const {leafletLayer, Scene, ClassicWebGLRenderer, HostFrame, LumaDeviceRenderer, debug, version} =
   Tangram;

@@ -1,3 +1,9 @@
+<!--
+Tangram
+SPDX-License-Identifier: MIT
+Copyright (c) 2013-2016 Brett Camper and Mapzen
+-->
+
 # Contributing to Tangram layers
 
 This repository is organized as a Yarn workspace monorepo. The renderer lives

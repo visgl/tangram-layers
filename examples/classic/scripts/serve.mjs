@@ -1,3 +1,7 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {createServer} from 'node:http';
 import {createReadStream, statSync} from 'node:fs';
 import {extname, join, normalize, resolve} from 'node:path';

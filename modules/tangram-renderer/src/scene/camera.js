@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 import Utils from '../utils/utils';
 import ShaderProgram from '../gl/shader_program';
 import {mat4, mat3, vec3} from '../utils/gl-matrix';

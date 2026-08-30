@@ -1,3 +1,9 @@
+<!--
+tangram-layers
+SPDX-License-Identifier: MIT
+Copyright (c) vis.gl contributors
+-->
+
 # Overview
 
 This site documents the vis.gl-oriented Tangram monorepo: a standalone

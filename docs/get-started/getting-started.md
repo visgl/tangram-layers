@@ -1,3 +1,9 @@
+<!--
+tangram-layers
+SPDX-License-Identifier: MIT
+Copyright (c) vis.gl contributors
+-->
+
 # Getting started
 
 Install the workspace dependencies and build both packages from the repository

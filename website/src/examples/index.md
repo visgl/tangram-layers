@@ -4,6 +4,13 @@ title: Tangram examples
 description: Runnable Tangram renderer and deck.gl integration examples.
 ---
 
+<!--
+tangram-layers
+SPDX-License-Identifier: MIT
+Copyright (c) vis.gl contributors
+-->
+
+
 Explore the runnable Tangram integrations. Each example is a first-class Docusaurus
 page, so the examples sidebar stays visible while you move between demos.
 

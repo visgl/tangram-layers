@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 import ShaderProgram from '../gl/shader_program';
 import GLSL from '../gl/glsl';
 import Geo from '../utils/geo';

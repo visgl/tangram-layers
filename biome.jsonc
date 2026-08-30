@@ -1,3 +1,7 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 {
   "$schema": "https://biomejs.dev/schemas/2.4.8/schema.json",
   "extends": ["@vis.gl/dev-tools/biome.jsonc"],

@@ -1,3 +1,7 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 // WebGL2 uniform buffer wrapper with std140-compatible CPU-side packing.
 
 const BLOCK_ALIGNMENT = 16;

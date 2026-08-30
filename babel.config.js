@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 export default function(context) {
   const ESM = (process.env.ESM !== 'false'); // default to ESM on
   const cache = context.cache(() => ESM);

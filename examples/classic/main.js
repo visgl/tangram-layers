@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 /*
     Hello source-viewers!
     We're glad you're interested in how Tangram can be used to make amazing maps!

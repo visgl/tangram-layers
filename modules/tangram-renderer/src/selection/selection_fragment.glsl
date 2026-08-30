@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Fragment shader for feature selection passes
 // Renders in silhouette according to selection (picking) color, or black if none defined
 

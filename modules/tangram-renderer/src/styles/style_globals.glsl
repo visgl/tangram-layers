@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 #ifdef TANGRAM_VERTEX_SHADER
 
 // Apply layer ordering to avoid z-fighting

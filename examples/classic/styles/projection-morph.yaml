@@ -1,3 +1,7 @@
+# tangram-layers
+# SPDX-License-Identifier: MIT
+# Copyright (c) vis.gl contributors
+
 # Port of the Albers projection experiment from tangrams/tangram-sandbox.
 # The bundled TopoJSON keeps this example runnable without a tile-service key.
 

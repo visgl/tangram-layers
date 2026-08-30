@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Manage rendering for primitives
 import ShaderProgram from './shader_program';
 import VertexArrayObject from './vao';

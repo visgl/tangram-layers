@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 let MAX_VALUE = Math.pow(2, 16) - 1;
 let has_element_index_uint = false;
 

@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 import Thread from './utils/thread';
 import Scene from './scene/scene';
 import Geo from './utils/geo';

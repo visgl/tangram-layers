@@ -1,3 +1,7 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 module.exports = {
   docsSidebar: [
     {
@@ -26,6 +30,7 @@ module.exports = {
       items: [
         'contributor-guide/development',
         'contributor-guide/monorepo',
+        'contributor-guide/licensing',
         'contributor-guide/release'
       ]
     },

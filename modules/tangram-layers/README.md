@@ -1,3 +1,9 @@
+<!--
+tangram-layers
+SPDX-License-Identifier: MIT
+Copyright (c) vis.gl contributors
+-->
+
 # @vis.gl/tangram-layers
 
 Experimental deck.gl integration for the Tangram basemap renderer.

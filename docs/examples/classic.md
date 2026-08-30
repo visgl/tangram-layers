@@ -1,3 +1,9 @@
+<!--
+tangram-layers
+SPDX-License-Identifier: MIT
+Copyright (c) vis.gl contributors
+-->
+
 # Classic Tangram playground
 
 This is the classic Tangram scene playground, contained inside the website so

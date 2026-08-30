@@ -1,3 +1,9 @@
+<!--
+tangram-layers
+SPDX-License-Identifier: MIT
+Copyright (c) vis.gl contributors
+-->
+
 # HostFrame API
 
 `HostFrame` is the host-to-renderer boundary for viewport, geographic, and

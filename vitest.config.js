@@ -1,3 +1,7 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {getVitestConfig} from '@vis.gl/dev-tools';
 
 const runLegacyBrowserTests = process.env.TANGRAM_VITEST_LEGACY === '1';

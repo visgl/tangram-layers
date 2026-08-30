@@ -1,3 +1,7 @@
+# Tangram
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 global:
     api_key: '' # put your nextzen API key here
     language: en # optional ISO 2-char code

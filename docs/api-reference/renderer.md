@@ -1,3 +1,9 @@
+<!--
+tangram-layers
+SPDX-License-Identifier: MIT
+Copyright (c) vis.gl contributors
+-->
+
 # Renderer API
 
 `@vis.gl/tangram-renderer` exports the classic Tangram default object and named

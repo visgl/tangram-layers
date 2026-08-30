@@ -1,3 +1,7 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import Tangram from './tangram.debug.mjs';
 
 const {leafletLayer, Scene, ClassicWebGLRenderer, HostFrame, LumaDeviceRenderer, debug, version} =

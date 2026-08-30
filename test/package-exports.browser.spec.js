@@ -1,3 +1,7 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {describe, expect, it} from 'vitest';
 import TangramLayer, {
   TangramLayer as NamedTangramLayer,

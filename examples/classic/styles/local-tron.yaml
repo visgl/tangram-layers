@@ -1,3 +1,7 @@
+# tangram-layers
+# SPDX-License-Identifier: MIT
+# Copyright (c) vis.gl contributors
+
 scene:
   background:
     # Let the Leaflet CARTO layer show through outside the preview geometry.

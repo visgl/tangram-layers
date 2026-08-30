@@ -1,3 +1,7 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 export function isCurrentDeckExampleMount(moduleMountId, activeMountId) {
   return !moduleMountId || String(activeMountId) === moduleMountId;
 }

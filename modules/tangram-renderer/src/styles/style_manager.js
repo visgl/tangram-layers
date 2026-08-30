@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Manage rendering styles
 import ShaderProgram from '../gl/shader_program';
 import mergeObjects from '../utils/merge';

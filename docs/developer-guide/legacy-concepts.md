@@ -1,3 +1,9 @@
+<!--
+tangram-layers
+SPDX-License-Identifier: MIT
+Copyright (c) vis.gl contributors
+-->
+
 # Tangram concepts
 
 This page distills the Tangram scene concepts that are most useful when moving

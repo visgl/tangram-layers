@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 import StyleParser from './style_parser';
 import { compileFunctionStrings } from '../utils/functions';
 import log from '../utils/log';

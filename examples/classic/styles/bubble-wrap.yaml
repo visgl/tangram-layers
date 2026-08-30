@@ -1,3 +1,7 @@
+# tangram-layers
+# SPDX-License-Identifier: MIT
+# Copyright (c) vis.gl contributors
+
 import:
   - https://www.nextzen.org/carto/bubble-wrap-style/10/bubble-wrap-style.zip
   - https://www.nextzen.org/carto/bubble-wrap-style/10/themes/label-10.zip

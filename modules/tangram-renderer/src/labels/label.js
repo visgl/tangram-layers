@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 import PointAnchor from './point_anchor';
 import {boxIntersectsList} from './intersect';
 import OBB from '../utils/obb';

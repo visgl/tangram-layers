@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Polygon builders
 import Geo from '../utils/geo';
 import Vector from '../utils/vector';

@@ -1,3 +1,7 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {readFile} from 'node:fs/promises';
 import {gzipSync} from 'node:zlib';
 import {resolve} from 'node:path';

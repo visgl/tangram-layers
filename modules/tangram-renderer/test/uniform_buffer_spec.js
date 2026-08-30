@@ -1,3 +1,7 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import { assert } from 'chai';
 import Context from '../src/gl/context';
 import ShaderProgram from '../src/gl/shader_program';

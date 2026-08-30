@@ -1,3 +1,7 @@
+# tangram-layers
+# SPDX-License-Identifier: MIT
+# Copyright (c) vis.gl contributors
+
 import:
   - https://www.nextzen.org/carto/walkabout-style/8/walkabout-style.zip
   - https://www.nextzen.org/carto/walkabout-style/8/themes/label-10.zip

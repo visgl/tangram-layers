@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 import Utils from '../utils/utils';
 import {compileFunctionString} from '../utils/functions';
 import Geo from '../utils/geo';
