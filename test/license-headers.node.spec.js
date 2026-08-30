@@ -42,6 +42,24 @@ describe('license headers', () => {
     expect(updateLicenseHeader(newPath, result.source).status).toBe('current');
   });
 
+  it('removes every stale attribution when repairing a dual-copyright header', () => {
+    const filePath = 'modules/tangram-renderer/src/utils/errors.ts';
+    const source = [
+      '// Tangram',
+      '// SPDX-License-Identifier: MIT',
+      '// Copyright (c) 2013-2016 Brett Camper and Mapzen',
+      '// Copyright (c) 2025 vis.gl contributors',
+      '',
+      'export const value = 1;',
+      ''
+    ].join('\n');
+    const result = updateLicenseHeader(filePath, source);
+
+    expect(result.status).toBe('incorrect');
+    expect(result.source).toBe(`${getHeader(filePath, 'line')}export const value = 1;\n`);
+    expect(result.source).not.toContain('2025 vis.gl contributors');
+  });
+
   it('writes repaired provenance headers in fix mode', async () => {
     const temporaryDirectory = await mkdtemp(join(tmpdir(), 'tangram-license-'));
     const filePath = join(temporaryDirectory, 'future-adapter.js');

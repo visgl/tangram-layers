@@ -293,12 +293,20 @@ function getExistingHeaderEnd(commentStyle, sourceAtHeader) {
     return markerIndex >= 0 ? markerIndex + marker.length : 0;
   }
 
-  const copyrightIndex = sourceAtHeader.indexOf('Copyright');
-  if (copyrightIndex < 0) {
-    return 0;
+  let headerEnd = 0;
+  for (const line of sourceAtHeader.match(/[^\n]*(?:\n|$)/g) || []) {
+    const headerValue = line.replace(/^(?:\/\/|#)\s?/, '').trim();
+    const isHeaderLine =
+      headerValue === 'Tangram' ||
+      headerValue === 'tangram-layers' ||
+      headerValue === SPDX_LINE ||
+      headerValue.startsWith('Copyright');
+    if (!isHeaderLine) {
+      break;
+    }
+    headerEnd += line.length;
   }
-  const lineEnd = sourceAtHeader.indexOf('\n', copyrightIndex);
-  return lineEnd >= 0 ? lineEnd + 1 : sourceAtHeader.length;
+  return headerEnd;
 }
 
 export function updateLicenseHeader(filePath, source) {
