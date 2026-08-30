@@ -59,6 +59,7 @@
     "@vis.gl/dev-tools": "2.0.0-alpha.6",
     "@vitest/coverage-v8": "^4.0.18",
     "chai": "^4.5.0",
+    "esbuild": "^0.28.1",
     "eslint": "7.8.1",
     "fast-async": "6.3.8",
     "playwright": "^1.58.0",

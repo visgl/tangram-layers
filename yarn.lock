@@ -6158,7 +6158,6 @@ __metadata:
   dependencies:
     "@vis.gl/tangram-renderer": "workspace:^"
     eslint: "npm:7.8.1"
-    rollup: "npm:4.59.0"
   peerDependencies:
     "@deck.gl/core": ^9.4.0-alpha.0
     "@luma.gl/core": ^9.4.0-alpha.0
@@ -18477,6 +18476,7 @@ __metadata:
     "@vis.gl/dev-tools": "npm:2.0.0-alpha.6"
     "@vitest/coverage-v8": "npm:^4.0.18"
     chai: "npm:^4.5.0"
+    esbuild: "npm:^0.28.1"
     eslint: "npm:7.8.1"
     fast-async: "npm:6.3.8"
     playwright: "npm:^1.58.0"
