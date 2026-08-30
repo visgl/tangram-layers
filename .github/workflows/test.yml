@@ -114,6 +114,8 @@ jobs:
           --coverage.thresholds.branches=25
           --coverage.thresholds.functions=35
           --coverage.thresholds.lines=30
+      - name: Validate coverage scope
+        run: yarn coverage:scope
       - name: Publish coverage to job summary
         if: always()
         run: node scripts/write-coverage-summary.mjs
