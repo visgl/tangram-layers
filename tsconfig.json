@@ -15,11 +15,11 @@
   },
   "include": [
     "types/**/*.d.ts",
-    "dev-modules/**/*.{js,ts}",
-    "modules/**/*.{js,ts}",
-    "examples/**/*.{js,ts}",
-    "test/**/*.{js,ts}",
-    "website/**/*.{js,ts}"
+    "dev-modules/**/*",
+    "modules/**/*",
+    "examples/**/*",
+    "test/**/*",
+    "website/**/*"
   ],
   "exclude": [
     "**/build/**",
