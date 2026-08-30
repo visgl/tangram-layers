@@ -7,7 +7,7 @@ Copyright (c) vis.gl contributors
 # Examples
 
 The website publishes every runnable application under the repository's
-[`examples/`](https://github.com/visgl/tangram-layers/tree/ib/monorepo-layout/examples)
+[`examples/`](https://github.com/visgl/tangram.gl/tree/master/examples)
 directory. These are static demo applications, so they can also be served
 directly from a checkout with a simple HTTP server.
 

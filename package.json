@@ -13,7 +13,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/visgl/tangram-layers.git"
+    "url": "https://github.com/visgl/tangram.gl.git"
   },
   "homepage": "https://visgl.github.io/tangram-layers/",
   "scripts": {

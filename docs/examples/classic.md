@@ -24,7 +24,7 @@ reported in the panel title and is not submitted to Tangram.
 
 The [standalone playground](/tangram-layers/examples/classic/) is also
 available when a full-window map is more convenient. The [source and style
-assets](https://github.com/visgl/tangram-layers/tree/master/examples/classic)
+assets](https://github.com/visgl/tangram.gl/tree/master/examples/classic)
 are packaged and copied into the website during the build.
 
 All gallery scenes are keyless. The historical basemap and shader styles use a

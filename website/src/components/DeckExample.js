@@ -150,7 +150,7 @@ export default function DeckExample({
             <p className="hint">Blue landmarks and the orange path are deck.gl layers.</p>
             <p className="source-link">
               <a
-                href="https://github.com/visgl/tangram-layers/blob/master/examples/deck/app-runtime.js"
+                href="https://github.com/visgl/tangram.gl/blob/master/examples/deck/app-runtime.js"
                 target="_blank"
                 rel="noopener noreferrer"
               >
