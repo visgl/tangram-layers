@@ -17,10 +17,27 @@
 .hero--primary {
   position: relative;
   isolation: isolate;
+  min-height: 420px;
   background:
-    linear-gradient(90deg, rgba(2, 8, 18, 0.78), rgba(7, 25, 44, 0.5)),
-    url('../../static/img/tron-map.svg') center / cover;
+    linear-gradient(90deg, rgba(2, 8, 18, 0.78), rgba(7, 25, 44, 0.5));
   overflow: hidden;
+}
+
+.tangram-home-live-map {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  background: #061426;
+  pointer-events: none;
+}
+
+.tangram-home-live-map .leaflet-control-container {
+  display: none;
+}
+
+.hero--primary .container {
+  position: relative;
+  z-index: 1;
 }
 
 .hero--primary::after {

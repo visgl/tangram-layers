@@ -13,7 +13,7 @@
         return;
     }
 
-    var scene_url = 'styles/local-basemap.yaml';
+    var scene_url = window.tangramClassicScene || 'styles/local-basemap.yaml';
     var nextzen_scenes = [
         'scene.yaml',
         'styles/crosshatch.zip'
@@ -61,7 +61,7 @@
     });
 
     // Create a Leaflet map
-    var map = L.map('map', {
+    var map = L.map(window.tangramClassicMapId || 'map', {
         maxZoom: 22,
         zoomSnap: 0,
         keyboard: false
