@@ -9,7 +9,12 @@ const sidebars = {
       type: 'category',
       label: 'TangramLayer examples',
       collapsed: false,
-      items: [{type: 'doc', id: 'deck', label: 'Deck + TangramLayer'}]
+      items: [
+        {type: 'doc', id: 'deck', label: 'MapView perspective'},
+        {type: 'doc', id: 'deck-map-flat', label: 'MapView flat'},
+        {type: 'doc', id: 'deck-globe', label: 'GlobeView'},
+        {type: 'doc', id: 'deck-first-person', label: 'FirstPersonView'}
+      ]
     },
     {
       type: 'category',

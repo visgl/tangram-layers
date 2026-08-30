@@ -27,8 +27,18 @@ export default function ClassicPlayground() {
   const rendererUrl = useBaseUrl('/modules/tangram-renderer/dist/tangram.debug.mjs');
   const styleSchemaUrl = useBaseUrl('/modules/tangram-renderer/dist/tangram-style.schema.json');
   const [errorMessage, setErrorMessage] = useState(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const frameElement = useRef(null);
   const scriptElements = useRef([]);
   const stylesheetElements = useRef([]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === frameElement.current);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -105,8 +115,23 @@ export default function ClassicPlayground() {
 
   return (
     <div className="classic-playground-embed">
-      <div id="classic-playground-frame">
+      <div id="classic-playground-frame" ref={frameElement}>
         <div id="map" />
+        <button
+          className={isFullscreen ? 'canvas-fullscreen is-active' : 'canvas-fullscreen'}
+          type="button"
+          aria-label={isFullscreen ? 'Exit fullscreen example' : 'Open fullscreen example'}
+          title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+          onClick={() => {
+            if (isFullscreen) {
+              document.exitFullscreen();
+            } else {
+              frameElement.current?.requestFullscreen();
+            }
+          }}
+        >
+          ⛶
+        </button>
       </div>
       {errorMessage ? <p className="alert alert--danger">{errorMessage}</p> : null}
     </div>
