@@ -20,7 +20,7 @@ Tangram scenes are YAML documents. A scene usually contains:
 - `styles`, `textures`, and `fonts` used by those draw styles; and
 - `cameras` and a `scene.background` for the view.
 
-The [classic example scene](https://github.com/visgl/tangram-layers/blob/master/examples/classic/scene.yaml)
+The [classic example scene](https://github.com/visgl/tangram.gl/blob/master/examples/classic/scene.yaml)
 is a compact reference that exercises most of these sections.
 
 ## Sources and layers

@@ -24,7 +24,10 @@ const sidebars = {
       type: 'category',
       label: 'Tangram renderer examples',
       collapsed: false,
-      items: [{type: 'doc', id: 'classic', label: 'Classic playground'}]
+      items: [
+        {type: 'doc', id: 'classic', label: 'Classic playground'},
+        {type: 'doc', id: 'leaflet', label: 'Leaflet integration'}
+      ]
     }
   ]
 };
