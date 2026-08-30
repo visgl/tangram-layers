@@ -1,18 +1,30 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["DOM", "DOM.Iterable", "ES2022", "WebWorker"],
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "allowJs": false
+    "allowJs": true,
+    "checkJs": false,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "verbatimModuleSyntax": true
   },
   "include": [
     "types/**/*.d.ts",
-    "dev-modules/**/*.ts",
-    "modules/**/*.ts",
-    "examples/**/*.ts",
-    "website/**/*.ts"
+    "dev-modules/**/*.{js,ts}",
+    "modules/**/*.{js,ts}",
+    "examples/**/*.{js,ts}",
+    "test/**/*.{js,ts}",
+    "website/**/*.{js,ts}"
+  ],
+  "exclude": [
+    "**/build/**",
+    "**/dist/**",
+    "**/lib/**",
+    "node_modules"
   ]
 }
