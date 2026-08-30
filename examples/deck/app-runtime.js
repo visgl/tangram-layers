@@ -109,7 +109,7 @@ export function initializeDeckExample({
         'GlobeView is a deck.gl-only preview: Tangram tile vertices still need a globe projection adapter.'
     },
     firstPerson: {
-      label: 'FirstPersonView — renderer adapter needed',
+      label: 'FirstPersonView',
       view: new FirstPersonView({id: 'main', controller: true, far: 20000}),
       initialViewState: {
         longitude: mapViewState.longitude,
@@ -118,9 +118,7 @@ export function initializeDeckExample({
         bearing: 0,
         pitch: 60
       },
-      supportsTangram: false,
-      limitation:
-        'FirstPersonView is a deck.gl-only preview: Tangram needs an explicit geographic tile-selection anchor and level of detail.'
+      supportsTangram: true
     }
   };
 

@@ -6,6 +6,8 @@ const DECK_TO_TANGRAM_ZOOM_OFFSET = 1;
 const VIEW_EPSILON = 1e-7;
 const DECK_WORLD_SIZE = 512;
 const TANGRAM_HALF_WORLD_METERS = 20037508.342789244;
+const TANGRAM_TILE_SIZE = 256;
+const FIRST_PERSON_TILE_BUFFER = 1;
 
 /**
  * Injects an API key into every Nextzen source in a Tangram scene.
@@ -71,6 +73,86 @@ export function getExternalCameraFrame(viewport) {
     projection: new Float32Array(viewport.projectionMatrix),
     // The view matrix places the camera at the origin in eye coordinates.
     position: [0, 0, 0]
+  };
+}
+
+/**
+ * Converts a deck.gl FirstPersonViewport into Tangram's geographic tile frame.
+ *
+ * FirstPersonViewport uses planar Web Mercator geometry but does not expose a
+ * map-style zoom. Its internal zoom describes meters in common space, not the
+ * level of detail needed by the visible ground footprint. This adapter
+ * intersects the viewport corners with the ground plane and derives a Tangram
+ * zoom from the resulting projected meters per pixel.
+ *
+ * @param {object} viewport deck.gl FirstPersonViewport.
+ * @param {{width?: number, height?: number}} [options] Render-target dimensions.
+ * @returns {{viewport: object, view: object, camera: object, tileBuffer: number}}
+ */
+export function getFirstPersonViewFrame(viewport, options = {}) {
+  const width = options.width || viewport.width;
+  const height = options.height || viewport.height;
+  if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
+    throw new Error('FirstPersonViewport requires positive width and height');
+  }
+  if (
+    typeof viewport.unproject !== 'function' ||
+    typeof viewport.projectFlat !== 'function' ||
+    typeof viewport.unprojectFlat !== 'function'
+  ) {
+    throw new Error('FirstPersonViewport ground projection methods are required');
+  }
+
+  const groundCorners = [
+    [0, 0],
+    [width, 0],
+    [0, height],
+    [width, height]
+  ].map((pixel) => getForwardGroundIntersection(viewport, pixel));
+  if (groundCorners.some((corner) => !isFiniteCoordinate(corner))) {
+    throw new Error('FirstPersonViewport must intersect the ground plane');
+  }
+
+  const projectedCorners = groundCorners.map((corner) => viewport.projectFlat(corner));
+  if (projectedCorners.some((corner) => !isFiniteCoordinate(corner))) {
+    throw new Error('FirstPersonViewport ground footprint must use Web Mercator coordinates');
+  }
+
+  const xValues = projectedCorners.map((corner) => corner[0]);
+  const yValues = projectedCorners.map((corner) => corner[1]);
+  const west = Math.min(...xValues);
+  const east = Math.max(...xValues);
+  const north = Math.min(...yValues);
+  const south = Math.max(...yValues);
+  const footprintWidth = east - west;
+  const footprintHeight = south - north;
+  const commonUnitsPerProjectedMeter = DECK_WORLD_SIZE / (TANGRAM_HALF_WORLD_METERS * 2);
+  const metersPerPixel = Math.max(
+    footprintWidth / commonUnitsPerProjectedMeter / width,
+    footprintHeight / commonUnitsPerProjectedMeter / height
+  );
+  if (!Number.isFinite(metersPerPixel) || metersPerPixel <= 0) {
+    throw new Error('FirstPersonViewport ground footprint is empty');
+  }
+
+  const center = viewport.unprojectFlat([(west + east) / 2, (north + south) / 2]);
+  if (!isFiniteCoordinate(center)) {
+    throw new Error('FirstPersonViewport ground footprint center is invalid');
+  }
+  const worldSizeMeters = TANGRAM_HALF_WORLD_METERS * 2;
+  const zoom = Math.log2(worldSizeMeters / (TANGRAM_TILE_SIZE * metersPerPixel));
+
+  return {
+    viewport: {width, height},
+    view: {
+      longitude: center[0],
+      latitude: center[1],
+      altitude:
+        viewport.position && Number.isFinite(viewport.position[2]) ? viewport.position[2] : 0,
+      zoom
+    },
+    camera: getExternalCameraFrame(viewport),
+    tileBuffer: FIRST_PERSON_TILE_BUFFER
   };
 }
 
@@ -326,19 +408,13 @@ export function createTangramLayerClass({Layer, ClassicWebGLRenderer, Renderer})
       const width = record.deckCanvas.clientWidth || viewport.width;
       const height = record.deckCanvas.clientHeight || viewport.height;
 
-      const pitch = (Math.abs(viewport.pitch || 0) * Math.PI) / 180;
       record.canvasWidth = width;
       record.canvasHeight = height;
-      record.renderer.setFrame({
-        viewport: {width, height},
-        view: {
-          longitude: viewport.longitude,
-          latitude: viewport.latitude,
-          zoom: viewport.zoom + DECK_TO_TANGRAM_ZOOM_OFFSET
-        },
-        camera: getExternalCameraFrame(viewport),
-        tileBuffer: Math.min(4, Math.ceil((Math.tan(pitch) * viewport.height) / 256))
-      });
+      record.renderer.setFrame(
+        isFirstPersonViewport(viewport)
+          ? getFirstPersonViewFrame(viewport, {width, height})
+          : getMapViewFrame(viewport, {width, height})
+      );
     }
 
     _canRender(record, props) {
@@ -458,11 +534,58 @@ function validateViewport(viewport, viewports) {
     return new Error('bearing and pitch must describe a finite deck.gl camera');
   }
   try {
-    getExternalCameraFrame(viewport);
+    if (isFirstPersonViewport(viewport)) {
+      getFirstPersonViewFrame(viewport);
+    } else {
+      getExternalCameraFrame(viewport);
+    }
   } catch (error) {
     return error;
   }
   return null;
+}
+
+function getMapViewFrame(viewport, {width, height}) {
+  const pitch = (Math.abs(viewport.pitch || 0) * Math.PI) / 180;
+  return {
+    viewport: {width, height},
+    view: {
+      longitude: viewport.longitude,
+      latitude: viewport.latitude,
+      zoom: viewport.zoom + DECK_TO_TANGRAM_ZOOM_OFFSET
+    },
+    camera: getExternalCameraFrame(viewport),
+    tileBuffer: Math.min(4, Math.ceil((Math.tan(pitch) * viewport.height) / 256))
+  };
+}
+
+function isFirstPersonViewport(viewport) {
+  return Boolean(
+    viewport && viewport.constructor && viewport.constructor.displayName === 'FirstPersonViewport'
+  );
+}
+
+function isFiniteCoordinate(coordinate) {
+  return coordinate && Number.isFinite(coordinate[0]) && Number.isFinite(coordinate[1]);
+}
+
+function getForwardGroundIntersection(viewport, pixel) {
+  const near = viewport.unproject([pixel[0], pixel[1], 0]);
+  const far = viewport.unproject([pixel[0], pixel[1], 1]);
+  if (
+    !isFiniteCoordinate(near) ||
+    !Number.isFinite(near[2]) ||
+    !isFiniteCoordinate(far) ||
+    !Number.isFinite(far[2])
+  ) {
+    return null;
+  }
+
+  const rayParameter = -near[2] / (far[2] - near[2]);
+  if (!Number.isFinite(rayParameter) || rayParameter <= 0) {
+    return null;
+  }
+  return viewport.unproject(pixel, {targetZ: 0});
 }
 
 function multiplyMatrices(left, right) {
