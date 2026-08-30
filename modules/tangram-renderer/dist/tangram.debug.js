@@ -68,17 +68,17 @@ function _iterableToArrayLimit(r, l) {
   }
 }
 
-function _arrayLikeToArray$3(r, a) {
+function _arrayLikeToArray$2(r, a) {
   (null == a || a > r.length) && (a = r.length);
   for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
   return n;
 }
 
-function _unsupportedIterableToArray$3(r, a) {
+function _unsupportedIterableToArray$2(r, a) {
   if (r) {
-    if ("string" == typeof r) return _arrayLikeToArray$3(r, a);
+    if ("string" == typeof r) return _arrayLikeToArray$2(r, a);
     var t = {}.toString.call(r).slice(8, -1);
-    return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray$3(r, a) : void 0;
+    return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray$2(r, a) : void 0;
   }
 }
 
@@ -87,7 +87,7 @@ function _nonIterableRest() {
 }
 
 function _slicedToArray(r, e) {
-  return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray$3(r, e) || _nonIterableRest();
+  return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray$2(r, e) || _nonIterableRest();
 }
 
 // Tangram
@@ -152,7 +152,7 @@ function _defineProperty(e, r, t) {
 }
 
 function _arrayWithoutHoles(r) {
-  if (Array.isArray(r)) return _arrayLikeToArray$3(r);
+  if (Array.isArray(r)) return _arrayLikeToArray$2(r);
 }
 
 function _iterableToArray(r) {
@@ -164,7 +164,7 @@ function _nonIterableSpread() {
 }
 
 function _toConsumableArray(r) {
-  return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray$3(r) || _nonIterableSpread();
+  return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray$2(r) || _nonIterableSpread();
 }
 
 function _classCallCheck(a, n) {
@@ -1256,17 +1256,21 @@ var Task = {
   }
 };
 
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 function subscribeMixin(target) {
   var listeners = [];
   return Object.assign(target, {
     subscribe: function subscribe(listener) {
-      if (!listeners.includes(listener)) {
+      if (listeners.indexOf(listener) === -1) {
         listeners.push(listener);
       }
     },
     unsubscribe: function unsubscribe(listener) {
       var index = listeners.indexOf(listener);
-      if (index >= 0) {
+      if (index > -1) {
         listeners.splice(index, 1);
       }
     },
@@ -1277,47 +1281,37 @@ function subscribeMixin(target) {
       for (var _len = arguments.length, data = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
         data[_key - 1] = arguments[_key];
       }
-      for (var _i = 0, _arr = _toConsumableArray(listeners); _i < _arr.length; _i++) {
-        var _listener = _arr[_i];
-        var handler = _listener[event];
-        if (typeof handler === 'function') {
+      listeners.forEach(function (listener) {
+        if (typeof listener[event] === 'function') {
           try {
-            handler.call.apply(handler, [_listener].concat(data));
-          } catch (error) {
-            log('warn', "Caught exception in listener for event '".concat(event, "':"), error);
+            listener[event].apply(listener, data);
+          } catch (e) {
+            log('warn', "Caught exception in listener for event '".concat(event, "':"), e);
           }
         }
-      }
+      });
     },
     hasSubscribersFor: function hasSubscribersFor(event) {
-      return listeners.some(function (listener) {
-        return typeof listener[event] === 'function';
+      var has = false;
+      listeners.forEach(function (listener) {
+        if (typeof listener[event] === 'function') {
+          has = true;
+        }
       });
+      return has;
     }
   });
 }
 
-function _createForOfIteratorHelper$2(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray$2(r)) || e) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t.return || t.return(); } finally { if (u) throw o; } } }; }
-function _unsupportedIterableToArray$2(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray$2(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray$2(r, a) : void 0; } }
-function _arrayLikeToArray$2(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-function sliceObject(object, keys) {
+function sliceObject(obj, keys) {
   var sliced = {};
-  var _iterator = _createForOfIteratorHelper$2(keys),
-    _step;
-  try {
-    for (_iterator.s(); !(_step = _iterator.n()).done;) {
-      var key = _step.value;
-      sliced[key] = object[key];
-    }
-  } catch (err) {
-    _iterator.e(err);
-  } finally {
-    _iterator.f();
-  }
+  keys.forEach(function (k) {
+    return sliced[k] = obj[k];
+  });
   return sliced;
 }
 
@@ -2331,10 +2325,17 @@ function getExtension(gl, name) {
 
 // http://werxltd.com/wp/2010/05/13/javascript-implementation-of-javas-string-hashcode-method/
 function hashString(string) {
-  var hash = 0;
-  for (var index = 0; index < string.length; index++) {
-    hash = (hash << 5) - hash + string.charCodeAt(index);
-    hash |= 0;
+  var hash = 0,
+    i,
+    chr,
+    len;
+  if (string.length === 0) {
+    return hash;
+  }
+  for (i = 0, len = string.length; i < len; i++) {
+    chr = string.charCodeAt(i);
+    hash = (hash << 5) - hash + chr;
+    hash |= 0; // Convert to 32bit integer
   }
   return hash;
 }
@@ -36266,15 +36267,15 @@ Scene.generation = 0; // id that is incremented each time a scene config is re-p
 // https://davidwalsh.name/javascript-debounce-function
 function debounce(func, wait) {
   var timeout;
-  return function debounced() {
-    var _this = this;
-    for (var _len = arguments.length, arguments_ = new Array(_len), _key = 0; _key < _len; _key++) {
-      arguments_[_key] = arguments[_key];
-    }
+  return function () {
+    var context = this,
+      args = arguments;
+    var later = function later() {
+      timeout = null;
+      func.apply(context, args);
+    };
     clearTimeout(timeout);
-    timeout = setTimeout(function () {
-      return func.apply(_this, arguments_);
-    }, wait);
+    timeout = setTimeout(later, wait);
   };
 }
 
@@ -40456,7 +40457,7 @@ return Tangram$1;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = 'abf89269feef707066b377225d2779b518face2a';
+	Tangram.debug.SHA = '9040e07b5ee51a8f1b48a8ebe650b5fbadd1ef0b';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}
