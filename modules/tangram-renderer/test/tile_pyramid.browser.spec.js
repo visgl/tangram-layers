@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-import chai from 'chai';
-let assert = chai.assert;
+import {beforeEach, describe, expect, it} from 'vitest';
 import TilePyramid from '../src/tile/tile_pyramid';
 import { TileID } from '../src/tile/tile_id';
 
@@ -39,13 +38,13 @@ describe('TilePyramid', function() {
         it('creates one entry per zoom', () => {
             pyramid.addTile(tile);
 
-            assert.equal(Object.keys(pyramid.tiles).length, coords.z + 1);
+            expect(Object.keys(pyramid.tiles)).toHaveLength(coords.z + 1);
         });
 
         it('creates one entry for non-overzoomed tile', () => {
             pyramid.addTile(tile);
 
-            assert.isNotNull(pyramid.tiles[tile.key]);
+            expect(pyramid.tiles[tile.key]).not.toBeNull();
         });
 
         it('creates entries for overzoomed tiles', () => {
@@ -54,21 +53,21 @@ describe('TilePyramid', function() {
             tile.style_z = 20;
             pyramid.addTile(tile);
 
-            assert.isNotNull(pyramid.tiles[TileID.key(tile.coords, source, tile.style_z)]);
+            expect(pyramid.tiles[TileID.key(tile.coords, source, tile.style_z)]).not.toBeNull();
         });
 
         it('removes all entries for single tile', () => {
             pyramid.addTile(tile);
             pyramid.removeTile(tile);
 
-            assert.equal(Object.keys(pyramid.tiles).length, 0);
+            expect(Object.keys(pyramid.tiles)).toHaveLength(0);
         });
 
         it('gets tile ancestor', () => {
             pyramid.addTile(tile);
             let ancestor = pyramid.getAncestor(tile);
 
-            assert.isNotNull(ancestor);
+            expect(ancestor).not.toBeNull();
         });
 
         it('gets tile descendant', () => {
@@ -76,7 +75,7 @@ describe('TilePyramid', function() {
             let ancestor = TileID.parent(TileID.parent(tile));
             let descendants = pyramid.getDescendants(ancestor);
 
-            assert.equal(descendants.length, 1);
+            expect(descendants).toHaveLength(1);
         });
 
     });

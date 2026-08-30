@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-import chai from 'chai';
-let assert = chai.assert;
+import {beforeEach, describe, expect, it} from 'vitest';
 
 import Geo from '../src/utils/geo';
 import simplePolygon from './fixtures/simple-polygon.json';
@@ -17,7 +16,7 @@ describe('Geo', () => {
         });
 
         it('calculates the expected bounding box', () => {
-            assert.deepEqual(bbox, simplePolygon.properties.bounds);
+            expect(bbox).toEqual(simplePolygon.properties.bounds);
         });
     });
 

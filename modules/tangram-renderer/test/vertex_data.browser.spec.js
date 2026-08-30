@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-import chai from 'chai';
-let assert = chai.assert;
+import {beforeEach, describe, expect, it} from 'vitest';
 import VertexLayout from '../src/gl/vertex_layout';
 import VertexData from '../src/gl/vertex_data';
 import gl from '../src/gl/constants';
@@ -27,11 +26,11 @@ describe('VertexData', () => {
         });
 
         it('returns a new instance', () => {
-            assert.instanceOf(subject, VertexData);
+            expect(subject).toBeInstanceOf(VertexData);
         });
         it('sets up buffer views', () => {
-            assert.instanceOf(subject.views[gl.FLOAT], Float32Array);
-            assert.instanceOf(subject.views[gl.UNSIGNED_BYTE], Uint8Array);
+            expect(subject.views[gl.FLOAT]).toBeInstanceOf(Float32Array);
+            expect(subject.views[gl.UNSIGNED_BYTE]).toBeInstanceOf(Uint8Array);
         });
     });
 
@@ -51,12 +50,12 @@ describe('VertexData', () => {
         });
 
         it('advances the buffer offset', () => {
-            assert.equal(subject.offset, layout.stride);
+            expect(subject.offset).toBe(layout.stride);
         });
         it('sets a vertex attribute value in the buffer', () => {
-            assert.equal(subject.views[gl.FLOAT][0], vertex[0]);
-            assert.equal(subject.views[gl.FLOAT][1], vertex[1]);
-            assert.equal(subject.views[gl.FLOAT][2], vertex[2]);
+            expect(subject.views[gl.FLOAT][0]).toBe(vertex[0]);
+            expect(subject.views[gl.FLOAT][1]).toBe(vertex[1]);
+            expect(subject.views[gl.FLOAT][2]).toBe(vertex[2]);
         });
     });
 

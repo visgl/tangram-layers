@@ -3,6 +3,7 @@
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 import subscribeMixin from '../src/utils/subscribe';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 describe('subscribeMixin', () => {
     let subject;
@@ -22,34 +23,34 @@ describe('subscribeMixin', () => {
     });
 
     it('fires all of the events that are subscribed', () => {
-        let spyA = sinon.spy(),
-            spyB = sinon.spy(),
-            spyC = sinon.spy(),
-            spyD = sinon.spy();
+        const spyA = vi.fn();
+        const spyB = vi.fn();
+        const spyC = vi.fn();
+        const spyD = vi.fn();
 
         subject.subscribe({ test: spyA });
         subject.subscribe({ test: spyB });
         subject.subscribe({ test: spyC });
         subject.subscribe({ test: spyD });
 
-        sinon.assert.notCalled(spyA);
-        sinon.assert.notCalled(spyB);
-        sinon.assert.notCalled(spyC);
-        sinon.assert.notCalled(spyD);
+        expect(spyA).not.toHaveBeenCalled();
+        expect(spyB).not.toHaveBeenCalled();
+        expect(spyC).not.toHaveBeenCalled();
+        expect(spyD).not.toHaveBeenCalled();
 
         subject.trigger('test');
 
-        sinon.assert.called(spyA);
-        sinon.assert.called(spyB);
-        sinon.assert.called(spyC);
-        sinon.assert.called(spyD);
+        expect(spyA).toHaveBeenCalled();
+        expect(spyB).toHaveBeenCalled();
+        expect(spyC).toHaveBeenCalled();
+        expect(spyD).toHaveBeenCalled();
     });
 
     it('does not fires events that are unsubscribed', () => {
-        let spyA = sinon.spy(),
-            spyB = sinon.spy(),
-            spyC = sinon.spy(),
-            spyD = sinon.spy();
+        const spyA = vi.fn();
+        const spyB = vi.fn();
+        const spyC = vi.fn();
+        const spyD = vi.fn();
 
         let subscriberA = { test: spyA },
             subscriberB = { test: spyB },
@@ -67,35 +68,35 @@ describe('subscribeMixin', () => {
 
         subject.trigger('test');
 
-        sinon.assert.notCalled(spyA);
-        sinon.assert.notCalled(spyB);
-        sinon.assert.notCalled(spyC);
-        sinon.assert.called(spyD);
+        expect(spyA).not.toHaveBeenCalled();
+        expect(spyB).not.toHaveBeenCalled();
+        expect(spyC).not.toHaveBeenCalled();
+        expect(spyD).toHaveBeenCalled();
     });
 
     it('does not fire any events when they are all unsubscribed', () => {
-        let spyA = sinon.spy(),
-            spyB = sinon.spy(),
-            spyC = sinon.spy(),
-            spyD = sinon.spy();
+        const spyA = vi.fn();
+        const spyB = vi.fn();
+        const spyC = vi.fn();
+        const spyD = vi.fn();
 
         subject.subscribe({ test: spyA });
         subject.subscribe({ test: spyB });
         subject.subscribe({ test: spyC });
         subject.subscribe({ test: spyD });
 
-        sinon.assert.notCalled(spyA);
-        sinon.assert.notCalled(spyB);
-        sinon.assert.notCalled(spyC);
-        sinon.assert.notCalled(spyD);
+        expect(spyA).not.toHaveBeenCalled();
+        expect(spyB).not.toHaveBeenCalled();
+        expect(spyC).not.toHaveBeenCalled();
+        expect(spyD).not.toHaveBeenCalled();
 
         subject.unsubscribeAll();
         subject.trigger('test');
 
-        sinon.assert.notCalled(spyA);
-        sinon.assert.notCalled(spyB);
-        sinon.assert.notCalled(spyC);
-        sinon.assert.notCalled(spyD);
+        expect(spyA).not.toHaveBeenCalled();
+        expect(spyB).not.toHaveBeenCalled();
+        expect(spyC).not.toHaveBeenCalled();
+        expect(spyD).not.toHaveBeenCalled();
     });
 
 
