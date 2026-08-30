@@ -33,7 +33,7 @@
   },
   "devDependencies": {
     "eslint": "7.8.1",
-    "rollup": "4.20.0"
+    "rollup": "4.59.0"
   },
   "dependencies": {
     "@vis.gl/tangram-renderer": "workspace:^"
