@@ -27,18 +27,18 @@ export default getVitestConfig({
   projects: {
     node: {
       test: {
-        include: ['test/**/*.node.spec.js']
+        include: ['test/**/*.node.spec.{js,ts}']
       }
     },
     browser: {
       test: {
-        include: ['test/**/*.browser.spec.js']
+        include: ['test/**/*.browser.spec.{js,ts}']
       }
     },
     headless: {
       test: {
         include: [
-          'test/**/*.browser.spec.js',
+          'test/**/*.browser.spec.{js,ts}',
           ...(runLegacyBrowserTests ? ['modules/**/test/**/*_spec.js'] : [])
         ],
         exclude: ['modules/tangram-renderer/test/leaflet_layer_spec.js'],

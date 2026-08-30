@@ -1111,13 +1111,13 @@ function subscribeMixin(target) {
   let listeners = [];
   return Object.assign(target, {
     subscribe(listener) {
-      if (listeners.indexOf(listener) === -1) {
+      if (!listeners.includes(listener)) {
         listeners.push(listener);
       }
     },
     unsubscribe(listener) {
-      let index = listeners.indexOf(listener);
-      if (index > -1) {
+      const index = listeners.indexOf(listener);
+      if (index >= 0) {
         listeners.splice(index, 1);
       }
     },
@@ -1125,24 +1125,19 @@ function subscribeMixin(target) {
       listeners = [];
     },
     trigger(event, ...data) {
-      listeners.forEach(listener => {
-        if (typeof listener[event] === 'function') {
+      for (const listener of listeners) {
+        const handler = listener[event];
+        if (typeof handler === 'function') {
           try {
-            listener[event](...data);
-          } catch (e) {
-            log('warn', `Caught exception in listener for event '${event}':`, e);
+            handler(...data);
+          } catch (error) {
+            log('warn', `Caught exception in listener for event '${event}':`, error);
           }
         }
-      });
+      }
     },
     hasSubscribersFor(event) {
-      let has = false;
-      listeners.forEach(listener => {
-        if (typeof listener[event] === 'function') {
-          has = true;
-        }
-      });
-      return has;
+      return listeners.some(listener => typeof listener[event] === 'function');
     }
   });
 }
@@ -1151,9 +1146,11 @@ function subscribeMixin(target) {
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-function sliceObject(obj, keys) {
-  let sliced = {};
-  keys.forEach(k => sliced[k] = obj[k]);
+function sliceObject(object, keys) {
+  const sliced = {};
+  for (const key of keys) {
+    sliced[key] = object[key];
+  }
   return sliced;
 }
 
@@ -2103,17 +2100,10 @@ function getExtension(gl, name) {
 
 // http://werxltd.com/wp/2010/05/13/javascript-implementation-of-javas-string-hashcode-method/
 function hashString(string) {
-  var hash = 0,
-    i,
-    chr,
-    len;
-  if (string.length === 0) {
-    return hash;
-  }
-  for (i = 0, len = string.length; i < len; i++) {
-    chr = string.charCodeAt(i);
-    hash = (hash << 5) - hash + chr;
-    hash |= 0; // Convert to 32bit integer
+  let hash = 0;
+  for (let index = 0; index < string.length; index++) {
+    hash = (hash << 5) - hash + string.charCodeAt(index);
+    hash |= 0;
   }
   return hash;
 }
@@ -34467,16 +34457,10 @@ Scene.generation = 0; // id that is incremented each time a scene config is re-p
 // Debounce a function
 // https://davidwalsh.name/javascript-debounce-function
 function debounce(func, wait) {
-  var timeout;
-  return function () {
-    var context = this,
-      args = arguments;
-    var later = function later() {
-      timeout = null;
-      func.apply(context, args);
-    };
+  let timeout;
+  return function debounced(...arguments_) {
     clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
+    timeout = setTimeout(() => func.apply(this, arguments_), wait);
   };
 }
 
@@ -38169,7 +38153,7 @@ return Tangram$1;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = '9040e07b5ee51a8f1b48a8ebe650b5fbadd1ef0b';
+	Tangram.debug.SHA = 'd2d8d25483cd4958e375c345c6743c085ca7afa7';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}
