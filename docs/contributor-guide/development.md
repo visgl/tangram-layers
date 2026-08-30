@@ -22,7 +22,7 @@ yarn lint          # Biome plus the renderer compatibility lint
 yarn lint:fix      # apply safe Biome fixes
 yarn test-fast     # lint and Node tests
 yarn test-browser  # Chromium-backed Vitest project
-yarn test-coverage # headless Vitest coverage run
+yarn test-coverage # headless Vitest coverage run (renderer source)
 yarn test          # lint, worker bundle, and Karma browser tests
 ```
 
@@ -43,6 +43,33 @@ build consumes that output. For a standalone local server, run
 
 Private shared development helpers live under `dev-modules/`. They are not
 published and should stay focused on test and build infrastructure.
+
+## Renderer tests and coverage
+
+The renderer’s tests run through Vitest, using the `node`, `browser`, and
+`headless` projects supplied by `@vis.gl/dev-tools`. The historical renderer
+specifications are executed by the headless project with a compatibility setup
+so they can be migrated to native Vitest syntax incrementally without losing
+coverage. New tests should use native Vitest APIs and should be placed in
+`*.node.spec.*` or `*.browser.spec.*` files according to their runtime.
+
+The coverage command scopes instrumentation to
+`modules/tangram-renderer/src/**/*.{js,ts}`. It includes the existing renderer
+unit and integration suite, including the legacy specifications under Vitest,
+and emits text, LCOV, and JSON summary reports in `coverage/`.
+
+The pull-request workflow collects separate Node and Chromium coverage blobs,
+merges them, and enforces these global renderer thresholds before uploading the
+report as a workflow artifact:
+
+- 30% statements;
+- 25% branches;
+- 35% functions; and
+- 30% lines.
+
+Coverage is intentionally scoped to source rather than generated bundles,
+fixtures, or dependencies. The report shows untested files and keeps the
+threshold ratchet visible as the renderer is converted to TypeScript.
 
 ## Website and examples
 
