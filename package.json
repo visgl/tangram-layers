@@ -36,7 +36,7 @@
     "test-browser": "ocular-test browser",
     "test-headless": "ocular-test headless",
     "test-headless-legacy": "TANGRAM_VITEST_LEGACY=1 ocular-test headless",
-    "test-coverage": "ocular-test headless --coverage",
+    "test-coverage": "TANGRAM_VITEST_LEGACY=1 ocular-test headless --coverage",
     "typecheck": "tsc --noEmit",
     "playwright:install": "playwright install chromium",
     "test-website": "yarn website:build",

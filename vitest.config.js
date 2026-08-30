@@ -24,6 +24,12 @@ export default getVitestConfig({
       }
     ]
   },
+  coverage: {
+    provider: 'v8',
+    reporter: ['text', 'lcov', 'json-summary'],
+    include: ['modules/tangram-renderer/src/**/*.{js,ts}'],
+    exclude: ['**/*.d.ts']
+  },
   projects: {
     node: {
       test: {
