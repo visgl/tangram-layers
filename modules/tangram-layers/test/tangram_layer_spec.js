@@ -3,7 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import { assert } from 'chai';
-import createTangramLayerClass from '../src/tangram-layer';
+import {FirstPersonViewport} from '@deck.gl/core';
+import createTangramLayerClass, {getFirstPersonViewFrame} from '../src/tangram-layer';
 import Camera from '../../tangram-renderer/src/scene/camera';
 import LumaDeviceRenderer from '../../tangram-renderer/src/gpu/luma_device_renderer';
 
@@ -346,6 +347,34 @@ describe('TangramLayer', function () {
 
         layer.draw();
         assert.lengthOf(scene.resizeCalls, 1, 'unchanged dimensions do not resize again');
+    });
+
+    it('selects first-person tiles from the visible ground footprint', function () {
+        const viewport = new FirstPersonViewport({
+            width: 800,
+            height: 600,
+            longitude: -74.009764,
+            latitude: 40.705319,
+            position: [0, 0, 600],
+            bearing: 0,
+            pitch: 60,
+            far: 20000
+        });
+        const expected_frame = getFirstPersonViewFrame(viewport);
+        const { layer } = createLayer({}, { viewport });
+        const frame = FakeRenderer.instances[0].frameCalls[0];
+
+        assert.lengthOf(layer.errors, 0);
+        assert.deepEqual(frame.viewport, { width: 800, height: 600 });
+        assert.closeTo(frame.view.longitude, expected_frame.view.longitude, 1e-12);
+        assert.closeTo(frame.view.latitude, expected_frame.view.latitude, 1e-12);
+        assert.closeTo(frame.view.zoom, expected_frame.view.zoom, 1e-12);
+        assert.strictEqual(frame.view.altitude, 600);
+        assert.strictEqual(frame.tileBuffer, 1);
+        assert.isAbove(frame.view.zoom, 14);
+        assert.isBelow(frame.view.zoom, viewport.zoom + 1);
+        assert.lengthOf(frame.camera.view, 16);
+        assert.lengthOf(frame.camera.projection, 16);
     });
 
     it('renders on a WebGPU device without reading its raw handle', async function () {
@@ -799,7 +828,7 @@ describe('TangramLayer', function () {
         assert.strictEqual(loadCallbackCount, 0);
     });
 
-    function createLayer(props = {}, { deviceType = 'webgl' } = {}) {
+    function createLayer(props = {}, { deviceType = 'webgl', viewport: providedViewport } = {}) {
         const parentElement = document.createElement('div');
         parentElement.style.position = 'relative';
         const deckCanvas = document.createElement('canvas');
@@ -813,7 +842,7 @@ describe('TangramLayer', function () {
         document.body.appendChild(parentElement);
         parentElements.push(parentElement);
 
-        const viewport = {
+        const viewport = providedViewport || {
             longitude: -74.009764,
             latitude: 40.705319,
             zoom: 15.25,
@@ -996,6 +1025,7 @@ function createFakeRenderPass() {
         }
     };
 }
+
 
 function createFakeWebGLContext(canvas) {
     const gl = {

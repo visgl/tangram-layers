@@ -6,7 +6,8 @@ import {describe, expect, it} from 'vitest';
 import TangramLayer, {
   TangramLayer as NamedTangramLayer,
   createTangramLayerClass,
-  getExternalCameraFrame
+  getExternalCameraFrame,
+  getFirstPersonViewFrame
 } from '@vis.gl/tangram-layers';
 import Tangram, {
   ClassicWebGLRenderer,
@@ -32,6 +33,7 @@ describe('published package entrypoints', () => {
     expect(TangramLayer).toBe(NamedTangramLayer);
     expect(createTangramLayerClass).toBeTypeOf('function');
     expect(getExternalCameraFrame).toBeTypeOf('function');
+    expect(getFirstPersonViewFrame).toBeTypeOf('function');
   });
 
   it('exports the Zod style schema and generated JSON Schema', () => {

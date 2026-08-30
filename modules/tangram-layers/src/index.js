@@ -6,6 +6,7 @@ import {Layer} from '@deck.gl/core';
 import {ClassicWebGLRenderer} from '@vis.gl/tangram-renderer';
 import createTangramLayerClass, {
   getExternalCameraFrame,
+  getFirstPersonViewFrame,
   injectNextzenApiKey
 } from './tangram-layer';
 
@@ -15,6 +16,12 @@ import createTangramLayerClass, {
  */
 const TangramLayer = createTangramLayerClass({Layer, ClassicWebGLRenderer});
 
-export {TangramLayer, createTangramLayerClass, getExternalCameraFrame, injectNextzenApiKey};
+export {
+  TangramLayer,
+  createTangramLayerClass,
+  getExternalCameraFrame,
+  getFirstPersonViewFrame,
+  injectNextzenApiKey
+};
 
 export default TangramLayer;

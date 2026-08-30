@@ -1,7 +1,7 @@
 ---
 sidebar_position: 5
 title: FirstPersonView
-description: A deck.gl FirstPersonView LOD-adapter preview.
+description: A Tangram basemap driven by deck.gl's FirstPersonView.
 hide_title: true
 ---
 
@@ -16,5 +16,5 @@ import DeckExample from '@site/src/components/DeckExample';
 <DeckExample
   viewMode="firstPerson"
   title="FirstPersonView"
-  description="A geospatial first-person preview with an extended camera range. Tangram needs a host-provided tile anchor and LOD policy before its basemap is enabled."
+  description="A geospatial first-person camera with Tangram tiles selected from its visible ground footprint."
 />

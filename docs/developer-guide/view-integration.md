@@ -51,18 +51,17 @@ Inject the camera and visibility policies when `Scene` constructs `View`.
 At this point a real `@vis.gl/tangram-renderer/core` entry can exclude Leaflet,
 interaction handlers, the standalone loop, and classic camera implementations.
 
-### 3. Implement FirstPersonView
+### 3. FirstPersonView
 
-First-person rendering can continue using planar Web Mercator geometry, so it
-is the smaller next target. The adapter should require a geographic anchor,
-intersect the camera frustum with the ground plane, select tiles covering that
-footprint, and derive LOD from projected texel size instead of map zoom. Camera
-matrices continue to come directly from deck.gl.
+First-person rendering continues using planar Web Mercator geometry. The deck
+adapter intersects the viewport corners with the ground plane, selects tiles
+covering that footprint, and derives LOD from projected meters per pixel instead
+of treating deck.gl's internal meter scale as a map zoom. Camera matrices still
+come directly from deck.gl.
 
-Start with a fixed-altitude camera looking at the ground, then add horizon-level
-views, elevation, and movement across tile boundaries. The FirstPersonView
-example supplies visible local geometry and an extended far plane for this
-work.
+The initial supported contract is a fixed-altitude camera whose four viewport
+corners intersect the Web Mercator ground plane. Horizon-level views, terrain
+elevation, and footprints crossing the antimeridian remain follow-up work.
 
 ### 4. Implement GlobeView
 
