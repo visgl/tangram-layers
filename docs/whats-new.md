@@ -8,6 +8,9 @@
 - The renderer exposes luma.gl-backed `ClassicWebGLRenderer`, `Scene`, and
   `LumaDeviceRenderer` integration points while retaining the legacy default
   Tangram API.
+- `HostFrame` separates shared geographic state from named render views and
+  establishes a multi-view contract suitable for future stereo and WebXR
+  basemap rendering.
 - The deck example is under `examples/deck/` and supports shared luma.gl
   WebGL and WebGPU devices, vector styles, and the animated TRON style.
 - The repository uses Yarn workspaces and `@vis.gl/dev-tools` for bootstrap,
