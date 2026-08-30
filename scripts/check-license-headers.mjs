@@ -28,7 +28,6 @@ const VENDORED_PATH_PREFIXES = [
 ];
 
 const TANGRAM_RENDERER_FILES = new Set([
-  'examples/classic/leaflet-layer.js',
   'modules/tangram-renderer/src/builders/common.js',
   'modules/tangram-renderer/src/builders/points.js',
   'modules/tangram-renderer/src/builders/polygons.js',
@@ -171,6 +170,7 @@ const TANGRAM_CLASSIC_FILES = new Set([
   'examples/classic/app/url.js',
   'examples/classic/css/main.css',
   'examples/classic/index.html',
+  'examples/classic/leaflet-layer.js',
   'examples/classic/main.js',
   'examples/classic/scene.yaml',
   'examples/classic/styles/dots.yaml',
