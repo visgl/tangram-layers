@@ -7,13 +7,13 @@ Copyright (c) vis.gl contributors
 # Deck.gl basemap example
 
 The live integration example is built from the
-[`examples/deck` source directory](https://github.com/visgl/tangram-layers/tree/master/examples/deck)
+[`examples/deck` source directory](https://github.com/visgl/tangram.gl/tree/master/examples/deck)
 and staged into the documentation site during the website build. It is
 embedded in the website so the Examples sidebar remains available while you
 explore it.
 
 <div>
-  <a className="button button--primary button--lg" href="/tangram-layers/examples/deck">
+  <a className="button button--primary button--lg" href="/tangram.gl/examples/deck">
     Open the interactive TangramLayer example
   </a>
 </div>

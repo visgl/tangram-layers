@@ -9,7 +9,7 @@ Copyright (c) vis.gl contributors
 The public example is deployed from the monorepo branch to:
 
 ```text
-https://visgl.github.io/tangram-layers/examples/deck/
+https://visgl.github.io/tangram.gl/examples/deck/
 ```
 
 The page opts out of search indexing and the published site includes a
