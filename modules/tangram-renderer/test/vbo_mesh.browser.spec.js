@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import { assert } from 'chai';
+import {describe, expect, it} from 'vitest';
 import VBOMesh from '../src/gl/vbo_mesh';
 import Scene from '../src/scene/scene';
 import VertexLayout from '../src/gl/vertex_layout';
@@ -40,9 +40,9 @@ describe('VBOMesh render backend', function () {
             bufferFactory: buffer_factory
         });
 
-        assert.strictEqual(mesh.vertex_buffer, resources[0]);
-        assert.strictEqual(mesh.element_buffer, resources[1]);
-        assert.deepEqual(factory_options, [{
+        expect(mesh.vertex_buffer).toBe(resources[0]);
+        expect(mesh.element_buffer).toBe(resources[1]);
+        expect(factory_options).toEqual([{
             id: 'mesh-test-vertices',
             usage: 'vertex',
             data: vertex_data
@@ -54,8 +54,8 @@ describe('VBOMesh render backend', function () {
         }]);
 
         mesh.destroy();
-        assert.isTrue(resources[0].destroyed);
-        assert.isTrue(resources[1].destroyed);
+        expect(resources[0].destroyed).toBe(true);
+        expect(resources[1].destroyed).toBe(true);
     });
 
     it('exposes a portable indexed draw descriptor', function () {
@@ -85,7 +85,7 @@ describe('VBOMesh render backend', function () {
             }
         });
 
-        assert.deepEqual(mesh.getDrawDescriptor(), {
+        expect(mesh.getDrawDescriptor()).toEqual({
             topology: 'triangle-list',
             vertexCount: 3,
             indexCount: 3,
@@ -126,10 +126,10 @@ describe('VBOMesh render backend', function () {
             }
         });
 
-        assert.strictEqual(mesh.vertex_buffer, resources[0]);
-        assert.strictEqual(mesh.getDrawDescriptor().topology, 'triangle-list');
+        expect(mesh.vertex_buffer).toBe(resources[0]);
+        expect(mesh.getDrawDescriptor().topology).toBe('triangle-list');
         mesh.destroy();
-        assert.isTrue(resources[0].destroyed);
+        expect(resources[0].destroyed).toBe(true);
     });
 
     it('describes Uint16 indices without consulting a WebGL context', function () {
@@ -148,7 +148,7 @@ describe('VBOMesh render backend', function () {
                 }
             });
 
-        assert.strictEqual(mesh.getDrawDescriptor().indexType, 'uint16');
+        expect(mesh.getDrawDescriptor().indexType).toBe('uint16');
         mesh.destroy();
     });
 
@@ -176,8 +176,8 @@ describe('VBOMesh render backend', function () {
         vertex_data[0] = 42;
         mesh.upload();
 
-        assert.deepEqual(writes, [vertex_data]);
-        assert.strictEqual(writes[0][0], 42);
+        expect(writes).toEqual([vertex_data]);
+        expect(writes[0][0]).toBe(42);
         mesh.destroy();
     });
 
@@ -203,18 +203,18 @@ describe('VBOMesh render backend', function () {
             }
         };
 
-        assert.isTrue(mesh.render({
+        expect(mesh.render({
             program,
             renderPass: render_pass,
             renderState: render_state,
             meshRenderer: mesh_renderer
-        }));
-        assert.strictEqual(draw_options.mesh, mesh);
-        assert.strictEqual(draw_options.program, program);
-        assert.strictEqual(draw_options.renderPass, render_pass);
-        assert.strictEqual(draw_options.renderState, render_state);
-        assert.isNumber(draw_options.visibleTime);
-        assert.strictEqual(program.use_calls, 0);
+        })).toBe(true);
+        expect(draw_options.mesh).toBe(mesh);
+        expect(draw_options.program).toBe(program);
+        expect(draw_options.renderPass).toBe(render_pass);
+        expect(draw_options.renderState).toBe(render_state);
+        expect(draw_options.visibleTime).toEqual(expect.any(Number));
+        expect(program.use_calls).toBe(0);
     });
 
     it('falls back to raw drawing and forces uniform block bindings when requested', function () {
@@ -246,9 +246,9 @@ describe('VBOMesh render backend', function () {
         });
         const mesh_renderer = { drawMesh: () => null };
 
-        assert.isFalse(mesh.render({ program, meshRenderer: mesh_renderer }));
-        assert.deepEqual(use_options, [{ bindUniformBlocks: true }]);
-        assert.deepEqual(draw_calls, [[0x0004, 0, 3]]);
+        expect(mesh.render({ program, meshRenderer: mesh_renderer })).toBe(false);
+        expect(use_options).toEqual([{ bindUniformBlocks: true }]);
+        expect(draw_calls).toEqual([[0x0004, 0, 3]]);
     });
 
     it('routes the active render pass and mesh renderer through Scene.renderStyle', function () {
@@ -272,7 +272,7 @@ describe('VBOMesh render backend', function () {
             styles: {
                 polygons: {
                     render(rendered_mesh, options) {
-                        assert.strictEqual(rendered_mesh, mesh);
+                        expect(rendered_mesh).toBe(mesh);
                         render_options = options;
                         return false;
                     }
@@ -301,8 +301,8 @@ describe('VBOMesh render backend', function () {
             render_pass
         );
 
-        assert.strictEqual(count, 2);
-        assert.deepEqual(render_options, {
+        expect(count).toBe(2);
+        expect(render_options).toEqual({
             renderPass: render_pass,
             meshRenderer: mesh_renderer,
             renderState: scene.mesh_render_state

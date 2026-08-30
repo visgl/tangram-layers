@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-import chai from 'chai';
-let assert = chai.assert;
+import {describe, expect, it} from 'vitest';
 import OBB from '../src/utils/obb.js';
 
 describe('OBB', () => {
@@ -14,9 +13,9 @@ describe('OBB', () => {
     	let obb3 = new OBB(2.5, 2.5, 0.0, 0.4, 0.4);
 
         it('test collision between oriented bounding boxes', () => {
-            assert.isTrue(OBB.intersect(obb1, obb2));
-            assert.isTrue(OBB.intersect(obb3, obb2));
-            assert.isFalse(OBB.intersect(obb1, obb3));
+            expect(OBB.intersect(obb1, obb2)).toBe(true);
+            expect(OBB.intersect(obb3, obb2)).toBe(true);
+            expect(OBB.intersect(obb1, obb3)).toBe(false);
         });
     });
 
@@ -26,10 +25,10 @@ describe('OBB', () => {
         let obb3 = new OBB(0.0, 1.0, Math.PI * 2.0, 1.0, 0.999);
 
         it('test collision between oriented bounding boxes', () => {
-            assert.isFalse(OBB.intersect(obb1, obb2));
-            assert.isFalse(OBB.intersect(obb2, obb1));
-            assert.isFalse(OBB.intersect(obb2, obb3));
-            assert.isTrue(OBB.intersect(obb1, obb3));
+            expect(OBB.intersect(obb1, obb2)).toBe(false);
+            expect(OBB.intersect(obb2, obb1)).toBe(false);
+            expect(OBB.intersect(obb2, obb3)).toBe(false);
+            expect(OBB.intersect(obb1, obb3)).toBe(true);
         });
     });
 
@@ -41,13 +40,13 @@ describe('OBB', () => {
         let obb5 = new OBB(1.0, -0.5, Math.PI / 8.0, 1.0, 1.0);
 
         it('test collision between oriented bounding boxes', () => {
-            assert.isFalse(OBB.intersect(obb1, obb2));
-            assert.isFalse(OBB.intersect(obb2, obb1));
-            assert.isFalse(OBB.intersect(obb2, obb3));
-            assert.isFalse(OBB.intersect(obb1, obb4));
-            assert.isFalse(OBB.intersect(obb2, obb4));
-            assert.isTrue(OBB.intersect(obb1, obb3));
-            assert.isTrue(OBB.intersect(obb5, obb4));
+            expect(OBB.intersect(obb1, obb2)).toBe(false);
+            expect(OBB.intersect(obb2, obb1)).toBe(false);
+            expect(OBB.intersect(obb2, obb3)).toBe(false);
+            expect(OBB.intersect(obb1, obb4)).toBe(false);
+            expect(OBB.intersect(obb2, obb4)).toBe(false);
+            expect(OBB.intersect(obb1, obb3)).toBe(true);
+            expect(OBB.intersect(obb5, obb4)).toBe(true);
         });
     });
 

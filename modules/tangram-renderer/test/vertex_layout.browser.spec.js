@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-import chai from 'chai';
-let assert = chai.assert;
+import {beforeEach, describe, expect, it} from 'vitest';
 import VertexLayout from '../src/gl/vertex_layout';
 import VertexData from '../src/gl/vertex_data';
 import gl from '../src/gl/constants';
@@ -24,10 +23,10 @@ describe('VertexLayout', () => {
         });
 
         it('returns a new instance', () => {
-            assert.instanceOf(subject, VertexLayout);
+            expect(subject).toBeInstanceOf(VertexLayout);
         });
         it('calculates the right vertex stride', () => {
-            assert.equal(subject.stride, 20);
+            expect(subject.stride).toBe(20);
         });
     });
 
@@ -41,7 +40,7 @@ describe('VertexLayout', () => {
         });
 
         it('creates a vertex data buffer', () => {
-            assert.instanceOf(vertex_data, VertexData);
+            expect(vertex_data).toBeInstanceOf(VertexData);
         });
     });
 
@@ -49,7 +48,7 @@ describe('VertexLayout', () => {
         it('describes interleaved dynamic attributes with luma.gl vertex formats', () => {
             const subject = new VertexLayout(attribs);
 
-            assert.deepEqual(subject.getBufferLayout(), {
+            expect(subject.getBufferLayout()).toEqual({
                 name: 'vertices',
                 byteStride: 20,
                 attributes: [
@@ -66,14 +65,14 @@ describe('VertexLayout', () => {
                 { name: 'a_color', size: 4, type: gl.UNSIGNED_BYTE, normalized: true, static: [1, 0, 1, 1] }
             ]);
 
-            assert.deepEqual(subject.getBufferLayout('mesh'), {
+            expect(subject.getBufferLayout('mesh')).toEqual({
                 name: 'mesh',
                 byteStride: 4,
                 attributes: [
                     { attribute: 'a_position', format: 'sint16x2', byteOffset: 0 }
                 ]
             });
-            assert.deepEqual(subject.getStaticAttributes(), [{
+            expect(subject.getStaticAttributes()).toEqual([{
                 attribute: 'a_color',
                 value: [1, 0, 1, 1]
             }]);
