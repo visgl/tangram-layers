@@ -6,6 +6,8 @@ Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 # Tangram layers
 
+[![Coverage Status](https://coveralls.io/repos/github/visgl/tangram-layers/badge.svg?branch=master)](https://coveralls.io/github/visgl/tangram-layers?branch=master)
+
 This repository is a vis.gl-oriented monorepo for the Tangram renderer and its
 deck.gl integration. It is an experimental Linux Foundation/Mapzen Tangram
 custodian fork; it is not the official Tangram project website.
