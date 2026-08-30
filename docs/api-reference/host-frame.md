@@ -19,6 +19,7 @@ import {HostFrame} from '@vis.gl/tangram-renderer';
 new HostFrame({
   viewport,
   geographicAnchor,
+  projection,
   renderViews,
   activeRenderViewId,
   tileBuffer
@@ -35,6 +36,19 @@ The complete render target as `{width, height}`. Normalized frames also expose
 Shared state `{longitude, latitude, altitude, zoom}`. `altitude` defaults to
 zero. The current Web Mercator visibility implementation uses `zoom` for tile
 selection and style evaluation.
+
+### `projection`
+
+The deck-independent geographic projection contract. It defaults to
+`{type: 'web-mercator'}` for backward compatibility and also recognizes
+`{type: 'globe'}` so host adapters can describe spherical frames without
+importing deck.gl classes into the renderer package.
+
+The current renderer intentionally rejects a `globe` frame before mutating
+scene state. Accepting the frame shape is groundwork for the spherical vertex
+projection, tile traversal, tessellation, label, and picking work tracked in
+[GlobeView support](https://github.com/visgl/tangram.gl/issues/48); it does not
+claim that globe rendering is implemented yet.
 
 ### `renderViews`
 
@@ -77,6 +91,7 @@ normalizes the legacy shape:
 HostFrame.from({
   viewport: {width, height},
   view: {longitude, latitude, zoom},
+  projection: {type: 'web-mercator'},
   camera,
   tileBuffer
 });

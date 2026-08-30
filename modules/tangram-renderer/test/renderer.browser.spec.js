@@ -55,6 +55,34 @@ describe('Renderer', function () {
         assert.isTrue(renderer.scene.processTasks.calledOnce);
     });
 
+    it('rejects globe frames before mutating renderer state', function () {
+        const renderer = Renderer.create({});
+        const scene = renderer.scene;
+        sinon.spy(scene, 'resizeMap');
+        sinon.spy(scene.view, 'setView');
+        const frame = new HostFrame({
+            viewport: { width: 800, height: 600 },
+            geographicAnchor: { longitude: -74, latitude: 40.7, zoom: 3 },
+            projection: { type: 'globe' },
+            renderViews: [{
+                id: 'main',
+                camera: {
+                    view: IDENTITY_MATRIX,
+                    projection: IDENTITY_MATRIX,
+                    position: [0, 0, 1]
+                }
+            }]
+        });
+
+        assert.throws(
+            () => renderer.setFrame(frame),
+            /does not yet support host projection 'globe'/
+        );
+        assert.isNull(renderer.host_frame);
+        assert.isFalse(scene.resizeMap.called);
+        assert.isFalse(scene.view.setView.called);
+    });
+
     it('selects multiple render views over shared geographic state', function () {
         const renderer = Renderer.create({});
         const scene = renderer.scene;

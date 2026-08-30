@@ -22,6 +22,11 @@ export type GeographicAnchor = {
   zoom: number;
 };
 
+/** Geographic projection used by host-provided positions and camera matrices. */
+export type HostProjection = {
+  type: 'web-mercator' | 'globe';
+};
+
 export type HostCamera = {
   view: Matrix4;
   projection: Matrix4;
@@ -37,6 +42,7 @@ export type HostRenderView = {
 export type HostFrameOptions = {
   viewport: Viewport;
   geographicAnchor: GeographicAnchor;
+  projection?: HostProjection;
   renderViews: readonly HostRenderView[];
   activeRenderViewId?: string;
   tileBuffer?: number;
@@ -45,6 +51,7 @@ export type HostFrameOptions = {
 export type LegacyHostFrame = {
   viewport: Viewport;
   view: GeographicAnchor;
+  projection?: HostProjection;
   camera: HostCamera;
   tileBuffer?: number;
 };
