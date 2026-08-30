@@ -22,7 +22,11 @@ function appendScript(url, type = 'text/javascript') {
 
 let deckExampleMountId = 0;
 
-export default function DeckExample() {
+export default function DeckExample({
+  viewMode = 'mapPerspective',
+  title = 'MapView perspective',
+  description = 'deck.gl owns the camera and supplies its matrices to the Tangram renderer.'
+}) {
   const deckExampleBaseUrl = useBaseUrl('/examples/deck/');
   const tangramLayersUrl = useBaseUrl('/modules/tangram-layers/dist/index.js');
   const tangramRendererUrl = useBaseUrl('/modules/tangram-renderer/dist/index.js');
@@ -34,6 +38,7 @@ export default function DeckExample() {
     let cancelled = false;
     document.body.classList.add('tangram-deck-embedded');
     window.tangramExampleBaseUrl = new URL(deckExampleBaseUrl, window.location.origin).href;
+    window.tangramExampleViewMode = viewMode;
     stylesheetElement.current = appendStylesheet(`${deckExampleBaseUrl}main.css`);
 
     const importMapElement = document.createElement('script');
@@ -73,77 +78,98 @@ export default function DeckExample() {
       scriptElements.current = [];
       document.body.classList.remove('tangram-deck-embedded');
       delete window.tangramExampleBaseUrl;
+      delete window.tangramExampleViewMode;
       delete window.tangramDeckExampleDestroy;
     };
-  }, [deckExampleBaseUrl, tangramLayersUrl, tangramRendererUrl]);
+  }, [deckExampleBaseUrl, tangramLayersUrl, tangramRendererUrl, viewMode]);
 
   return (
     <div className="deck-example-embed">
       <div id="deck-container">
         <aside id="controls">
-          <h1>TangramLayer bridge</h1>
-          <p id="status" role="status" />
-          <label className="control">
-            <span>Device</span>
-            <select id="device-type" defaultValue="webgpu">
-              <option value="webgpu">WebGPU</option>
-              <option value="webgl">WebGL</option>
-            </select>
-          </label>
-          <label className="control">
-            <span>Basemap</span>
-            <select id="basemap-style" defaultValue="tron">
-              <option value="streetsVector">Streets (vector)</option>
-              <option value="positronRaster">Positron (raster)</option>
-              <option value="tron">TRON 2.0 (vector, no key)</option>
-              <option value="tronNextzen">Original TRON 2.0 on Nextzen</option>
-            </select>
-          </label>
-          <label className="control">
-            <span>deck.gl view</span>
-            <select id="view-type" defaultValue="mapPerspective">
-              <option value="mapFlat">MapView — flat</option>
-              <option value="mapPerspective">MapView — perspective</option>
-              <option value="globe">GlobeView — renderer adapter needed</option>
-              <option value="firstPerson">FirstPersonView — renderer adapter needed</option>
-            </select>
-          </label>
-          <label className="control checkbox-control">
-            <input id="basemap-visible" type="checkbox" defaultChecked />
-            Show TangramBasemapLayer
-          </label>
-          <p className="hint">
-            Use the device tabs above or the device selector to compare WebGL and WebGPU.
-          </p>
-          <form id="nextzen-key-form" hidden>
-            <label className="control" htmlFor="nextzen-api-key">
-              <span>Existing Nextzen API key</span>
-            </label>
-            <div className="key-input-row">
-              <input
-                id="nextzen-api-key"
-                name="nextzen-api-key"
-                type="password"
-                autoComplete="off"
-                spellCheck="false"
-              />
-              <button type="submit">Load</button>
-            </div>
-            <p className="hint">Kept only in this browser tab; never written to source.</p>
-          </form>
-          <p className="source-link">
-            <a
-              href="https://github.com/visgl/tangram-layers/blob/master/examples/deck/app.js"
-              target="_blank"
-              rel="noopener noreferrer"
+          <h1>{title}</h1>
+          <div className="info-tabs" role="tablist" aria-label="Example information">
+            <button
+              type="button"
+              className="is-active"
+              data-example-tab="controls"
+              role="tab"
+              aria-selected="true"
             >
-              View TangramLayer demo source
-            </a>
-          </p>
-          <p id="tron-source-link" className="source-link" hidden>
-            Style source: <a href="https://github.com/tangrams/tron-style">tangrams/tron-style</a>
-          </p>
+              Controls
+            </button>
+            <button type="button" data-example-tab="about" role="tab" aria-selected="false">
+              About
+            </button>
+          </div>
+          <div data-example-tab-panel="controls">
+            <p id="status" role="status" />
+            <label className="control">
+              <span>Basemap</span>
+              <select id="basemap-style" defaultValue="tron">
+                <option value="streetsVector">Streets (vector)</option>
+                <option value="positronRaster">Positron (raster)</option>
+                <option value="tron">TRON 2.0 (vector, no key)</option>
+                <option value="tronNextzen">Original TRON 2.0 on Nextzen</option>
+              </select>
+            </label>
+            <label className="control checkbox-control">
+              <input id="basemap-visible" type="checkbox" defaultChecked />
+              Show TangramBasemapLayer
+            </label>
+            <form id="nextzen-key-form" hidden>
+              <label className="control" htmlFor="nextzen-api-key">
+                <span>Existing Nextzen API key</span>
+              </label>
+              <div className="key-input-row">
+                <input
+                  id="nextzen-api-key"
+                  name="nextzen-api-key"
+                  type="password"
+                  autoComplete="off"
+                  spellCheck="false"
+                />
+                <button type="submit">Load</button>
+              </div>
+              <p className="hint">Kept only in this browser tab; never written to source.</p>
+            </form>
+          </div>
+          <div data-example-tab-panel="about" hidden>
+            <p className="example-description">{description}</p>
+            <p className="hint">Blue landmarks and the orange path are deck.gl layers.</p>
+            <p className="source-link">
+              <a
+                href="https://github.com/visgl/tangram-layers/blob/master/examples/deck/app.js"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                View TangramLayer demo source
+              </a>
+            </p>
+            <p id="tron-source-link" className="source-link" hidden>
+              Style source: <a href="https://github.com/tangrams/tron-style">tangrams/tron-style</a>
+            </p>
+          </div>
         </aside>
+        <div className="canvas-toolbar">
+          <div className="canvas-device-tabs" role="tablist" aria-label="Rendering device">
+            <button type="button" data-device-type="webgpu" role="tab">
+              WebGPU
+            </button>
+            <button type="button" data-device-type="webgl" role="tab">
+              WebGL
+            </button>
+          </div>
+          <button
+            id="example-fullscreen"
+            className="canvas-fullscreen"
+            type="button"
+            aria-label="Open fullscreen example"
+            title="Fullscreen"
+          >
+            ⛶
+          </button>
+        </div>
         <p id="attribution">
           &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>
           <span id="carto-attribution"> &copy; Basemap data providers</span>

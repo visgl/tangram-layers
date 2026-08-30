@@ -100,13 +100,13 @@ const VIEW_MODES = {
   },
   firstPerson: {
     label: 'FirstPersonView — renderer adapter needed',
-    view: new FirstPersonView({id: 'main', controller: true}),
+    view: new FirstPersonView({id: 'main', controller: true, far: 20000}),
     initialViewState: {
       longitude: mapViewState.longitude,
       latitude: mapViewState.latitude,
-      position: [0, 0, 800],
-      bearing: -20,
-      pitch: 35
+      position: [0, 0, 600],
+      bearing: 0,
+      pitch: 60
     },
     supportsTangram: false,
     limitation:
@@ -114,7 +114,7 @@ const VIEW_MODES = {
   }
 };
 
-const requestedViewModeId = searchParams.get('view');
+const requestedViewModeId = searchParams.get('view') || window.tangramExampleViewMode;
 const viewModeId = VIEW_MODES[requestedViewModeId] ? requestedViewModeId : 'mapPerspective';
 const viewMode = VIEW_MODES[viewModeId];
 
@@ -129,6 +129,16 @@ const bridgePath = [
   [-73.996864, 40.706086]
 ];
 
+const globeLandmarks = [
+  {name: 'New York', coordinates: [-74.009764, 40.705319]},
+  {name: 'London', coordinates: [-0.1276, 51.5072]},
+  {name: 'Tokyo', coordinates: [139.6917, 35.6895]},
+  {name: 'San Francisco', coordinates: [-122.4194, 37.7749]}
+];
+
+const globePath = globeLandmarks.map((landmark) => landmark.coordinates);
+globePath.push(globePath[0]);
+
 const overlayParameters = {
   depthCompare: 'always',
   depthWriteEnabled: false
@@ -137,16 +147,26 @@ const overlayParameters = {
 const statusElement = document.getElementById('status');
 const visibilityInput = document.getElementById('basemap-visible');
 const basemapSelect = document.getElementById('basemap-style');
-const deviceSelect = document.getElementById('device-type');
 const viewSelect = document.getElementById('view-type');
+const deviceTabButtons = document.querySelectorAll('[data-device-type]');
+const infoTabButtons = document.querySelectorAll('[data-example-tab]');
+const infoTabPanels = document.querySelectorAll('[data-example-tab-panel]');
+const fullscreenButton = document.getElementById('example-fullscreen');
+const fullscreenTarget = document.getElementById('deck-container');
 const cartoAttribution = document.getElementById('carto-attribution');
 const nextzenAttribution = document.getElementById('nextzen-attribution');
 const tronSourceLink = document.getElementById('tron-source-link');
 const nextzenKeyForm = document.getElementById('nextzen-key-form');
 const nextzenKeyInput = document.getElementById('nextzen-api-key');
 nextzenKeyInput.value = apiKey || '';
-deviceSelect.value = deviceType;
-viewSelect.value = viewModeId;
+if (viewSelect) {
+  viewSelect.value = viewModeId;
+}
+for (const button of deviceTabButtons) {
+  const isActive = button.dataset.deviceType === deviceType;
+  button.classList.toggle('is-active', isActive);
+  button.setAttribute('aria-selected', String(isActive));
+}
 const defaultBasemapId = 'tron';
 const requestedBasemapId = searchParams.get('basemap');
 const initialBasemapId =
@@ -175,6 +195,9 @@ function setStatus(message, type = '') {
 function createLayers() {
   const basemap = BASEMAPS[basemapId];
   const layers = [];
+  const usesGlobeOverlay = viewModeId === 'globe';
+  const overlayLandmarks = usesGlobeOverlay ? globeLandmarks : landmarks;
+  const overlayPath = usesGlobeOverlay ? globePath : bridgePath;
   if (viewMode.supportsTangram && (!basemap.requiresApiKey || (apiKey && nextzenKeyValidated))) {
     layers.push(
       new TangramLayer({
@@ -196,7 +219,7 @@ function createLayers() {
   layers.push(
     new PathLayer({
       id: 'alignment-path',
-      data: [{path: bridgePath}],
+      data: [{path: overlayPath}],
       getPath: (object) => object.path,
       getColor: () => [255, 96, 32, 220],
       getWidth: () => 6,
@@ -205,9 +228,10 @@ function createLayers() {
     }),
     new ScatterplotLayer({
       id: 'alignment-landmarks',
-      data: landmarks,
+      data: overlayLandmarks,
       getPosition: (object) => object.coordinates,
-      getRadius: () => 35,
+      getRadius: () => (usesGlobeOverlay ? 7 : 35),
+      radiusUnits: usesGlobeOverlay ? 'pixels' : 'meters',
       getFillColor: () => [30, 144, 255, 220],
       getLineColor: () => [255, 255, 255, 255],
       lineWidthMinPixels: 2,
@@ -274,20 +298,59 @@ if (basemapId === 'tronNextzen' && apiKey) {
   validateNextzenKey();
 }
 
-deviceSelect.addEventListener('change', (event) => {
-  const url = new URL(window.location.href);
-  url.searchParams.set('device', event.target.value);
-  if (!BASEMAPS[basemapId].deviceTypes.includes(event.target.value)) {
-    url.searchParams.delete('basemap');
-  }
-  window.location.assign(url);
-});
+for (const button of deviceTabButtons) {
+  button.addEventListener('click', () => {
+    const nextDeviceType = button.dataset.deviceType;
+    const url = new URL(window.location.href);
+    url.searchParams.set('device', nextDeviceType);
+    if (!BASEMAPS[basemapId].deviceTypes.includes(nextDeviceType)) {
+      url.searchParams.delete('basemap');
+    }
+    window.location.assign(url);
+  });
+}
 
-viewSelect.addEventListener('change', (event) => {
+viewSelect?.addEventListener('change', (event) => {
   const url = new URL(window.location.href);
   url.searchParams.set('view', event.target.value);
   window.location.assign(url);
 });
+
+for (const button of infoTabButtons) {
+  button.addEventListener('click', () => {
+    for (const candidate of infoTabButtons) {
+      const isActive = candidate === button;
+      candidate.classList.toggle('is-active', isActive);
+      candidate.setAttribute('aria-selected', String(isActive));
+    }
+    for (const panel of infoTabPanels) {
+      panel.hidden = panel.dataset.exampleTabPanel !== button.dataset.exampleTab;
+    }
+  });
+}
+
+function updateFullscreenButton() {
+  if (!fullscreenButton) {
+    return;
+  }
+  const isFullscreen = document.fullscreenElement === fullscreenTarget;
+  fullscreenButton.classList.toggle('is-active', isFullscreen);
+  fullscreenButton.setAttribute(
+    'aria-label',
+    isFullscreen ? 'Exit fullscreen example' : 'Open fullscreen example'
+  );
+  fullscreenButton.title = isFullscreen ? 'Exit fullscreen' : 'Fullscreen';
+}
+
+fullscreenButton?.addEventListener('click', async () => {
+  if (document.fullscreenElement === fullscreenTarget) {
+    await document.exitFullscreen();
+  } else {
+    await fullscreenTarget.requestFullscreen();
+  }
+});
+document.addEventListener('fullscreenchange', updateFullscreenButton);
+updateFullscreenButton();
 
 visibilityInput.addEventListener('change', (event) => {
   basemapVisible = event.target.checked;
@@ -829,6 +892,7 @@ function createTronCartoScene({
 }
 
 window.tangramDeckExampleDestroy = function destroyTangramDeckExample() {
+  document.removeEventListener('fullscreenchange', updateFullscreenButton);
   if (deckInstance) {
     deckInstance.finalize();
     deckInstance = null;
