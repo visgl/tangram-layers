@@ -17,16 +17,15 @@ It supports tiled MVT, GeoJSON, and TopoJSON sources as well as non-tiled data.
 Scene files describe sources, layers, draw rules, cameras, lights, materials,
 textures, and custom shaders.
 
-The classic API uses Leaflet for interaction and camera state. It remains
-available for compatibility and for the classic playground. New deck.gl
-applications should normally use `TangramLayer` or `ClassicWebGLRenderer` with
-a `HostFrame`.
+The classic playground uses an example-local Leaflet adapter for interaction
+and camera state. Leaflet is intentionally not exported by the renderer
+package. New deck.gl applications should normally use `TangramLayer` or
+`ClassicWebGLRenderer` with a `HostFrame`.
 
 ## Package export
 
 ```js
 import Tangram, {
-  leafletLayer,
   Scene,
   ClassicWebGLRenderer,
   HostFrame,
@@ -37,13 +36,14 @@ import Tangram, {
 The default `Tangram` object contains the same named members plus the historical
 `Renderer` alias, `debug`, and `version`.
 
-## Leaflet integration
+## Leaflet example integration
 
-Leaflet may be provided explicitly or through `window.L`:
+The classic example packages the historical adapter locally rather than making
+it part of `@vis.gl/tangram-renderer`:
 
 ```js
 import L from 'leaflet';
-import {leafletLayer} from '@vis.gl/tangram-renderer';
+import {leafletLayer} from './leaflet-layer.js';
 
 const map = L.map('map');
 const layer = leafletLayer({
@@ -54,7 +54,8 @@ const layer = leafletLayer({
 layer.addTo(map);
 ```
 
-The returned layer exposes its `Scene` as `layer.scene`. Leaflet owns pan,
+This adapter is example code, not a supported renderer-package API. The
+returned layer exposes its `Scene` as `layer.scene`. Leaflet owns pan,
 zoom, pointer events, and the classic camera lifecycle. The layer translates
 those changes into Tangram view state and manages the standalone render loop.
 

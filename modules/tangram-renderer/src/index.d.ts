@@ -67,14 +67,11 @@ export declare class LumaDeviceRenderer {
   destroy(): void;
 }
 
-export declare function leafletLayer(options: Record<string, unknown>): unknown;
-
 export declare const Renderer: typeof ClassicWebGLRenderer;
 export declare const debug: Record<string, unknown>;
 export declare const version: string;
 
 declare const Tangram: {
-  leafletLayer: typeof leafletLayer;
   Scene: typeof Scene;
   ClassicWebGLRenderer: typeof ClassicWebGLRenderer;
   Renderer: typeof ClassicWebGLRenderer;

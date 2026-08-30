@@ -4,8 +4,6 @@
 
 /*jshint worker: true*/
 
-// The leaflet layer plugin is currently the primary public API
-import {leafletLayer} from './leaflet_layer';
 import Scene from './scene/scene';
 import ClassicWebGLRenderer from './scene/renderer';
 import HostFrame from './scene/host_frame';
@@ -68,7 +66,6 @@ const debug = {
 };
 
 const Tangram = {
-    leafletLayer,
     Scene,
     ClassicWebGLRenderer,
     Renderer: ClassicWebGLRenderer,

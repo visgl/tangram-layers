@@ -7,7 +7,8 @@ Copyright (c) vis.gl contributors
 # `@vis.gl/tangram-renderer`
 
 The renderer package owns Tangram scenes, tiles, styles, labels, resource
-management, and luma.gl draw submission. It has no deck.gl dependency.
+management, and luma.gl draw submission. It has no deck.gl or Leaflet
+dependency.
 
 ## Public entrypoint
 
@@ -31,7 +32,11 @@ host-integration boundary:
   views supplied by the embedding application.
 - `LumaDeviceRenderer` provides the luma.gl resource backend used by WebGL and
   WebGPU paths.
-- `leafletLayer`, `debug`, and `version` remain available for legacy consumers.
+- `debug` and `version` remain available for legacy consumers.
+
+The repository's classic example carries its own Leaflet adapter. Keeping that
+adapter outside this package prevents host interaction and camera code from
+entering applications that use the renderer through deck.gl.
 
 The renderer accepts an externally owned luma.gl device through its renderer
 options. Applications should use the device and render pass supplied by their

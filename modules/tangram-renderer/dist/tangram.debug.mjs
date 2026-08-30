@@ -28,7 +28,50 @@
                     }
             }
 
-define(['exports'], (function (exports) { 'use strict';
+define(['exports'], (function (exports$1) { 'use strict';
+
+function _typeof(o) {
+  "@babel/helpers - typeof";
+
+  return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) {
+    return typeof o;
+  } : function (o) {
+    return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o;
+  }, _typeof(o);
+}
+
+function toPrimitive(t, r) {
+  if ("object" != _typeof(t) || !t) return t;
+  var e = t[Symbol.toPrimitive];
+  if (void 0 !== e) {
+    var i = e.call(t, r);
+    if ("object" != _typeof(i)) return i;
+    throw new TypeError("@@toPrimitive must return a primitive value.");
+  }
+  return ("string" === r ? String : Number)(t);
+}
+
+function toPropertyKey(t) {
+  var i = toPrimitive(t, "string");
+  return "symbol" == _typeof(i) ? i : i + "";
+}
+
+function _defineProperty(e, r, t) {
+  return (r = toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
+    value: t,
+    enumerable: true,
+    configurable: true,
+    writable: true
+  }) : e[r] = t, e;
+}
+
+var version$1 = "1.0.0-alpha.0";
+
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
+var version = 'v' + version$1;
 
 // Tangram
 // SPDX-License-Identifier: MIT
@@ -55,49 +98,6 @@ try {
   };
   self.document = self.window.document;
 }
-
-function _typeof(o) {
-  "@babel/helpers - typeof";
-
-  return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) {
-    return typeof o;
-  } : function (o) {
-    return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o;
-  }, _typeof(o);
-}
-
-function toPrimitive(t, r) {
-  if ("object" != _typeof(t) || !t) return t;
-  var e = t[Symbol.toPrimitive];
-  if (void 0 !== e) {
-    var i = e.call(t, r || "default");
-    if ("object" != _typeof(i)) return i;
-    throw new TypeError("@@toPrimitive must return a primitive value.");
-  }
-  return ("string" === r ? String : Number)(t);
-}
-
-function toPropertyKey(t) {
-  var i = toPrimitive(t, "string");
-  return "symbol" == _typeof(i) ? i : i + "";
-}
-
-function _defineProperty(e, r, t) {
-  return (r = toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
-    value: t,
-    enumerable: !0,
-    configurable: !0,
-    writable: !0
-  }) : e[r] = t, e;
-}
-
-var version$1 = "1.0.0-alpha.0";
-
-// Tangram
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2013-2016 Brett Camper and Mapzen
-
-var version = 'v' + version$1;
 
 // Tangram
 // SPDX-License-Identifier: MIT
@@ -7288,7 +7288,7 @@ uniform bool u_raster_mask_alpha;
 `;
 
 function ownKeys$4(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
-function _objectSpread$4(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$4(Object(t), !0).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$4(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
+function _objectSpread$4(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$4(Object(t), true).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$4(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
 
 // Base class
 
@@ -12513,7 +12513,7 @@ function requireFontfaceobserver_standalone() {
   (function (module) {
     (function () {
       function m(a, b) {
-        document.addEventListener ? a.addEventListener("scroll", b, !1) : a.attachEvent("scroll", b);
+        document.addEventListener ? a.addEventListener("scroll", b, false) : a.attachEvent("scroll", b);
       }
       function n(a) {
         document.body ? a() : document.addEventListener ? document.addEventListener("DOMContentLoaded", function c() {
@@ -12550,7 +12550,7 @@ function requireFontfaceobserver_standalone() {
         a.f.style.width = c + "px";
         a.c.scrollLeft = c;
         a.b.scrollLeft = a.b.scrollWidth + 100;
-        return a.g !== b ? (a.g = b, !0) : !1;
+        return a.g !== b ? (a.g = b, true) : false;
       }
       function z(a, b) {
         function c() {
@@ -12625,7 +12625,7 @@ function requireFontfaceobserver_standalone() {
             function H() {
               if (new Date().getTime() - G >= D) d.parentNode && d.parentNode.removeChild(d), b(c);else {
                 var a = document.hidden;
-                if (!0 === a || void 0 === a) g = f.a.offsetWidth, h = p.a.offsetWidth, k = q.a.offsetWidth, e();
+                if (true === a || void 0 === a) g = f.a.offsetWidth, h = p.a.offsetWidth, k = q.a.offsetWidth, e();
                 r = setTimeout(H, 50);
               }
             }
@@ -13115,7 +13115,7 @@ class Line {
 }
 
 function ownKeys$3(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
-function _objectSpread$3(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$3(Object(t), !0).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$3(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
+function _objectSpread$3(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$3(Object(t), true).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$3(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
 class TextCanvas {
   constructor() {
     this.createCanvas(); // create initial canvas and context
@@ -13792,7 +13792,7 @@ TextCanvas.cache = {
 };
 
 function ownKeys$2(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
-function _objectSpread$2(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$2(Object(t), !0).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$2(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
+function _objectSpread$2(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$2(Object(t), true).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$2(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
 
 // namespaces label textures (ensures new texture name when a tile is built multiple times)
 let text_texture_id = 0;
@@ -18153,7 +18153,7 @@ var selection_vertex_source = `// Tangram
 `;
 
 function ownKeys$1(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
-function _objectSpread$1(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$1(Object(t), !0).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$1(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
+function _objectSpread$1(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$1(Object(t), true).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$1(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
 class StyleManager {
   constructor() {
     this.styles = {};
@@ -19193,7 +19193,7 @@ function matchFeature(context, layers, collected_layers, collected_layers_ids) {
 }
 
 function ownKeys(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
-function _objectSpread(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys(Object(t), !0).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
+function _objectSpread(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys(Object(t), true).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
 let id = 0; // unique tile id
 let build_id = 0; // id tracking order in which tiles were build
 
@@ -20345,7 +20345,7 @@ function requirePbf() {
         high = high + 1 | 0;
       }
     }
-    if (val >= 0x10000000000000000 || val < -0x10000000000000000) {
+    if (val >= 0x10000000000000000 || val < -18446744073709552e3) {
       throw new Error('Given varint doesn\'t fit into 10 bytes');
     }
     pbf.realloc(10);
@@ -22347,15 +22347,15 @@ function transform (topology) {
   };
 }
 
-function feature$1 (topology, o) {
+function feature_default (topology, o) {
   return o.type === "GeometryCollection" ? {
     type: "FeatureCollection",
     features: o.geometries.map(function (o) {
-      return feature$2(topology, o);
+      return feature$1(topology, o);
     })
-  } : feature$2(topology, o);
+  } : feature$1(topology, o);
 }
-function feature$2(topology, o) {
+function feature$1(topology, o) {
   var id = o.id,
     bbox = o.bbox,
     properties = o.properties == null ? {} : o.properties,
@@ -22478,7 +22478,7 @@ class TopoJSONSource extends GeoJSONSource {
   }
 }
 function getTopoJSONFeature(topology, object) {
-  let feature = feature$1(topology, object);
+  let feature = feature_default(topology, object);
 
   // Convert single feature to a feature collection
   if (feature.type === 'Feature') {
@@ -22510,62 +22510,61 @@ DataSource.register('TopoJSON', source => {
   return TopoJSONTileSource.urlHasTilePattern(source.url) ? TopoJSONTileSource : TopoJSONSource;
 });
 
-exports.Collision = Collision;
-exports.Context = Context;
-exports.DataSource = DataSource;
-exports.FeatureSelection = FeatureSelection;
-exports.FilterOptions = FilterOptions;
-exports.FontManager = FontManager;
-exports.GLSL = GLSL;
-exports.Geo = Geo;
-exports.Label = Label;
-exports.LabelLineStraight = LabelLineStraight;
-exports.LabelPoint = LabelPoint;
-exports.Light = Light;
-exports.Material = Material;
-exports.OBB = OBB;
-exports.ShaderProgram = ShaderProgram;
-exports.Style = Style;
-exports.StyleManager = StyleManager;
-exports.StyleParser = StyleParser;
-exports.Task = Task;
-exports.TextCanvas = TextCanvas;
-exports.Texture = Texture;
-exports.Thread = Thread;
-exports.Tile = Tile;
-exports.TileID = TileID;
-exports.Utils = Utils;
-exports.Vector = Vector;
-exports.VertexArrayObject = VertexArrayObject;
-exports.VertexData = VertexData;
-exports.VertexElements = VertexElements;
-exports.View = View;
-exports.WorkerBroker = WorkerBroker;
-exports._defineProperty = _defineProperty;
-exports.addBaseURL = addBaseURL;
-exports.buildFilter = buildFilter;
-exports.cache = cache;
-exports.clearFunctionStringCache = clearFunctionStringCache;
-exports.compileFunctionStrings = compileFunctionStrings;
-exports.createObjectURL = createObjectURL;
-exports.debugSettings = debugSettings;
-exports.debugSumLayerStats = debugSumLayerStats;
-exports.extensionForURL = extensionForURL;
-exports.flattenRelativeURL = flattenRelativeURL;
-exports.getAugmentedNamespace = getAugmentedNamespace;
-exports.getDefaultExportFromCjs = getDefaultExportFromCjs;
-exports.isLocalURL = isLocalURL;
-exports.isRelativeURL = isRelativeURL;
-exports.isReserved = isReserved;
-exports.layerCache = layerCache;
-exports.log = log;
-exports.mergeDebugSettings = mergeDebugSettings;
-exports.mergeObjects = mergeObjects;
-exports.parseLayers = parseLayers;
-exports.pathForURL = pathForURL;
-exports.sliceObject = sliceObject;
-exports.subscribeMixin = subscribeMixin;
-exports.version = version;
+exports$1.Collision = Collision;
+exports$1.Context = Context;
+exports$1.DataSource = DataSource;
+exports$1.FeatureSelection = FeatureSelection;
+exports$1.FilterOptions = FilterOptions;
+exports$1.FontManager = FontManager;
+exports$1.GLSL = GLSL;
+exports$1.Geo = Geo;
+exports$1.Label = Label;
+exports$1.LabelLineStraight = LabelLineStraight;
+exports$1.LabelPoint = LabelPoint;
+exports$1.Light = Light;
+exports$1.Material = Material;
+exports$1.OBB = OBB;
+exports$1.ShaderProgram = ShaderProgram;
+exports$1.Style = Style;
+exports$1.StyleManager = StyleManager;
+exports$1.StyleParser = StyleParser;
+exports$1.Task = Task;
+exports$1.TextCanvas = TextCanvas;
+exports$1.Texture = Texture;
+exports$1.Tile = Tile;
+exports$1.TileID = TileID;
+exports$1.Utils = Utils;
+exports$1.Vector = Vector;
+exports$1.VertexArrayObject = VertexArrayObject;
+exports$1.VertexData = VertexData;
+exports$1.VertexElements = VertexElements;
+exports$1.View = View;
+exports$1.WorkerBroker = WorkerBroker;
+exports$1._defineProperty = _defineProperty;
+exports$1.addBaseURL = addBaseURL;
+exports$1.buildFilter = buildFilter;
+exports$1.cache = cache;
+exports$1.clearFunctionStringCache = clearFunctionStringCache;
+exports$1.compileFunctionStrings = compileFunctionStrings;
+exports$1.createObjectURL = createObjectURL;
+exports$1.debugSettings = debugSettings;
+exports$1.debugSumLayerStats = debugSumLayerStats;
+exports$1.extensionForURL = extensionForURL;
+exports$1.flattenRelativeURL = flattenRelativeURL;
+exports$1.getAugmentedNamespace = getAugmentedNamespace;
+exports$1.getDefaultExportFromCjs = getDefaultExportFromCjs;
+exports$1.isLocalURL = isLocalURL;
+exports$1.isRelativeURL = isRelativeURL;
+exports$1.isReserved = isReserved;
+exports$1.layerCache = layerCache;
+exports$1.log = log;
+exports$1.mergeDebugSettings = mergeDebugSettings;
+exports$1.mergeObjects = mergeObjects;
+exports$1.parseLayers = parseLayers;
+exports$1.pathForURL = pathForURL;
+exports$1.sliceObject = sliceObject;
+exports$1.subscribeMixin = subscribeMixin;
+exports$1.version = version;
 
 }));
 
@@ -24100,8 +24099,8 @@ function bidirectionalIndexOf(buffer, val, byteOffset, encoding, dir) {
     byteOffset = 0;
   } else if (byteOffset > 0x7fffffff) {
     byteOffset = 0x7fffffff;
-  } else if (byteOffset < -0x80000000) {
-    byteOffset = -0x80000000;
+  } else if (byteOffset < -2147483648) {
+    byteOffset = -2147483648;
   }
   byteOffset = +byteOffset; // Coerce to Number.
   if (isNaN(byteOffset)) {
@@ -24729,7 +24728,7 @@ Buffer$1.prototype.writeIntBE = function writeIntBE(value, offset, byteLength, n
 Buffer$1.prototype.writeInt8 = function writeInt8(value, offset, noAssert) {
   value = +value;
   offset = offset | 0;
-  if (!noAssert) checkInt(this, value, offset, 1, 0x7f, -0x80);
+  if (!noAssert) checkInt(this, value, offset, 1, 0x7f, -128);
   if (!Buffer$1.TYPED_ARRAY_SUPPORT) value = Math.floor(value);
   if (value < 0) value = 0xff + value + 1;
   this[offset] = value & 0xff;
@@ -24738,7 +24737,7 @@ Buffer$1.prototype.writeInt8 = function writeInt8(value, offset, noAssert) {
 Buffer$1.prototype.writeInt16LE = function writeInt16LE(value, offset, noAssert) {
   value = +value;
   offset = offset | 0;
-  if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -0x8000);
+  if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -32768);
   if (Buffer$1.TYPED_ARRAY_SUPPORT) {
     this[offset] = value & 0xff;
     this[offset + 1] = value >>> 8;
@@ -24750,7 +24749,7 @@ Buffer$1.prototype.writeInt16LE = function writeInt16LE(value, offset, noAssert)
 Buffer$1.prototype.writeInt16BE = function writeInt16BE(value, offset, noAssert) {
   value = +value;
   offset = offset | 0;
-  if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -0x8000);
+  if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -32768);
   if (Buffer$1.TYPED_ARRAY_SUPPORT) {
     this[offset] = value >>> 8;
     this[offset + 1] = value & 0xff;
@@ -24762,7 +24761,7 @@ Buffer$1.prototype.writeInt16BE = function writeInt16BE(value, offset, noAssert)
 Buffer$1.prototype.writeInt32LE = function writeInt32LE(value, offset, noAssert) {
   value = +value;
   offset = offset | 0;
-  if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000);
+  if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -2147483648);
   if (Buffer$1.TYPED_ARRAY_SUPPORT) {
     this[offset] = value & 0xff;
     this[offset + 1] = value >>> 8;
@@ -24776,7 +24775,7 @@ Buffer$1.prototype.writeInt32LE = function writeInt32LE(value, offset, noAssert)
 Buffer$1.prototype.writeInt32BE = function writeInt32BE(value, offset, noAssert) {
   value = +value;
   offset = offset | 0;
-  if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000);
+  if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -2147483648);
   if (value < 0) value = 0xffffffff + value + 1;
   if (Buffer$1.TYPED_ARRAY_SUPPORT) {
     this[offset] = value >>> 24;
@@ -25280,7 +25279,7 @@ var hasRequiredJszip_min;
 function requireJszip_min() {
   if (hasRequiredJszip_min) return jszip_min.exports;
   hasRequiredJszip_min = 1;
-  (function (module, exports) {
+  (function (module, exports$1) {
     !function (e) {
       module.exports = e();
     }(function () {
@@ -25289,8 +25288,8 @@ function requireJszip_min() {
           if (!o[r]) {
             if (!a[r]) {
               var t = "function" == typeof commonjsRequire && commonjsRequire;
-              if (!e && t) return t(r, !0);
-              if (l) return l(r, !0);
+              if (!e && t) return t(r, true);
+              if (l) return l(r, true);
               var n = new Error("Cannot find module '" + r + "'");
               throw n.code = "MODULE_NOT_FOUND", n;
             }
@@ -25412,7 +25411,7 @@ function requireJszip_min() {
         }],
         5: [function (e, t, r) {
 
-          r.base64 = !1, r.binary = !1, r.dir = !1, r.createFolders = !0, r.date = null, r.compression = null, r.compressionOptions = null, r.comment = null, r.unixPermissions = null, r.dosPermissions = null;
+          r.base64 = false, r.binary = false, r.dir = false, r.createFolders = true, r.date = null, r.compression = null, r.compressionOptions = null, r.comment = null, r.unixPermissions = null, r.dosPermissions = null;
         }, {}],
         6: [function (e, t, r) {
 
@@ -25434,14 +25433,14 @@ function requireJszip_min() {
             a.call(this, "FlateWorker/" + e), this._pako = null, this._pakoAction = e, this._pakoOptions = t, this.meta = {};
           }
           r.magic = "\b\0", s.inherits(h, a), h.prototype.processChunk = function (e) {
-            this.meta = e.meta, null === this._pako && this._createPako(), this._pako.push(s.transformTo(o, e.data), !1);
+            this.meta = e.meta, null === this._pako && this._createPako(), this._pako.push(s.transformTo(o, e.data), false);
           }, h.prototype.flush = function () {
-            a.prototype.flush.call(this), null === this._pako && this._createPako(), this._pako.push([], !0);
+            a.prototype.flush.call(this), null === this._pako && this._createPako(), this._pako.push([], true);
           }, h.prototype.cleanUp = function () {
             a.prototype.cleanUp.call(this), this._pako = null;
           }, h.prototype._createPako = function () {
             this._pako = new i[this._pakoAction]({
-              raw: !0,
+              raw: true,
               level: this._pakoOptions.level || -1
             });
             var t = this;
@@ -25515,7 +25514,7 @@ function requireJszip_min() {
             B = e("../crc32"),
             R = e("../signature");
           function s(e, t, r, n) {
-            i.call(this, "ZipFileWorker"), this.bytesWritten = 0, this.zipComment = t, this.zipPlatform = r, this.encodeFileName = n, this.streamFiles = e, this.accumulate = !1, this.contentBuffer = [], this.dirRecords = [], this.currentSourceOffset = 0, this.entriesCount = 0, this.currentFile = null, this._sources = [];
+            i.call(this, "ZipFileWorker"), this.bytesWritten = 0, this.zipComment = t, this.zipPlatform = r, this.encodeFileName = n, this.streamFiles = e, this.accumulate = false, this.contentBuffer = [], this.dirRecords = [], this.currentSourceOffset = 0, this.entriesCount = 0, this.currentFile = null, this._sources = [];
           }
           I.inherits(s, i), s.prototype.push = function (e) {
             var t = e.meta.percent || 0,
@@ -25532,18 +25531,18 @@ function requireJszip_min() {
             this.currentSourceOffset = this.bytesWritten, this.currentFile = e.file.name;
             var t = this.streamFiles && !e.file.dir;
             if (t) {
-              var r = n(e, t, !1, this.currentSourceOffset, this.zipPlatform, this.encodeFileName);
+              var r = n(e, t, false, this.currentSourceOffset, this.zipPlatform, this.encodeFileName);
               this.push({
                 data: r.fileRecord,
                 meta: {
                   percent: 0
                 }
               });
-            } else this.accumulate = !0;
+            } else this.accumulate = true;
           }, s.prototype.closedSource = function (e) {
-            this.accumulate = !1;
+            this.accumulate = false;
             var t = this.streamFiles && !e.file.dir,
-              r = n(e, t, !0, this.currentSourceOffset, this.zipPlatform, this.encodeFileName);
+              r = n(e, t, true, this.currentSourceOffset, this.zipPlatform, this.encodeFileName);
             if (this.dirRecords.push(r.dirRecord), t) this.push({
               data: function (e) {
                 return R.DATA_DESCRIPTOR + A(e.crc32, 4) + A(e.compressedSize, 4) + A(e.uncompressedSize, 4);
@@ -25589,14 +25588,14 @@ function requireJszip_min() {
               t.error(e);
             }), this;
           }, s.prototype.resume = function () {
-            return !!i.prototype.resume.call(this) && (!this.previous && this._sources.length ? (this.prepareNextSource(), !0) : this.previous || this._sources.length || this.generatedError ? void 0 : (this.end(), !0));
+            return !!i.prototype.resume.call(this) && (!this.previous && this._sources.length ? (this.prepareNextSource(), true) : this.previous || this._sources.length || this.generatedError ? void 0 : (this.end(), true));
           }, s.prototype.error = function (e) {
             var t = this._sources;
-            if (!i.prototype.error.call(this, e)) return !1;
+            if (!i.prototype.error.call(this, e)) return false;
             for (var r = 0; r < t.length; r++) try {
               t[r].error(e);
             } catch (e) {}
-            return !0;
+            return true;
           }, s.prototype.lock = function () {
             i.prototype.lock.call(this);
             for (var e = this._sources, t = 0; t < e.length; t++) e[t].lock();
@@ -25687,12 +25686,12 @@ function requireJszip_min() {
           t.exports = function (e, o) {
             var h = this;
             return o = u.extend(o || {}, {
-              base64: !1,
-              checkCRC32: !1,
-              optimizedBinaryString: !1,
-              createFolders: !1,
+              base64: false,
+              checkCRC32: false,
+              optimizedBinaryString: false,
+              createFolders: false,
               decodeFileName: n.utf8decode
-            }), l.isNode && l.isStream(e) ? i.Promise.reject(new Error("JSZip can't accept a stream when loading a zip file.")) : u.prepareContent("the loaded zip file", e, !0, o.optimizedBinaryString, o.base64).then(function (e) {
+            }), l.isNode && l.isStream(e) ? i.Promise.reject(new Error("JSZip can't accept a stream when loading a zip file.")) : u.prepareContent("the loaded zip file", e, true, o.optimizedBinaryString, o.base64).then(function (e) {
               var t = new s(o);
               return t.load(e), t;
             }).then(function (e) {
@@ -25706,8 +25705,8 @@ function requireJszip_min() {
                   s = i.fileNameStr,
                   a = u.resolve(i.fileNameStr);
                 h.file(a, i.decompressed, {
-                  binary: !0,
-                  optimizedBinaryString: !0,
+                  binary: true,
+                  optimizedBinaryString: true,
                   date: i.date,
                   dir: i.dir,
                   comment: i.fileCommentStr.length ? i.fileCommentStr : null,
@@ -25732,7 +25731,7 @@ function requireJszip_min() {
           var n = e("../utils"),
             i = e("../stream/GenericWorker");
           function s(e, t) {
-            i.call(this, "Nodejs stream input adapter for " + e), this._upstreamEnded = !1, this._bindStream(t);
+            i.call(this, "Nodejs stream input adapter for " + e), this._upstreamEnded = false, this._bindStream(t);
           }
           n.inherits(s, i), s.prototype._bindStream = function (e) {
             var t = this;
@@ -25746,12 +25745,12 @@ function requireJszip_min() {
             }).on("error", function (e) {
               t.isPaused ? this.generatedError = e : t.error(e);
             }).on("end", function () {
-              t.isPaused ? t._upstreamEnded = !0 : t.end();
+              t.isPaused ? t._upstreamEnded = true : t.end();
             });
           }, s.prototype.pause = function () {
-            return !!i.prototype.pause.call(this) && (this._stream.pause(), !0);
+            return !!i.prototype.pause.call(this) && (this._stream.pause(), true);
           }, s.prototype.resume = function () {
-            return !!i.prototype.resume.call(this) && (this._upstreamEnded ? this.end() : this._stream.resume(), !0);
+            return !!i.prototype.resume.call(this) && (this._upstreamEnded ? this.end() : this._stream.resume(), true);
           }, t.exports = s;
         }, {
           "../stream/GenericWorker": 28,
@@ -25806,9 +25805,9 @@ function requireJszip_min() {
             var n,
               i = u.getTypeOf(t),
               s = u.extend(r || {}, f);
-            s.date = s.date || new Date(), null !== s.compression && (s.compression = s.compression.toUpperCase()), "string" == typeof s.unixPermissions && (s.unixPermissions = parseInt(s.unixPermissions, 8)), s.unixPermissions && 16384 & s.unixPermissions && (s.dir = !0), s.dosPermissions && 16 & s.dosPermissions && (s.dir = !0), s.dir && (e = g(e)), s.createFolders && (n = _(e)) && b.call(this, n, !0);
-            var a = "string" === i && !1 === s.binary && !1 === s.base64;
-            r && void 0 !== r.binary || (s.binary = !a), (t instanceof c && 0 === t.uncompressedSize || s.dir || !t || 0 === t.length) && (s.base64 = !1, s.binary = !0, t = "", s.compression = "STORE", i = "string");
+            s.date = s.date || new Date(), null !== s.compression && (s.compression = s.compression.toUpperCase()), "string" == typeof s.unixPermissions && (s.unixPermissions = parseInt(s.unixPermissions, 8)), s.unixPermissions && 16384 & s.unixPermissions && (s.dir = true), s.dosPermissions && 16 & s.dosPermissions && (s.dir = true), s.dir && (e = g(e)), s.createFolders && (n = _(e)) && b.call(this, n, true);
+            var a = "string" === i && false === s.binary && false === s.base64;
+            r && void 0 !== r.binary || (s.binary = !a), (t instanceof c && 0 === t.uncompressedSize || s.dir || !t || 0 === t.length) && (s.base64 = false, s.binary = true, t = "", s.compression = "STORE", i = "string");
             var o = null;
             o = t instanceof c || t instanceof l ? t : p.isNode && p.isStream(t) ? new m(e, t) : u.prepareContent(e, t, s.binary, s.optimizedBinaryString, s.base64);
             var h = new d(e, o, s);
@@ -25834,7 +25833,7 @@ function requireJszip_min() {
             },
             b = function b(e, t) {
               return t = void 0 !== t ? t : f.createFolders, e = g(e), this.files[e] || s.call(this, e, null, {
-                dir: !0,
+                dir: true,
                 createFolders: t
               }), this.files[e];
             };
@@ -26135,8 +26134,8 @@ function requireJszip_min() {
           function s(e) {
             i.call(this, "DataWorker");
             var t = this;
-            this.dataIsReady = !1, this.index = 0, this.max = 0, this.data = null, this.type = "", this._tickScheduled = !1, e.then(function (e) {
-              t.dataIsReady = !0, t.data = e, t.max = e && e.length || 0, t.type = n.getTypeOf(e), t.isPaused || t._tickAndRepeat();
+            this.dataIsReady = false, this.index = 0, this.max = 0, this.data = null, this.type = "", this._tickScheduled = false, e.then(function (e) {
+              t.dataIsReady = true, t.data = e, t.max = e && e.length || 0, t.type = n.getTypeOf(e), t.isPaused || t._tickAndRepeat();
             }, function (e) {
               t.error(e);
             });
@@ -26144,11 +26143,11 @@ function requireJszip_min() {
           n.inherits(s, i), s.prototype.cleanUp = function () {
             i.prototype.cleanUp.call(this), this.data = null;
           }, s.prototype.resume = function () {
-            return !!i.prototype.resume.call(this) && (!this._tickScheduled && this.dataIsReady && (this._tickScheduled = !0, n.delay(this._tickAndRepeat, [], this)), !0);
+            return !!i.prototype.resume.call(this) && (!this._tickScheduled && this.dataIsReady && (this._tickScheduled = true, n.delay(this._tickAndRepeat, [], this)), true);
           }, s.prototype._tickAndRepeat = function () {
-            this._tickScheduled = !1, this.isPaused || this.isFinished || (this._tick(), this.isFinished || (n.delay(this._tickAndRepeat, [], this), this._tickScheduled = !0));
+            this._tickScheduled = false, this.isPaused || this.isFinished || (this._tick(), this.isFinished || (n.delay(this._tickAndRepeat, [], this), this._tickScheduled = true));
           }, s.prototype._tick = function () {
-            if (this.isPaused || this.isFinished) return !1;
+            if (this.isPaused || this.isFinished) return false;
             var e = null,
               t = Math.min(this.max, this.index + 16384);
             if (this.index >= this.max) return this.end();
@@ -26177,7 +26176,7 @@ function requireJszip_min() {
         28: [function (e, t, r) {
 
           function n(e) {
-            this.name = e || "default", this.streamInfo = {}, this.generatedError = null, this.extraStreamInfo = {}, this.isPaused = !0, this.isFinished = !1, this.isLocked = !1, this._listeners = {
+            this.name = e || "default", this.streamInfo = {}, this.generatedError = null, this.extraStreamInfo = {}, this.isPaused = true, this.isFinished = false, this.isLocked = false, this._listeners = {
               data: [],
               end: [],
               error: []
@@ -26188,17 +26187,17 @@ function requireJszip_min() {
               this.emit("data", e);
             },
             end: function () {
-              if (this.isFinished) return !1;
+              if (this.isFinished) return false;
               this.flush();
               try {
                 this.emit("end"), this.cleanUp(), this.isFinished = !0;
               } catch (e) {
                 this.emit("error", e);
               }
-              return !0;
+              return true;
             },
             error: function (e) {
-              return !this.isFinished && (this.isPaused ? this.generatedError = e : (this.isFinished = !0, this.emit("error", e), this.previous && this.previous.error(e), this.cleanUp()), !0);
+              return !this.isFinished && (this.isPaused ? this.generatedError = e : (this.isFinished = true, this.emit("error", e), this.previous && this.previous.error(e), this.cleanUp()), true);
             },
             on: function (e, t) {
               return this._listeners[e].push(t), this;
@@ -26225,12 +26224,12 @@ function requireJszip_min() {
               }), this;
             },
             pause: function () {
-              return !this.isPaused && !this.isFinished && (this.isPaused = !0, this.previous && this.previous.pause(), !0);
+              return !this.isPaused && !this.isFinished && (this.isPaused = true, this.previous && this.previous.pause(), true);
             },
             resume: function () {
-              if (!this.isPaused || this.isFinished) return !1;
-              var e = this.isPaused = !1;
-              return this.generatedError && (this.error(this.generatedError), e = !0), this.previous && this.previous.resume(), !e;
+              if (!this.isPaused || this.isFinished) return false;
+              var e = this.isPaused = false;
+              return this.generatedError && (this.error(this.generatedError), e = true), this.previous && this.previous.resume(), !e;
             },
             flush: function () {},
             processChunk: function (e) {
@@ -26244,7 +26243,7 @@ function requireJszip_min() {
             },
             lock: function () {
               if (this.isLocked) throw new Error("The stream '" + this + "' has already been used.");
-              this.isLocked = !0, this.previous && this.previous.lock();
+              this.isLocked = true, this.previous && this.previous.lock();
             },
             toString: function () {
               var e = "Worker " + this.name;
@@ -26365,7 +26364,7 @@ function requireJszip_min() {
         }],
         30: [function (e, t, r) {
 
-          if (r.base64 = !0, r.array = !0, r.string = !0, r.arraybuffer = "undefined" != typeof ArrayBuffer && "undefined" != typeof Uint8Array, r.nodebuffer = "undefined" != typeof Buffer$1, r.uint8array = "undefined" != typeof Uint8Array, "undefined" == typeof ArrayBuffer) r.blob = !1;else {
+          if (r.base64 = true, r.array = true, r.string = true, r.arraybuffer = "undefined" != typeof ArrayBuffer && "undefined" != typeof Uint8Array, r.nodebuffer = "undefined" != typeof Buffer$1, r.uint8array = "undefined" != typeof Uint8Array, "undefined" == typeof ArrayBuffer) r.blob = false;else {
             var n = new ArrayBuffer(0);
             try {
               r.blob = 0 === new Blob([n], {
@@ -26376,14 +26375,14 @@ function requireJszip_min() {
                 var i = new (self.BlobBuilder || self.WebKitBlobBuilder || self.MozBlobBuilder || self.MSBlobBuilder)();
                 i.append(n), r.blob = 0 === i.getBlob("application/zip").size;
               } catch (e) {
-                r.blob = !1;
+                r.blob = false;
               }
             }
           }
           try {
             r.nodestream = !!e("readable-stream").Readable;
           } catch (e) {
-            r.nodestream = !1;
+            r.nodestream = false;
           }
         }, {
           "readable-stream": 16
@@ -26507,14 +26506,14 @@ function requireJszip_min() {
                 try {
                   return o.uint8array && 1 === String.fromCharCode.apply(null, new Uint8Array(1)).length;
                 } catch (e) {
-                  return !1;
+                  return false;
                 }
               }(),
               nodebuffer: function () {
                 try {
                   return o.nodebuffer && 1 === String.fromCharCode.apply(null, r.allocBuffer(1)).length;
                 } catch (e) {
-                  return !1;
+                  return false;
                 }
               }()
             }
@@ -26522,7 +26521,7 @@ function requireJszip_min() {
           function s(e) {
             var t = 65536,
               r = a.getTypeOf(e),
-              n = !0;
+              n = true;
             if ("uint8array" === r ? n = i.applyCanBeUsed.uint8array : "nodebuffer" === r && (n = i.applyCanBeUsed.nodebuffer), n) for (; 1 < t;) try {
               return i.stringifyByChunk(e, r, t);
             } catch (e) {
@@ -26646,7 +26645,7 @@ function requireJszip_min() {
               }) : n;
             }).then(function (e) {
               var t = a.getTypeOf(e);
-              return t ? ("arraybuffer" === t ? e = a.transformTo("uint8array", e) : "string" === t && (s ? e = h.decode(e) : n && !0 !== i && (e = function (e) {
+              return t ? ("arraybuffer" === t ? e = a.transformTo("uint8array", e) : "string" === t && (s ? e = h.decode(e) : n && true !== i && (e = function (e) {
                 return l(e, o.uint8array ? new Uint8Array(e.length) : new Array(e.length));
               }(e))), e) : u.Promise.reject(new Error("Can't read the data of '" + r + "'. Is it in a supported JavaScript type (String, Blob, ArrayBuffer, etc) ?"));
             });
@@ -26717,7 +26716,7 @@ function requireJszip_min() {
               this.reader.setIndex(e);
               var t = e;
               if (this.checkSignature(s.CENTRAL_DIRECTORY_END), this.readBlockEndOfCentral(), this.diskNumber === i.MAX_VALUE_16BITS || this.diskWithCentralDirStart === i.MAX_VALUE_16BITS || this.centralDirRecordsOnThisDisk === i.MAX_VALUE_16BITS || this.centralDirRecords === i.MAX_VALUE_16BITS || this.centralDirSize === i.MAX_VALUE_32BITS || this.centralDirOffset === i.MAX_VALUE_32BITS) {
-                if (this.zip64 = !0, (e = this.reader.lastIndexOfSignature(s.ZIP64_CENTRAL_DIRECTORY_LOCATOR)) < 0) throw new Error("Corrupted zip: can't find the ZIP64 end of central directory locator");
+                if (this.zip64 = true, (e = this.reader.lastIndexOfSignature(s.ZIP64_CENTRAL_DIRECTORY_LOCATOR)) < 0) throw new Error("Corrupted zip: can't find the ZIP64 end of central directory locator");
                 if (this.reader.setIndex(e), this.checkSignature(s.ZIP64_CENTRAL_DIRECTORY_LOCATOR), this.readBlockZip64EndOfCentralLocator(), !this.isSignature(this.relativeOffsetEndOfZip64CentralDir, s.ZIP64_CENTRAL_DIRECTORY_END) && (this.relativeOffsetEndOfZip64CentralDir = this.reader.lastIndexOfSignature(s.ZIP64_CENTRAL_DIRECTORY_END), this.relativeOffsetEndOfZip64CentralDir < 0)) throw new Error("Corrupted zip: can't find the ZIP64 end of central directory");
                 this.reader.setIndex(this.relativeOffsetEndOfZip64CentralDir), this.checkSignature(s.ZIP64_CENTRAL_DIRECTORY_END), this.readBlockZip64EndOfCentral();
               }
@@ -26777,7 +26776,7 @@ function requireJszip_min() {
             processAttributes: function () {
               this.unixPermissions = null, this.dosPermissions = null;
               var e = this.versionMadeBy >> 8;
-              this.dir = !!(16 & this.externalFileAttributes), 0 == e && (this.dosPermissions = 63 & this.externalFileAttributes), 3 == e && (this.unixPermissions = this.externalFileAttributes >> 16 & 65535), this.dir || "/" !== this.fileNameStr.slice(-1) || (this.dir = !0);
+              this.dir = !!(16 & this.externalFileAttributes), 0 == e && (this.dosPermissions = 63 & this.externalFileAttributes), 3 == e && (this.unixPermissions = this.externalFileAttributes >> 16 & 65535), this.dir || "/" !== this.fileNameStr.slice(-1) || (this.dir = true);
             },
             parseZIP64ExtraField: function () {
               if (this.extraFields[1]) {
@@ -26903,7 +26902,7 @@ function requireJszip_min() {
                 s = new e(u),
                 a = t.document.createTextNode("");
               s.observe(a, {
-                characterData: !0
+                characterData: true
               }), r = function () {
                 a.data = i = ++i % 2;
               };
@@ -26923,12 +26922,12 @@ function requireJszip_min() {
             var h = [];
             function u() {
               var e, t;
-              n = !0;
+              n = true;
               for (var r = h.length; r;) {
                 for (t = h, h = [], e = -1; ++e < r;) t[e]();
                 r = h.length;
               }
-              n = !1;
+              n = false;
             }
             l.exports = function (e) {
               1 !== h.push(e) || n || r();
@@ -26968,12 +26967,12 @@ function requireJszip_min() {
             };
           }
           function d(t, e) {
-            var r = !1;
+            var r = false;
             function n(e) {
-              r || (r = !0, l.reject(t, e));
+              r || (r = true, l.reject(t, e));
             }
             function i(e) {
-              r || (r = !0, l.resolve(t, e));
+              r || (r = true, l.resolve(t, e));
             }
             var s = p(function () {
               e(i, n);
@@ -27039,7 +27038,7 @@ function requireJszip_min() {
             var r = this;
             if ("[object Array]" !== Object.prototype.toString.call(e)) return this.reject(new TypeError("must be an array"));
             var n = e.length,
-              i = !1;
+              i = false;
             if (!n) return this.resolve([]);
             var s = new Array(n),
               a = 0,
@@ -27049,23 +27048,23 @@ function requireJszip_min() {
             return o;
             function h(e, t) {
               r.resolve(e).then(function (e) {
-                s[t] = e, ++a !== n || i || (i = !0, l.resolve(o, s));
+                s[t] = e, ++a !== n || i || (i = true, l.resolve(o, s));
               }, function (e) {
-                i || (i = !0, l.reject(o, e));
+                i || (i = true, l.reject(o, e));
               });
             }
           }, o.race = function (e) {
             var t = this;
             if ("[object Array]" !== Object.prototype.toString.call(e)) return this.reject(new TypeError("must be an array"));
             var r = e.length,
-              n = !1;
+              n = false;
             if (!r) return this.resolve([]);
             var i = -1,
               s = new this(u);
             for (; ++i < r;) a = e[i], t.resolve(a).then(function (e) {
-              n || (n = !0, l.resolve(s, e));
+              n || (n = true, l.resolve(s, e));
             }, function (e) {
-              n || (n = !0, l.reject(s, e));
+              n || (n = true, l.reject(s, e));
             });
             var a;
             return s;
@@ -27107,18 +27106,18 @@ function requireJszip_min() {
               to: ""
             }, e || {});
             var t = this.options;
-            t.raw && 0 < t.windowBits ? t.windowBits = -t.windowBits : t.gzip && 0 < t.windowBits && t.windowBits < 16 && (t.windowBits += 16), this.err = 0, this.msg = "", this.ended = !1, this.chunks = [], this.strm = new s(), this.strm.avail_out = 0;
+            t.raw && 0 < t.windowBits ? t.windowBits = -t.windowBits : t.gzip && 0 < t.windowBits && t.windowBits < 16 && (t.windowBits += 16), this.err = 0, this.msg = "", this.ended = false, this.chunks = [], this.strm = new s(), this.strm.avail_out = 0;
             var r = a.deflateInit2(this.strm, t.level, t.method, t.windowBits, t.memLevel, t.strategy);
             if (r !== l) throw new Error(i[r]);
             if (t.header && a.deflateSetHeader(this.strm, t.header), t.dictionary) {
               var n;
               if (n = "string" == typeof t.dictionary ? h.string2buf(t.dictionary) : "[object ArrayBuffer]" === u.call(t.dictionary) ? new Uint8Array(t.dictionary) : t.dictionary, (r = a.deflateSetDictionary(this.strm, n)) !== l) throw new Error(i[r]);
-              this._dict_set = !0;
+              this._dict_set = true;
             }
           }
           function n(e, t) {
             var r = new p(t);
-            if (r.push(e, !0), r.err) throw r.msg || i[r.err];
+            if (r.push(e, true), r.err) throw r.msg || i[r.err];
             return r.result;
           }
           p.prototype.push = function (e, t) {
@@ -27126,21 +27125,21 @@ function requireJszip_min() {
               n,
               i = this.strm,
               s = this.options.chunkSize;
-            if (this.ended) return !1;
-            n = t === ~~t ? t : !0 === t ? 4 : 0, "string" == typeof e ? i.input = h.string2buf(e) : "[object ArrayBuffer]" === u.call(e) ? i.input = new Uint8Array(e) : i.input = e, i.next_in = 0, i.avail_in = i.input.length;
+            if (this.ended) return false;
+            n = t === ~~t ? t : true === t ? 4 : 0, "string" == typeof e ? i.input = h.string2buf(e) : "[object ArrayBuffer]" === u.call(e) ? i.input = new Uint8Array(e) : i.input = e, i.next_in = 0, i.avail_in = i.input.length;
             do {
-              if (0 === i.avail_out && (i.output = new o.Buf8(s), i.next_out = 0, i.avail_out = s), 1 !== (r = a.deflate(i, n)) && r !== l) return this.onEnd(r), !(this.ended = !0);
+              if (0 === i.avail_out && (i.output = new o.Buf8(s), i.next_out = 0, i.avail_out = s), 1 !== (r = a.deflate(i, n)) && r !== l) return this.onEnd(r), !(this.ended = true);
               0 !== i.avail_out && (0 !== i.avail_in || 4 !== n && 2 !== n) || ("string" === this.options.to ? this.onData(h.buf2binstring(o.shrinkBuf(i.output, i.next_out))) : this.onData(o.shrinkBuf(i.output, i.next_out)));
             } while ((0 < i.avail_in || 0 === i.avail_out) && 1 !== r);
-            return 4 === n ? (r = a.deflateEnd(this.strm), this.onEnd(r), this.ended = !0, r === l) : 2 !== n || (this.onEnd(l), !(i.avail_out = 0));
+            return 4 === n ? (r = a.deflateEnd(this.strm), this.onEnd(r), this.ended = true, r === l) : 2 !== n || (this.onEnd(l), !(i.avail_out = 0));
           }, p.prototype.onData = function (e) {
             this.chunks.push(e);
           }, p.prototype.onEnd = function (e) {
             e === l && ("string" === this.options.to ? this.result = this.chunks.join("") : this.result = o.flattenChunks(this.chunks)), this.chunks = [], this.err = e, this.msg = this.strm.msg;
           }, r.Deflate = p, r.deflate = n, r.deflateRaw = function (e, t) {
-            return (t = t || {}).raw = !0, n(e, t);
+            return (t = t || {}).raw = true, n(e, t);
           }, r.gzip = function (e, t) {
-            return (t = t || {}).gzip = !0, n(e, t);
+            return (t = t || {}).gzip = true, n(e, t);
           };
         }, {
           "./utils/common": 41,
@@ -27167,14 +27166,14 @@ function requireJszip_min() {
               to: ""
             }, e || {});
             var t = this.options;
-            t.raw && 0 <= t.windowBits && t.windowBits < 16 && (t.windowBits = -t.windowBits, 0 === t.windowBits && (t.windowBits = -15)), !(0 <= t.windowBits && t.windowBits < 16) || e && e.windowBits || (t.windowBits += 32), 15 < t.windowBits && t.windowBits < 48 && 0 == (15 & t.windowBits) && (t.windowBits |= 15), this.err = 0, this.msg = "", this.ended = !1, this.chunks = [], this.strm = new i(), this.strm.avail_out = 0;
+            t.raw && 0 <= t.windowBits && t.windowBits < 16 && (t.windowBits = -t.windowBits, 0 === t.windowBits && (t.windowBits = -15)), !(0 <= t.windowBits && t.windowBits < 16) || e && e.windowBits || (t.windowBits += 32), 15 < t.windowBits && t.windowBits < 48 && 0 == (15 & t.windowBits) && (t.windowBits |= 15), this.err = 0, this.msg = "", this.ended = false, this.chunks = [], this.strm = new i(), this.strm.avail_out = 0;
             var r = c.inflateInit2(this.strm, t.windowBits);
             if (r !== m.Z_OK) throw new Error(n[r]);
             this.header = new s(), c.inflateGetHeader(this.strm, this.header);
           }
           function o(e, t) {
             var r = new a(t);
-            if (r.push(e, !0), r.err) throw r.msg || n[r.err];
+            if (r.push(e, true), r.err) throw r.msg || n[r.err];
             return r.result;
           }
           a.prototype.push = function (e, t) {
@@ -27187,20 +27186,20 @@ function requireJszip_min() {
               h = this.strm,
               u = this.options.chunkSize,
               l = this.options.dictionary,
-              f = !1;
-            if (this.ended) return !1;
-            n = t === ~~t ? t : !0 === t ? m.Z_FINISH : m.Z_NO_FLUSH, "string" == typeof e ? h.input = p.binstring2buf(e) : "[object ArrayBuffer]" === _.call(e) ? h.input = new Uint8Array(e) : h.input = e, h.next_in = 0, h.avail_in = h.input.length;
+              f = false;
+            if (this.ended) return false;
+            n = t === ~~t ? t : true === t ? m.Z_FINISH : m.Z_NO_FLUSH, "string" == typeof e ? h.input = p.binstring2buf(e) : "[object ArrayBuffer]" === _.call(e) ? h.input = new Uint8Array(e) : h.input = e, h.next_in = 0, h.avail_in = h.input.length;
             do {
-              if (0 === h.avail_out && (h.output = new d.Buf8(u), h.next_out = 0, h.avail_out = u), (r = c.inflate(h, m.Z_NO_FLUSH)) === m.Z_NEED_DICT && l && (o = "string" == typeof l ? p.string2buf(l) : "[object ArrayBuffer]" === _.call(l) ? new Uint8Array(l) : l, r = c.inflateSetDictionary(this.strm, o)), r === m.Z_BUF_ERROR && !0 === f && (r = m.Z_OK, f = !1), r !== m.Z_STREAM_END && r !== m.Z_OK) return this.onEnd(r), !(this.ended = !0);
-              h.next_out && (0 !== h.avail_out && r !== m.Z_STREAM_END && (0 !== h.avail_in || n !== m.Z_FINISH && n !== m.Z_SYNC_FLUSH) || ("string" === this.options.to ? (i = p.utf8border(h.output, h.next_out), s = h.next_out - i, a = p.buf2string(h.output, i), h.next_out = s, h.avail_out = u - s, s && d.arraySet(h.output, h.output, i, s, 0), this.onData(a)) : this.onData(d.shrinkBuf(h.output, h.next_out)))), 0 === h.avail_in && 0 === h.avail_out && (f = !0);
+              if (0 === h.avail_out && (h.output = new d.Buf8(u), h.next_out = 0, h.avail_out = u), (r = c.inflate(h, m.Z_NO_FLUSH)) === m.Z_NEED_DICT && l && (o = "string" == typeof l ? p.string2buf(l) : "[object ArrayBuffer]" === _.call(l) ? new Uint8Array(l) : l, r = c.inflateSetDictionary(this.strm, o)), r === m.Z_BUF_ERROR && true === f && (r = m.Z_OK, f = false), r !== m.Z_STREAM_END && r !== m.Z_OK) return this.onEnd(r), !(this.ended = true);
+              h.next_out && (0 !== h.avail_out && r !== m.Z_STREAM_END && (0 !== h.avail_in || n !== m.Z_FINISH && n !== m.Z_SYNC_FLUSH) || ("string" === this.options.to ? (i = p.utf8border(h.output, h.next_out), s = h.next_out - i, a = p.buf2string(h.output, i), h.next_out = s, h.avail_out = u - s, s && d.arraySet(h.output, h.output, i, s, 0), this.onData(a)) : this.onData(d.shrinkBuf(h.output, h.next_out)))), 0 === h.avail_in && 0 === h.avail_out && (f = true);
             } while ((0 < h.avail_in || 0 === h.avail_out) && r !== m.Z_STREAM_END);
-            return r === m.Z_STREAM_END && (n = m.Z_FINISH), n === m.Z_FINISH ? (r = c.inflateEnd(this.strm), this.onEnd(r), this.ended = !0, r === m.Z_OK) : n !== m.Z_SYNC_FLUSH || (this.onEnd(m.Z_OK), !(h.avail_out = 0));
+            return r === m.Z_STREAM_END && (n = m.Z_FINISH), n === m.Z_FINISH ? (r = c.inflateEnd(this.strm), this.onEnd(r), this.ended = true, r === m.Z_OK) : n !== m.Z_SYNC_FLUSH || (this.onEnd(m.Z_OK), !(h.avail_out = 0));
           }, a.prototype.onData = function (e) {
             this.chunks.push(e);
           }, a.prototype.onEnd = function (e) {
             e === m.Z_OK && ("string" === this.options.to ? this.result = this.chunks.join("") : this.result = d.flattenChunks(this.chunks)), this.chunks = [], this.err = e, this.msg = this.strm.msg;
           }, r.Inflate = a, r.inflate = o, r.inflateRaw = function (e, t) {
-            return (t = t || {}).raw = !0, o(e, t);
+            return (t = t || {}).raw = true, o(e, t);
           }, r.ungzip = o;
         }, {
           "./utils/common": 41,
@@ -27252,17 +27251,17 @@ function requireJszip_min() {
         42: [function (e, t, r) {
 
           var h = e("./common"),
-            i = !0,
-            s = !0;
+            i = true,
+            s = true;
           try {
             String.fromCharCode.apply(null, [0]);
           } catch (e) {
-            i = !1;
+            i = false;
           }
           try {
             String.fromCharCode.apply(null, new Uint8Array(1));
           } catch (e) {
-            s = !1;
+            s = false;
           }
           for (var u = new h.Buf8(256), n = 0; n < 256; n++) u[n] = 252 <= n ? 6 : 248 <= n ? 5 : 240 <= n ? 4 : 224 <= n ? 3 : 192 <= n ? 2 : 1;
           function l(e, t) {
@@ -27481,9 +27480,9 @@ function requireJszip_min() {
                   e.strstart++;
                 } else e.strstart += e.match_length, e.match_length = 0, e.ins_h = e.window[e.strstart], e.ins_h = (e.ins_h << e.hash_shift ^ e.window[e.strstart + 1]) & e.hash_mask;
               } else n = u._tr_tally(e, 0, e.window[e.strstart]), e.lookahead--, e.strstart++;
-              if (n && (N(e, !1), 0 === e.strm.avail_out)) return A;
+              if (n && (N(e, false), 0 === e.strm.avail_out)) return A;
             }
-            return e.insert = e.strstart < x - 1 ? e.strstart : x - 1, t === f ? (N(e, !0), 0 === e.strm.avail_out ? O : B) : e.last_lit && (N(e, !1), 0 === e.strm.avail_out) ? A : I;
+            return e.insert = e.strstart < x - 1 ? e.strstart : x - 1, t === f ? (N(e, true), 0 === e.strm.avail_out ? O : B) : e.last_lit && (N(e, false), 0 === e.strm.avail_out) ? A : I;
           }
           function W(e, t) {
             for (var r, n, i;;) {
@@ -27493,12 +27492,12 @@ function requireJszip_min() {
               }
               if (r = 0, e.lookahead >= x && (e.ins_h = (e.ins_h << e.hash_shift ^ e.window[e.strstart + x - 1]) & e.hash_mask, r = e.prev[e.strstart & e.w_mask] = e.head[e.ins_h], e.head[e.ins_h] = e.strstart), e.prev_length = e.match_length, e.prev_match = e.match_start, e.match_length = x - 1, 0 !== r && e.prev_length < e.max_lazy_match && e.strstart - r <= e.w_size - z && (e.match_length = L(e, r), e.match_length <= 5 && (1 === e.strategy || e.match_length === x && 4096 < e.strstart - e.match_start) && (e.match_length = x - 1)), e.prev_length >= x && e.match_length <= e.prev_length) {
                 for (i = e.strstart + e.lookahead - x, n = u._tr_tally(e, e.strstart - 1 - e.prev_match, e.prev_length - x), e.lookahead -= e.prev_length - 1, e.prev_length -= 2; ++e.strstart <= i && (e.ins_h = (e.ins_h << e.hash_shift ^ e.window[e.strstart + x - 1]) & e.hash_mask, r = e.prev[e.strstart & e.w_mask] = e.head[e.ins_h], e.head[e.ins_h] = e.strstart), 0 != --e.prev_length;);
-                if (e.match_available = 0, e.match_length = x - 1, e.strstart++, n && (N(e, !1), 0 === e.strm.avail_out)) return A;
+                if (e.match_available = 0, e.match_length = x - 1, e.strstart++, n && (N(e, false), 0 === e.strm.avail_out)) return A;
               } else if (e.match_available) {
-                if ((n = u._tr_tally(e, 0, e.window[e.strstart - 1])) && N(e, !1), e.strstart++, e.lookahead--, 0 === e.strm.avail_out) return A;
+                if ((n = u._tr_tally(e, 0, e.window[e.strstart - 1])) && N(e, false), e.strstart++, e.lookahead--, 0 === e.strm.avail_out) return A;
               } else e.match_available = 1, e.strstart++, e.lookahead--;
             }
-            return e.match_available && (n = u._tr_tally(e, 0, e.window[e.strstart - 1]), e.match_available = 0), e.insert = e.strstart < x - 1 ? e.strstart : x - 1, t === f ? (N(e, !0), 0 === e.strm.avail_out ? O : B) : e.last_lit && (N(e, !1), 0 === e.strm.avail_out) ? A : I;
+            return e.match_available && (n = u._tr_tally(e, 0, e.window[e.strstart - 1]), e.match_available = 0), e.insert = e.strstart < x - 1 ? e.strstart : x - 1, t === f ? (N(e, true), 0 === e.strm.avail_out ? O : B) : e.last_lit && (N(e, false), 0 === e.strm.avail_out) ? A : I;
           }
           function M(e, t, r, n, i) {
             this.good_length = e, this.max_lazy = t, this.nice_length = r, this.max_chain = n, this.func = i;
@@ -27533,10 +27532,10 @@ function requireJszip_min() {
               }
               e.strstart += e.lookahead, e.lookahead = 0;
               var n = e.block_start + r;
-              if ((0 === e.strstart || e.strstart >= n) && (e.lookahead = e.strstart - n, e.strstart = n, N(e, !1), 0 === e.strm.avail_out)) return A;
-              if (e.strstart - e.block_start >= e.w_size - z && (N(e, !1), 0 === e.strm.avail_out)) return A;
+              if ((0 === e.strstart || e.strstart >= n) && (e.lookahead = e.strstart - n, e.strstart = n, N(e, false), 0 === e.strm.avail_out)) return A;
+              if (e.strstart - e.block_start >= e.w_size - z && (N(e, false), 0 === e.strm.avail_out)) return A;
             }
-            return e.insert = 0, t === f ? (N(e, !0), 0 === e.strm.avail_out ? O : B) : (e.strstart > e.block_start && (N(e, !1), e.strm.avail_out), A);
+            return e.insert = 0, t === f ? (N(e, true), 0 === e.strm.avail_out ? O : B) : (e.strstart > e.block_start && (N(e, false), e.strm.avail_out), A);
           }), new M(4, 4, 8, 4, Z), new M(4, 5, 16, 8, Z), new M(4, 6, 32, 32, Z), new M(4, 4, 16, 16, W), new M(8, 16, 32, 32, W), new M(8, 16, 128, 128, W), new M(8, 32, 128, 256, W), new M(32, 128, 258, 1024, W), new M(32, 258, 258, 4096, W)], r.deflateInit = function (e, t) {
             return Y(e, t, v, 15, 8, 0);
           }, r.deflateInit2 = Y, r.deflateReset = K, r.deflateResetKeep = G, r.deflateSetHeader = function (e, t) {
@@ -27586,9 +27585,9 @@ function requireJszip_min() {
                     if (t === l) return A;
                     break;
                   }
-                  if (e.match_length = 0, r = u._tr_tally(e, 0, e.window[e.strstart]), e.lookahead--, e.strstart++, r && (N(e, !1), 0 === e.strm.avail_out)) return A;
+                  if (e.match_length = 0, r = u._tr_tally(e, 0, e.window[e.strstart]), e.lookahead--, e.strstart++, r && (N(e, false), 0 === e.strm.avail_out)) return A;
                 }
-                return e.insert = 0, t === f ? (N(e, !0), 0 === e.strm.avail_out ? O : B) : e.last_lit && (N(e, !1), 0 === e.strm.avail_out) ? A : I;
+                return e.insert = 0, t === f ? (N(e, true), 0 === e.strm.avail_out ? O : B) : e.last_lit && (N(e, false), 0 === e.strm.avail_out) ? A : I;
               }(n, t) : 3 === n.strategy ? function (e, t) {
                 for (var r, n, i, s, a = e.window;;) {
                   if (e.lookahead <= S) {
@@ -27600,12 +27599,12 @@ function requireJszip_min() {
                     do {} while (n === a[++i] && n === a[++i] && n === a[++i] && n === a[++i] && n === a[++i] && n === a[++i] && n === a[++i] && n === a[++i] && i < s);
                     e.match_length = S - (s - i), e.match_length > e.lookahead && (e.match_length = e.lookahead);
                   }
-                  if (e.match_length >= x ? (r = u._tr_tally(e, 1, e.match_length - x), e.lookahead -= e.match_length, e.strstart += e.match_length, e.match_length = 0) : (r = u._tr_tally(e, 0, e.window[e.strstart]), e.lookahead--, e.strstart++), r && (N(e, !1), 0 === e.strm.avail_out)) return A;
+                  if (e.match_length >= x ? (r = u._tr_tally(e, 1, e.match_length - x), e.lookahead -= e.match_length, e.strstart += e.match_length, e.match_length = 0) : (r = u._tr_tally(e, 0, e.window[e.strstart]), e.lookahead--, e.strstart++), r && (N(e, false), 0 === e.strm.avail_out)) return A;
                 }
-                return e.insert = 0, t === f ? (N(e, !0), 0 === e.strm.avail_out ? O : B) : e.last_lit && (N(e, !1), 0 === e.strm.avail_out) ? A : I;
+                return e.insert = 0, t === f ? (N(e, true), 0 === e.strm.avail_out ? O : B) : e.last_lit && (N(e, false), 0 === e.strm.avail_out) ? A : I;
               }(n, t) : h[n.level].func(n, t);
               if (o !== O && o !== B || (n.status = 666), o === A || o === O) return 0 === e.avail_out && (n.last_flush = -1), m;
-              if (o === I && (1 === t ? u._tr_align(n) : 5 !== t && (u._tr_stored_block(n, 0, 0, !1), 3 === t && (D(n.head), 0 === n.lookahead && (n.strstart = 0, n.block_start = 0, n.insert = 0))), F(e), 0 === e.avail_out)) return n.last_flush = -1, m;
+              if (o === I && (1 === t ? u._tr_align(n) : 5 !== t && (u._tr_stored_block(n, 0, 0, false), 3 === t && (D(n.head), 0 === n.lookahead && (n.strstart = 0, n.block_start = 0, n.insert = 0))), F(e), 0 === e.avail_out)) return n.last_flush = -1, m;
             }
             return t !== f ? m : n.wrap <= 0 ? 1 : (2 === n.wrap ? (U(n, 255 & e.adler), U(n, e.adler >> 8 & 255), U(n, e.adler >> 16 & 255), U(n, e.adler >> 24 & 255), U(n, 255 & e.total_in), U(n, e.total_in >> 8 & 255), U(n, e.total_in >> 16 & 255), U(n, e.total_in >> 24 & 255)) : (P(n, e.adler >>> 16), P(n, 65535 & e.adler)), F(e), 0 < n.wrap && (n.wrap = -n.wrap), 0 !== n.pending ? m : 1);
           }, r.deflateEnd = function (e) {
@@ -27639,7 +27638,7 @@ function requireJszip_min() {
         47: [function (e, t, r) {
 
           t.exports = function () {
-            this.text = 0, this.time = 0, this.xflags = 0, this.os = 0, this.extra = null, this.extra_len = 0, this.name = "", this.comment = "", this.hcrc = 0, this.done = !1;
+            this.text = 0, this.time = 0, this.xflags = 0, this.os = 0, this.extra = null, this.extra_len = 0, this.name = "", this.comment = "", this.hcrc = 0, this.done = false;
           };
         }, {}],
         48: [function (e, t, r) {
@@ -27732,7 +27731,7 @@ function requireJszip_min() {
             return (e >>> 24 & 255) + (e >>> 8 & 65280) + ((65280 & e) << 8) + ((255 & e) << 24);
           }
           function s() {
-            this.mode = 0, this.last = !1, this.wrap = 0, this.havedict = !1, this.flags = 0, this.dmax = 0, this.check = 0, this.total = 0, this.head = null, this.wbits = 0, this.wsize = 0, this.whave = 0, this.wnext = 0, this.window = null, this.hold = 0, this.bits = 0, this.length = 0, this.offset = 0, this.extra = 0, this.lencode = null, this.distcode = null, this.lenbits = 0, this.distbits = 0, this.ncode = 0, this.nlen = 0, this.ndist = 0, this.have = 0, this.next = null, this.lens = new I.Buf16(320), this.work = new I.Buf16(288), this.lendyn = null, this.distdyn = null, this.sane = 0, this.back = 0, this.was = 0;
+            this.mode = 0, this.last = false, this.wrap = 0, this.havedict = false, this.flags = 0, this.dmax = 0, this.check = 0, this.total = 0, this.head = null, this.wbits = 0, this.wsize = 0, this.whave = 0, this.wnext = 0, this.window = null, this.hold = 0, this.bits = 0, this.length = 0, this.offset = 0, this.extra = 0, this.lencode = null, this.distcode = null, this.lenbits = 0, this.distbits = 0, this.ncode = 0, this.nlen = 0, this.ndist = 0, this.have = 0, this.next = null, this.lens = new I.Buf16(320), this.work = new I.Buf16(288), this.lendyn = null, this.distdyn = null, this.sane = 0, this.back = 0, this.was = 0;
           }
           function a(e) {
             var t;
@@ -27752,7 +27751,7 @@ function requireJszip_min() {
           }
           var l,
             f,
-            c = !0;
+            c = true;
           function j(e) {
             if (c) {
               var t;
@@ -27765,7 +27764,7 @@ function requireJszip_min() {
               }), t = 0; t < 32;) e.lens[t++] = 5;
               T(F, e.lens, 0, 32, f, 0, e.work, {
                 bits: 5
-              }), c = !1;
+              }), c = false;
             }
             e.lencode = l, e.lenbits = 9, e.distcode = f, e.distbits = 5;
           }
@@ -27820,7 +27819,7 @@ function requireJszip_min() {
                   E[r.check = 0] = 255 & u, E[1] = u >>> 8 & 255, r.check = B(r.check, E, 2, 0), l = u = 0, r.mode = 2;
                   break;
                 }
-                if (r.flags = 0, r.head && (r.head.done = !1), !(1 & r.wrap) || (((255 & u) << 8) + (u >> 8)) % 31) {
+                if (r.flags = 0, r.head && (r.head.done = false), !(1 & r.wrap) || (((255 & u) << 8) + (u >> 8)) % 31) {
                   e.msg = "incorrect header check", r.mode = 30;
                   break;
                 }
@@ -27898,7 +27897,7 @@ function requireJszip_min() {
                   }
                   l = u = 0;
                 }
-                r.head && (r.head.hcrc = r.flags >> 9 & 1, r.head.done = !0), e.adler = r.check = 0, r.mode = 12;
+                r.head && (r.head.hcrc = r.flags >> 9 & 1, r.head.done = true), e.adler = r.check = 0, r.mode = 12;
                 break;
               case 10:
                 for (; l < 32;) {
@@ -28168,7 +28167,7 @@ function requireJszip_min() {
             return t.window && (t.window = null), e.state = null, N;
           }, r.inflateGetHeader = function (e, t) {
             var r;
-            return e && e.state ? 0 == (2 & (r = e.state).wrap) ? U : ((r.head = t).done = !1, N) : U;
+            return e && e.state ? 0 == (2 & (r = e.state).wrap) ? U : ((r.head = t).done = false, N) : U;
           }, r.inflateSetDictionary = function (e, t) {
             var r,
               n = t.length;
@@ -28421,7 +28420,7 @@ function requireJszip_min() {
             }
           }
           n(T);
-          var q = !1;
+          var q = false;
           function J(e, t, r, n) {
             P(e, (s << 1) + (n ? 1 : 0), 3), function (e, t, r, n) {
               M(e), (U(e, r), U(e, ~r)), i.arraySet(e.pending_buf, e.window, t, r, e.pending), e.pending += r;
@@ -28445,7 +28444,7 @@ function requireJszip_min() {
               for (; e <= 287;) z[2 * e + 1] = 8, e++, s[8]++;
               for (Z(z, l + 1, s), e = 0; e < f; e++) C[2 * e + 1] = 5, C[2 * e] = j(e, 5);
               O = new D(z, w, u + 1, l, g), B = new D(C, k, 0, f, g), R = new D(new Array(0), x, 0, c, p);
-            }(), q = !0), e.l_desc = new F(e.dyn_ltree, O), e.d_desc = new F(e.dyn_dtree, B), e.bl_desc = new F(e.bl_tree, R), e.bi_buf = 0, e.bi_valid = 0, W(e);
+            }(), q = true), e.l_desc = new F(e.dyn_ltree, O), e.d_desc = new F(e.dyn_dtree, B), e.bl_desc = new F(e.bl_tree, R), e.bi_buf = 0, e.bi_valid = 0, W(e);
           }, r._tr_stored_block = J, r._tr_flush_block = function (e, t, r, n) {
             var i,
               s,
@@ -28493,7 +28492,7 @@ function requireJszip_min() {
                   a,
                   o = 1,
                   h = {},
-                  u = !1,
+                  u = false,
                   l = r.document,
                   e = Object.getPrototypeOf && Object.getPrototypeOf(r);
                 e = e && e.setTimeout ? e : r, i = "[object process]" === {}.toString.call(r.process) ? function (e) {
@@ -28502,13 +28501,13 @@ function requireJszip_min() {
                   });
                 } : function () {
                   if (r.postMessage && !r.importScripts) {
-                    var e = !0,
+                    var e = true,
                       t = r.onmessage;
                     return r.onmessage = function () {
-                      e = !1;
+                      e = false;
                     }, r.postMessage("", "*"), r.onmessage = t, e;
                   }
-                }() ? (a = "setImmediate$" + Math.random() + "$", r.addEventListener ? r.addEventListener("message", d, !1) : r.attachEvent("onmessage", d), function (e) {
+                }() ? (a = "setImmediate$" + Math.random() + "$", r.addEventListener ? r.addEventListener("message", d, false) : r.attachEvent("onmessage", d), function (e) {
                   r.postMessage(a + e, "*");
                 }) : r.MessageChannel ? ((t = new MessageChannel()).port1.onmessage = function (e) {
                   c(e.data);
@@ -28538,7 +28537,7 @@ function requireJszip_min() {
                 if (u) setTimeout(c, 0, e);else {
                   var t = h[e];
                   if (t) {
-                    u = !0;
+                    u = true;
                     try {
                       !function (e) {
                         var t = e.callback,
@@ -28561,7 +28560,7 @@ function requireJszip_min() {
                         }
                       }(t);
                     } finally {
-                      f(e), u = !1;
+                      f(e), u = false;
                     }
                   }
                 }
@@ -32781,7 +32780,7 @@ function setupSceneDebug(scene) {
 }
 
 function ownKeys$7(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
-function _objectSpread$7(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$7(Object(t), !0).forEach(function (r) { topojson._defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$7(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
+function _objectSpread$7(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$7(Object(t), true).forEach(function (r) { topojson._defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$7(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
 
 // Load scene definition: pass an object directly, or a URL as string to load remotely
 class Scene {
@@ -34450,542 +34449,6 @@ function getMeshRenderState({
 Scene.id = 0; // unique id for a scene instance
 Scene.generation = 0; // id that is incremented each time a scene config is re-parsed
 
-// Tangram
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2013-2016 Brett Camper and Mapzen
-
-// Debounce a function
-// https://davidwalsh.name/javascript-debounce-function
-function debounce(func, wait) {
-  let timeout;
-  return function debounced(...arguments_) {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func.apply(this, arguments_), wait);
-  };
-}
-
-// Tangram
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2013-2016 Brett Camper and Mapzen
-
-
-// Exports must appear outside a function, but will only be defined in main thread (below)
-var LeafletLayer;
-function leafletLayer(options) {
-  return extendLeaflet(options);
-}
-
-// save references to overloaded Leaflet methods
-const originalHandlers = {
-  map: {},
-  scrollWheelZoom: {},
-  doubleClickZoom: {}
-};
-function extendLeaflet(options) {
-  // If LeafletLayer is already defined when this is called just return that immediately
-  // e.g. if you call leafletLayer multiple times (which is valid)
-  if (typeof LeafletLayer !== 'undefined') {
-    return new LeafletLayer(options);
-  }
-
-  // Leaflet layer functionality is only defined in main thread
-  if (topojson.Thread.is_main) {
-    let L = options.leaflet || window.L;
-
-    // Determine if we are extending the leaflet 0.7.x TileLayer class, or the newer
-    // leaflet 1.x GridLayer class.
-    let layerBaseClass = L.GridLayer ? L.GridLayer : L.TileLayer;
-    let leafletVersion = layerBaseClass === L.GridLayer ? '1.x' : '0.7.x';
-    let layerClassConfig = {};
-    let setZoomAroundNoMoveEnd; // alternate zoom functions defined below
-
-    // If extending leaflet 0.7.x TileLayer, additional modifications are needed
-    if (layerBaseClass === L.TileLayer) {
-      layerClassConfig._addTile = function () {};
-      layerClassConfig._removeTile = function () {};
-      layerClassConfig._reset = function () {
-        layerBaseClass.prototype._reset.apply(this, arguments);
-        // re-add the canvas since base class `viewreset` event can remove it
-        if (this.scene && this.scene.container && this.scene.canvas) {
-          this.scene.container.appendChild(this.scene.canvas);
-        }
-      };
-    }
-
-    // Define custom layer methods
-    Object.assign(layerClassConfig, {
-      initialize(options) {
-        // Defaults
-        options.showDebug = !options.showDebug ? false : true;
-        L.setOptions(this, options);
-        this.updateTangramDebugSettings();
-        this.createScene();
-        this.hooks = {};
-        this._updating_tangram = false;
-      },
-      createScene() {
-        this.scene = Scene.create(this.options.scene, {
-          numWorkers: this.options.numWorkers,
-          preUpdate: this.options.preUpdate,
-          postUpdate: this.options.postUpdate,
-          continuousZoom: LeafletLayer.leafletVersion === '1.x',
-          wrapView: this.options.noWrap === true ? false : true,
-          highDensityDisplay: this.options.highDensityDisplay,
-          logLevel: this.options.logLevel,
-          introspection: this.options.introspection,
-          // turn scene introspection on/off
-          webGLContextOptions: this.options.webGLContextOptions,
-          // override/supplement WebGL context options
-          disableRenderLoop: this.options.disableRenderLoop // app must call scene.update() per frame
-        });
-      },
-      // Finish initializing scene and setup events when layer is added to map
-      onAdd(map) {
-        if (!this.scene) {
-          this.createScene();
-        }
-        layerBaseClass.prototype.onAdd.apply(this, arguments);
-        this.hooks.resize = () => {
-          this._updating_tangram = true;
-          this.updateSize();
-          this._updating_tangram = false;
-        };
-        map.on('resize', this.hooks.resize);
-        this.hooks.move = () => {
-          if (this._updating_tangram) {
-            return;
-          }
-          this._updating_tangram = true;
-          this.scene.view.setPanning(true);
-          var view = map.getCenter();
-          view.zoom = Math.max(Math.min(map.getZoom(), map.getMaxZoom() || topojson.Geo.default_view_max_zoom), map.getMinZoom());
-          this.scene.view.setView(view);
-          if (this._mapLayerCount > 1) {
-            // if there are other map pane layers active, redraw immediately to stay in better visual sync
-            // otherwise, wait until next regular animation loop iteration
-            this.scene.immediateRedraw();
-          }
-          this._updating_tangram = false;
-        };
-        map.on('move', this.hooks.move);
-        this.hooks.moveend = () => {
-          this.scene.view.setPanning(false);
-          this.scene.requestRedraw();
-        };
-        map.on('moveend', this.hooks.moveend);
-        this.hooks.drag = () => {
-          this.scene.view.markUserInput();
-        };
-        map.on('drag', this.hooks.drag);
-
-        // keep Tangram layer in sync with view via mutation observer
-        this._map_pane_observer = new MutationObserver(mutations => {
-          mutations.forEach(() => this.reverseTransform());
-        });
-        this._map_pane_observer.observe(map.getPanes().mapPane, {
-          attributes: true
-        });
-
-        // Modify default Leaflet behaviors
-        this.modifyScrollWheelBehavior(map);
-        this.modifyZoomBehavior(map);
-        this.trackMapLayerCounts(map);
-
-        // Setup feature selection
-        this.setupSelectionEventHandlers(map);
-        this.setSelectionEvents(this.options.events, {
-          radius: this.options.selectionRadius
-        });
-
-        // Add GL canvas to layer container
-        this.scene.container = this.getContainer();
-        this.updateSize();
-
-        // Initial view
-        this.updateView();
-        this.resizeOnFirstVisible();
-
-        // Subscribe to tangram events
-        this.scene.subscribe({
-          move: this.onTangramViewUpdate.bind(this)
-        });
-
-        // Use leaflet's existing event system as the callback mechanism
-        this.scene.load(this.options.scene, {
-          base_path: this.options.sceneBasePath,
-          file_type: this.options.sceneFileType,
-          blocking: false
-        }).then(() => {
-          if (!this.options.attribution) {
-            for (const [, value] of Object.entries(this.scene.config.sources)) {
-              if (value.attribution) {
-                map.attributionControl.addAttribution(value.attribution);
-              }
-            }
-          }
-          this._updating_tangram = true;
-          this.updateSize();
-          this.updateView();
-          this.reverseTransform();
-          this._updating_tangram = false;
-          this.fire('init');
-        }).catch(error => {
-          this.fire('error', error);
-        });
-      },
-      onRemove(map) {
-        layerBaseClass.prototype.onRemove.apply(this, arguments);
-        map.off('layeradd layerremove overlayadd overlayremove', this._updateMapLayerCount);
-        map.off('resize', this.hooks.resize);
-        map.off('move', this.hooks.move);
-        map.off('moveend', this.hooks.moveend);
-        map.off('drag', this.hooks.drag);
-        map.off('click', this.hooks.click);
-        map.off('mousemove', this.hooks.mousemove);
-        map.off('mouseout', this.hooks.mouseout);
-        document.removeEventListener('visibilitychange', this.hooks.visibilitychange);
-        this.hooks = {};
-        this._map_pane_observer.disconnect();
-        if (this.scene) {
-          this.scene.destroy();
-          this.scene = null;
-        }
-      },
-      createTile(coords) {
-        var key = coords.x + '/' + coords.y + '/' + coords.z;
-        var div = document.createElement('div');
-        div.setAttribute('data-tile-key', key);
-        div.style.width = '256px';
-        div.style.height = '256px';
-        if (this.options.showDebug) {
-          var debug_overlay = document.createElement('div');
-          debug_overlay.textContent = key;
-          debug_overlay.style.position = 'absolute';
-          debug_overlay.style.left = 0;
-          debug_overlay.style.top = 0;
-          debug_overlay.style.color = 'white';
-          debug_overlay.style.fontSize = '16px';
-          debug_overlay.style.textOutline = '1px #000000';
-          debug_overlay.style.padding = '8px';
-          div.appendChild(debug_overlay);
-          div.style.borderStyle = 'solid';
-          div.style.borderColor = 'white';
-          div.style.borderWidth = '1px';
-        }
-        return div;
-      },
-      // Modify leaflet's default scroll wheel behavior to render frames more frequently
-      // (should generally lead to smoother scroll with Tangram frame re-render)
-      modifyScrollWheelBehavior(map) {
-        if (this.scene.view.continuous_zoom && map.scrollWheelZoom && this.options.modifyScrollWheel !== false) {
-          map.options.zoomSnap = 0;
-          const enabled = map.scrollWheelZoom.enabled();
-          map.scrollWheelZoom.disable();
-
-          // Chrome and Safari have smoother scroll-zoom without actively throttling the mouse wheel,
-          // while FF and Edge/IE do better with throttling.
-          // TODO: may be related to syncing differences with requestAnimationFrame loop, investigate further
-          if (L.Browser.chrome || L.Browser.safari) {
-            map.scrollWheelZoom._onWheelScroll = function (e) {
-              var delta = L.DomEvent.getWheelDelta(e);
-              this._delta += delta;
-              this._lastMousePos = this._map.mouseEventToContainerPoint(e);
-              this._performZoom();
-              L.DomEvent.stop(e);
-            };
-          } else {
-            map.options.wheelDebounceTime = 20; // better default for FF and Edge/IE
-          }
-          const debounceMoveEnd = debounce(function (map) {
-            map._moveEnd(true);
-            map.fire('viewreset'); // keep other leaflet layers in sync
-          }, map.options.wheelDebounceTime * 2);
-
-          // save reference to overloaded method
-          if (!originalHandlers.scrollWheelZoom._performZoom) {
-            originalHandlers.scrollWheelZoom._performZoom = map.scrollWheelZoom._performZoom;
-          }
-          var layer = this;
-          map.scrollWheelZoom._performZoom = function () {
-            if (this._map !== layer._map) {
-              // only call overloaded method on a tangram layer
-              originalHandlers.scrollWheelZoom._performZoom.call(this);
-              return;
-            }
-            var map = this._map,
-              zoom = map.getZoom();
-            map._stop(); // stop panning and fly animations if any
-
-            var delta = this._delta / (this._map.options.wheelPxPerZoomLevel * 4);
-            this._delta = 0;
-            if (zoom + delta >= this._map.getMaxZoom()) {
-              delta = this._map.getMaxZoom() - zoom; // don't go past max zoom
-            } else if (zoom + delta <= this._map.getMinZoom()) {
-              delta = this._map.getMinZoom() - zoom; // don't go past min zoom
-            }
-            if (!delta) {
-              return;
-            }
-            if (map.options.scrollWheelZoom === 'center') {
-              setZoomAroundNoMoveEnd(layer, map.getCenter(), zoom + delta);
-            } else {
-              setZoomAroundNoMoveEnd(layer, this._lastMousePos, zoom + delta);
-            }
-            debounceMoveEnd(map);
-          };
-          if (enabled) {
-            map.scrollWheelZoom.enable();
-          }
-        }
-      },
-      // Modify leaflet's default double-click and zoom in/out behavior, to better keep Tangram layer in sync with marker/SVG layers
-      modifyZoomBehavior(map) {
-        if (this.scene.view.continuous_zoom && this.options.modifyZoomBehavior !== false) {
-          var layer = this;
-
-          // Simplified version of Leaflet's flyTo, for short animations zooming around a point
-          const flyAround = function flyAround(layer, targetCenter, targetZoom) {
-            map._stop();
-            var startZoom = map._zoom;
-            targetCenter = L.latLng(targetCenter);
-            targetZoom = targetZoom === undefined ? startZoom : targetZoom;
-            targetZoom = Math.min(targetZoom, map.getMaxZoom()); // don't go past max zoom
-
-            var start = Date.now(),
-              duration = 75;
-            function frame() {
-              var t = (Date.now() - start) / duration;
-              if (t <= 1) {
-                // reuse internal flyTo frame to ensure these animations are canceled like others
-                map._flyToFrame = L.Util.requestAnimFrame(frame, map);
-                setZoomAroundNoMoveEnd(layer, targetCenter, startZoom + (targetZoom - startZoom) * t);
-              } else {
-                setZoomAroundNoMoveEnd(layer, targetCenter, targetZoom)._moveEnd(true);
-              }
-            }
-            map._moveStart(true);
-            frame.call(map);
-            return map;
-          };
-
-          // Modify the double-click zoom handler to do a short zoom animation
-          // See original: https://github.com/Leaflet/Leaflet/blob/cf518ff1a5e0e54a2f63faa144aeaa50888e0bc6/src/map/handler/Map.DoubleClickZoom.js#L29
-          if (map.doubleClickZoom) {
-            const enabled = map.doubleClickZoom.enabled();
-            map.doubleClickZoom.disable();
-
-            // save reference to overloaded method
-            if (!originalHandlers.doubleClickZoom._onDoubleClick) {
-              originalHandlers.doubleClickZoom._onDoubleClick = map.doubleClickZoom._onDoubleClick;
-            }
-            map.doubleClickZoom._onDoubleClick = function (e) {
-              if (this._map !== layer._map) {
-                // only call overloaded method on a tangram layer
-                originalHandlers.doubleClickZoom._onDoubleClick.call(this, e);
-                return;
-              }
-              var map = this._map,
-                oldZoom = map.getZoom(),
-                delta = map.options.zoomDelta,
-                zoom = e.originalEvent.shiftKey ? oldZoom - delta : oldZoom + delta;
-              if (map.options.doubleClickZoom === 'center') {
-                flyAround(layer, map.getCenter(), zoom);
-              } else {
-                flyAround(layer, map.containerPointToLatLng(e.containerPoint), zoom);
-              }
-            };
-            if (enabled) {
-              map.doubleClickZoom.enable();
-            }
-          }
-
-          // Modify the zoom in/out behavior
-          // NOTE: this will NOT fire the 'zoomanim' event, so this modification should be disabled for apps that depend on it
-          // See original: https://github.com/Leaflet/Leaflet/blob/cf518ff1a5e0e54a2f63faa144aeaa50888e0bc6/src/map/Map.js#L1610
-          if (map._zoomAnimated) {
-            // save reference to overloaded method
-            if (!originalHandlers.map._animateZoom) {
-              originalHandlers.map._animateZoom = map._animateZoom;
-            }
-            map._animateZoom = function (center, zoom, startAnim, noUpdate) {
-              if (this !== layer._map) {
-                // only call overloaded method on a tangram layer
-                originalHandlers.map._animateZoom.call(this, center, zoom, startAnim, noUpdate);
-                return;
-              }
-              if (startAnim) {
-                this._animatingZoom = true;
-
-                // remember what center/zoom to set after animation
-                this._animateToCenter = center;
-                this._animateToZoom = zoom;
-
-                // replace leaflet CSS animation with Tangram animation to keep markers/SVG in sync
-                // (this is a workaround from not being able to easily track/sync to on-going CSS animations in JS)
-                flyAround(layer, center, zoom);
-              }
-
-              // Work around webkit not firing 'transitionend', see https://github.com/Leaflet/Leaflet/issues/3689, 2693
-              setTimeout(L.Util.bind(this._onZoomTransitionEnd, this), 250);
-            };
-          }
-        }
-      },
-      updateView() {
-        var view = this._map.getCenter();
-        view.zoom = Math.max(Math.min(this._map.getZoom(), this._map.getMaxZoom() || topojson.Geo.default_view_max_zoom), this._map.getMinZoom());
-        this.scene.view.setView(view);
-      },
-      updateSize() {
-        var size = this._map.getSize();
-        this.scene.resizeMap(size.x, size.y);
-      },
-      resizeOnFirstVisible() {
-        let first_visibility = true;
-        this.hooks.visibilitychange = () => {
-          if (first_visibility) {
-            first_visibility = false;
-            this.updateSize();
-          }
-        };
-        document.addEventListener('visibilitychange', this.hooks.visibilitychange);
-      },
-      onTangramViewUpdate() {
-        if (!this._map || this._updating_tangram) {
-          return;
-        }
-
-        // View changed?
-        let map_center = this._map.getCenter();
-        let view_center = this.scene.view.center;
-        if (map_center.lng === view_center.lng && map_center.lat === view_center.lat && this._map.getZoom() === this.scene.view.zoom) {
-          return;
-        }
-        this._updating_tangram = true;
-        this._map.setView([this.scene.view.center.lat, this.scene.view.center.lng], this.scene.view.zoom, {
-          animate: false
-        });
-        this._updating_tangram = false;
-      },
-      render() {
-        if (!this.scene) {
-          return;
-        }
-        this.scene.update();
-      },
-      // Reverse the CSS positioning Leaflet applies to the layer, since Tangram's WebGL canvas
-      // is expected to be 'absolutely' positioned.
-      reverseTransform() {
-        if (!this._map || !this.scene || !this.scene.container) {
-          return;
-        }
-        var top_left = this._map.containerPointToLayerPoint([0, 0]);
-        L.DomUtil.setPosition(this.scene.container, top_left);
-      },
-      // Tie Leaflet event handlers to Tangram feature selection
-      setupSelectionEventHandlers(map) {
-        this._selection_events = {};
-        this._selection_radius = null; // optional radius
-
-        this.hooks.click = event => {
-          if (typeof this._selection_events.click === 'function') {
-            this.scene.getFeatureAt(event.containerPoint, {
-              radius: this._selection_radius
-            }).then(selection => {
-              let results = Object.assign({}, selection, {
-                leaflet_event: event
-              });
-              this._selection_events.click(results);
-            });
-          }
-        };
-        map.on('click', this.hooks.click);
-        this.hooks.mousemove = event => {
-          if (typeof this._selection_events.hover === 'function') {
-            this.scene.getFeatureAt(event.containerPoint, {
-              radius: this._selection_radius
-            }).then(selection => {
-              let results = Object.assign({}, selection, {
-                leaflet_event: event
-              });
-              this._selection_events.hover(results);
-            });
-          }
-        };
-        map.on('mousemove', this.hooks.mousemove);
-        this.hooks.mouseout = event => {
-          // When mouse leaves map, send an additional selection event to indicate no feature is selected
-          if (typeof this._selection_events.hover === 'function') {
-            this._selection_events.hover({
-              changed: true,
-              leaflet_event: event
-            });
-          }
-        };
-        map.on('mouseout', this.hooks.mouseout);
-      },
-      // Set user-defined handlers for feature selection events
-      // Currently only one handler can be defined for each event type
-      // Event types are: `click`, `hover` (leaflet `mousemove`)
-      setSelectionEvents(events, {
-        radius
-      } = {}) {
-        this._selection_events = Object.assign(this._selection_events, events);
-        this._selection_radius = radius !== undefined ? radius : this._selection_radius;
-      },
-      // Track the # of layers in the map pane
-      // Used to optimize Tangram redraw sensitivity (redraw more frequently when needing to sync w/other layers)
-      trackMapLayerCounts(map) {
-        this._updateMapLayerCount = () => {
-          let nodes = map.getPanes().mapPane.childNodes;
-          this._mapLayerCount = 0;
-          for (let i = 0; i < nodes.length; i++) {
-            this._mapLayerCount += nodes[i].childNodes.length;
-          }
-        };
-        map.on('layeradd layerremove overlayadd overlayremove', this._updateMapLayerCount);
-        this._updateMapLayerCount();
-      },
-      updateTangramDebugSettings() {
-        topojson.mergeDebugSettings(this.options.debug || {});
-      }
-    });
-
-    // Modified version of Leaflet's setZoomAround that doesn't trigger a moveEnd event
-    setZoomAroundNoMoveEnd = function (layer, latlng, zoom) {
-      var map = layer._map,
-        scene = layer.scene,
-        scale = map.getZoomScale(zoom),
-        viewHalf = map.getSize().divideBy(2),
-        containerPoint = latlng instanceof L.Point ? latlng : map.latLngToContainerPoint(latlng),
-        centerOffset = containerPoint.subtract(viewHalf).multiplyBy(1 - 1 / scale),
-        newCenter = map.containerPointToLatLng(viewHalf.add(centerOffset));
-      if (scene) {
-        scene.view.markUserInput();
-      }
-      return map._move(newCenter, zoom, {
-        flyTo: true
-      });
-    };
-
-    // Create the layer class
-    LeafletLayer = layerBaseClass.extend(layerClassConfig);
-
-    // Polyfill some 1.0 methods
-    if (typeof LeafletLayer.remove !== 'function') {
-      LeafletLayer.prototype.remove = function () {
-        if (this._map) {
-          this._map.removeLayer(this);
-        }
-        this.fire('remove');
-      };
-    }
-    LeafletLayer.layerBaseClass = layerBaseClass;
-    LeafletLayer.leafletVersion = leafletVersion;
-    return new LeafletLayer(options);
-  }
-}
-
 // tangram-layers
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
@@ -35532,7 +34995,7 @@ function getHiResTimestamp() {
 }
 
 function ownKeys$6(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
-function _objectSpread$6(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$6(Object(t), !0).forEach(function (r) { topojson._defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$6(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
+function _objectSpread$6(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$6(Object(t), true).forEach(function (r) { topojson._defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$6(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
 // Instrumentation in other packages may override console methods, so preserve them here
 const originalConsole = {
   debug: isBrowser() ? console.debug || console.log : console.log,
@@ -35803,7 +35266,7 @@ function uid(id = 'id') {
 }
 
 function ownKeys$5(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
-function _objectSpread$5(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$5(Object(t), !0).forEach(function (r) { topojson._defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$5(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
+function _objectSpread$5(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$5(Object(t), true).forEach(function (r) { topojson._defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$5(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
 const CPU_HOTSPOT_PROFILER_MODULE = 'cpu-hotspot-profiler';
 const RESOURCE_COUNTS_STATS = 'GPU Resource Counts';
 const LEGACY_RESOURCE_COUNTS_STATS = 'Resource Counts';
@@ -36132,7 +35595,7 @@ function getPrototypeToStringTag(prototype) {
 }
 
 function ownKeys$4(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
-function _objectSpread$4(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$4(Object(t), !0).forEach(function (r) { topojson._defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$4(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
+function _objectSpread$4(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$4(Object(t), true).forEach(function (r) { topojson._defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$4(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
 /** Abstract GPU buffer */
 class Buffer extends Resource {
   get [Symbol.toStringTag]() {
@@ -36376,7 +35839,7 @@ class DataTypeDecoder {
 const dataTypeDecoder = new DataTypeDecoder();
 
 function ownKeys$3(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
-function _objectSpread$3(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$3(Object(t), !0).forEach(function (r) { topojson._defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$3(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
+function _objectSpread$3(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$3(Object(t), true).forEach(function (r) { topojson._defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$3(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -36780,7 +36243,7 @@ const TEXTURE_FORMAT_COMPRESSED_TABLE = {
 const TEXTURE_FORMAT_TABLE = _objectSpread$3(_objectSpread$3({}, TEXTURE_FORMAT_COLOR_DEPTH_TABLE), TEXTURE_FORMAT_COMPRESSED_TABLE);
 
 function ownKeys$2(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
-function _objectSpread$2(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$2(Object(t), !0).forEach(function (r) { topojson._defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$2(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
+function _objectSpread$2(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$2(Object(t), true).forEach(function (r) { topojson._defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$2(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
 const RGB_FORMAT_REGEX = /^(r|rg|rgb|rgba|bgra)([0-9]*)([a-z]*)(-srgb)?(-webgl)?$/;
 const COLOR_FORMAT_PREFIXES = ['rgb', 'rgba', 'bgra'];
 const DEPTH_FORMAT_PREFIXES = ['depth', 'stencil'];
@@ -37137,7 +36600,7 @@ function _objectWithoutProperties(e, t) {
 }
 
 function ownKeys$1(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
-function _objectSpread$1(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$1(Object(t), !0).forEach(function (r) { topojson._defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$1(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
+function _objectSpread$1(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys$1(Object(t), true).forEach(function (r) { topojson._defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys$1(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
 /** Immutable Sampler object */
 class Sampler extends Resource {
   get [Symbol.toStringTag]() {
@@ -37170,7 +36633,7 @@ const _excluded = ["data", "depth"],
   _excluded2 = ["data", "depth"];
 var _Texture;
 function ownKeys(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
-function _objectSpread(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys(Object(t), !0).forEach(function (r) { topojson._defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
+function _objectSpread(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys(Object(t), true).forEach(function (r) { topojson._defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
 const BASE_DIMENSIONS = {
   '1d': '1d',
   '2d': '2d',
@@ -38130,7 +37593,6 @@ const debug = {
   debugSettings: topojson.debugSettings
 };
 const Tangram$1 = {
-  leafletLayer,
   Scene,
   ClassicWebGLRenderer: Renderer,
   Renderer: Renderer,
@@ -38153,7 +37615,7 @@ return Tangram$1;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = 'abf89269feef707066b377225d2779b518face2a';
+	Tangram.debug.SHA = '0b6df144a8490c1a4a4b41af8560a80a3c888ae0';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

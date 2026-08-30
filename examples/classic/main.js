@@ -3,6 +3,7 @@
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 import Tangram from '../../modules/tangram-renderer/dist/tangram.debug.mjs';
+import {leafletLayer} from './leaflet-layer.js';
 import {initializeApiKey} from './app/key.js';
 import {initializeUrlSync} from './app/url.js';
 
@@ -51,7 +52,7 @@ export function createClassicDemo() {
     }
 
     // Create Tangram as a Leaflet layer
-    var layer = Tangram.leafletLayer({
+    var layer = leafletLayer({
         scene: scene_url,
         events: {
             hover: onHover,     // hover event (defined below)
