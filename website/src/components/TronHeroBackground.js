@@ -106,26 +106,28 @@ export default function TronHeroBackground() {
   }, [deckExampleBaseUrl, tangramLayersUrl, tangramRendererUrl]);
 
   return (
-    <div ref={backgroundElement} className="tangram-home-live-map" aria-hidden="true">
-      <div id="deck-container">
-        <div className="tangram-home-runtime-controls" hidden>
-          <p id="status" />
-          <select id="basemap-style" defaultValue="tron">
-            <option value="tron">TRON 2.0</option>
-          </select>
-          <input id="basemap-visible" type="checkbox" defaultChecked />
-          <form id="nextzen-key-form">
-            <input id="nextzen-api-key" defaultValue="" />
-          </form>
-          <span id="carto-attribution" />
-          <span id="nextzen-attribution" />
-          <span id="tron-source-link" />
+    <>
+      <div ref={backgroundElement} className="tangram-home-live-map" aria-hidden="true">
+        <div id="deck-container">
+          <div className="tangram-home-runtime-controls" hidden>
+            <p id="status" />
+            <select id="basemap-style" defaultValue="tron">
+              <option value="tron">TRON 2.0</option>
+            </select>
+            <input id="basemap-visible" type="checkbox" defaultChecked />
+            <form id="nextzen-key-form">
+              <input id="nextzen-api-key" defaultValue="" />
+            </form>
+            <span id="carto-attribution" />
+            <span id="nextzen-attribution" />
+            <span id="tron-source-link" />
+          </div>
         </div>
-        <p id="attribution">
-          &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>
-          <span id="carto-attribution-label"> &copy; Basemap data providers</span>
-        </p>
       </div>
-    </div>
+      <p id="attribution" className="tangram-home-attribution">
+        &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>
+        <span id="carto-attribution-label"> &copy; Basemap data providers</span>
+      </p>
+    </>
   );
 }
