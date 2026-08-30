@@ -128,7 +128,7 @@ const TANGRAM_RENDERER_FILES = new Set([
   'modules/tangram-renderer/src/utils/thread.ts',
   'modules/tangram-renderer/src/utils/urls.js',
   'modules/tangram-renderer/src/utils/utils.js',
-  'modules/tangram-renderer/src/utils/vector.js',
+  'modules/tangram-renderer/src/utils/vector.ts',
   'modules/tangram-renderer/src/utils/version.ts',
   'modules/tangram-renderer/src/utils/worker_broker.js',
   'modules/tangram-renderer/test/data_source.browser.spec.js',
@@ -158,7 +158,8 @@ const VISGL_MODIFIED_TANGRAM_FILES = new Set([
   'modules/tangram-renderer/src/utils/props.ts',
   'modules/tangram-renderer/src/utils/debug_settings.ts',
   'modules/tangram-renderer/src/utils/thread.ts',
-  'modules/tangram-renderer/src/utils/version.ts'
+  'modules/tangram-renderer/src/utils/version.ts',
+  'modules/tangram-renderer/src/utils/vector.ts'
 ]);
 
 const TANGRAM_ROOT_FILES = new Set([

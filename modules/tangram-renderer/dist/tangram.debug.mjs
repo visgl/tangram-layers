@@ -5430,192 +5430,155 @@ Material.block = 'material';
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
-/*** Vector functions - vectors provided as [x, y] or [x, y, z] arrays ***/
+/** A numeric vector accepted by Tangram's vector utilities. */
 
-const Vector = {};
-Vector.copy = function (v) {
-  var V = [];
-  var lim = v.length;
-  for (var i = 0; i < lim; i++) {
-    V[i] = v[i];
+/** A mutable numeric vector returned or updated by Tangram's vector utilities. */
+
+function copy(vector) {
+  return [...vector];
+}
+function negate(vector) {
+  return vector.map(component => -component);
+}
+function add(left, right) {
+  const length = Math.min(left.length, right.length);
+  const result = [];
+  for (let index = 0; index < length; index++) {
+    result[index] = left[index] + right[index];
   }
-  return V;
-};
-Vector.neg = function (v) {
-  var V = [];
-  var lim = v.length;
-  for (var i = 0; i < lim; i++) {
-    V[i] = -v[i];
+  return result;
+}
+function subtract(left, right) {
+  const length = Math.min(left.length, right.length);
+  const result = [];
+  for (let index = 0; index < length; index++) {
+    result[index] = left[index] - right[index];
   }
-  return V;
-};
-
-// Addition of two vectors
-Vector.add = function (v1, v2) {
-  var v = [];
-  var lim = Math.min(v1.length, v2.length);
-  for (var i = 0; i < lim; i++) {
-    v[i] = v1[i] + v2[i];
+  return result;
+}
+function signedArea(first, second, third) {
+  return (second[0] - first[0]) * (third[1] - first[1]) - (third[0] - first[0]) * (second[1] - first[1]);
+}
+function multiply(vector, multiplier) {
+  const length = typeof multiplier === 'number' ? vector.length : Math.min(vector.length, multiplier.length);
+  const result = [];
+  for (let index = 0; index < length; index++) {
+    result[index] = vector[index] * (typeof multiplier === 'number' ? multiplier : multiplier[index]);
   }
-  return v;
-};
-
-// Substraction of two vectors
-Vector.sub = function (v1, v2) {
-  var v = [];
-  var lim = Math.min(v1.length, v2.length);
-  for (var i = 0; i < lim; i++) {
-    v[i] = v1[i] - v2[i];
+  return result;
+}
+function divide(vector, divisor) {
+  const length = typeof divisor === 'number' ? vector.length : Math.min(vector.length, divisor.length);
+  const result = [];
+  for (let index = 0; index < length; index++) {
+    result[index] = vector[index] / (typeof divisor === 'number' ? divisor : divisor[index]);
   }
-  return v;
-};
-Vector.signed_area = function (v1, v2, v3) {
-  return (v2[0] - v1[0]) * (v3[1] - v1[1]) - (v3[0] - v1[0]) * (v2[1] - v1[1]);
-};
-
-// Multiplication of two vectors, or a vector and a scalar
-Vector.mult = function (v1, v2) {
-  var v = [],
-    len = v1.length,
-    i;
-  if (typeof v2 === 'number') {
-    // Mulitply by scalar
-    for (i = 0; i < len; i++) {
-      v[i] = v1[i] * v2;
-    }
-  } else {
-    // Multiply two vectors
-    len = Math.min(v1.length, v2.length);
-    for (i = 0; i < len; i++) {
-      v[i] = v1[i] * v2[i];
-    }
-  }
-  return v;
-};
-
-// Division of two vectors
-Vector.div = function (v1, v2) {
-  var v = [],
-    i;
-  if (typeof v2 === 'number') {
-    // Divide by scalar
-    for (i = 0; i < v1.length; i++) {
-      v[i] = v1[i] / v2;
-    }
-  } else {
-    // Divide to vectors
-    var len = Math.min(v1.length, v2.length);
-    for (i = 0; i < len; i++) {
-      v[i] = v1[i] / v2[i];
-    }
-  }
-  return v;
-};
-
-// Get 2D perpendicular
-Vector.perp = function (v1, v2) {
-  return [v2[1] - v1[1], v1[0] - v2[0]];
-};
-
-// Get 2D vector rotated
-Vector.rot = function (v, a) {
-  var c = Math.cos(a);
-  var s = Math.sin(a);
-  return [v[0] * c - v[1] * s, v[0] * s + v[1] * c];
-};
-
-// Get 2D counter-clockwise angle
-// Angles in quadrant I and II are mapped to [0, PI)
-// Angles in quadrant III and IV are mapped to [-PI, 0]
-Vector.angle = function ([x, y]) {
+  return result;
+}
+function perpendicular(first, second) {
+  return [second[1] - first[1], first[0] - second[0]];
+}
+function rotate(vector, angleRadians) {
+  const cosine = Math.cos(angleRadians);
+  const sine = Math.sin(angleRadians);
+  return [vector[0] * cosine - vector[1] * sine, vector[0] * sine + vector[1] * cosine];
+}
+function angle([x, y]) {
   return Math.atan2(y, x);
-};
-
-// Get angle between two vectors
-Vector.angleBetween = function (A, B) {
-  var delta = Vector.dot(Vector.normalize(Vector.copy(A)), Vector.normalize(Vector.copy(B)));
+}
+function angleBetween(first, second) {
+  let delta = dot(normalize(copy(first)), normalize(copy(second)));
   if (delta > 1) {
     delta = 1;
-  } // protect against floating point error
+  }
   return Math.acos(delta);
-};
-
-// Compare two points
-Vector.isEqual = function (v1, v2) {
-  var len = v1.length;
-  for (var i = 0; i < len; i++) {
-    if (v1[i] !== v2[i]) {
+}
+function isEqual(first, second) {
+  for (let index = 0; index < first.length; index++) {
+    if (first[index] !== second[index]) {
       return false;
     }
   }
   return true;
-};
-
-// Vector length squared
-Vector.lengthSq = function (v) {
-  if (v.length === 2) {
-    return v[0] * v[0] + v[1] * v[1];
-  } else if (v.length >= 3) {
-    return v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
+}
+function lengthSquared(vector) {
+  if (vector.length === 2) {
+    return vector[0] * vector[0] + vector[1] * vector[1];
+  }
+  if (vector.length >= 3) {
+    return vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2];
   }
   return 0;
-};
-
-// Vector length
-Vector.length = function (v) {
-  return Math.sqrt(Vector.lengthSq(v));
-};
-
-// Normalize a vector *in place* (use Vector.copy() if you need a new vector instance)
-Vector.normalize = function (v) {
-  var d;
-  if (v.length === 2) {
-    d = v[0] * v[0] + v[1] * v[1];
-    if (d === 1) {
-      return v;
+}
+function getLength(vector) {
+  return Math.sqrt(lengthSquared(vector));
+}
+function normalize(vector) {
+  if (vector.length !== 2 && vector.length < 3) {
+    return vector;
+  }
+  let magnitudeSquared = vector[0] * vector[0] + vector[1] * vector[1];
+  if (vector.length >= 3) {
+    magnitudeSquared += vector[2] * vector[2];
+  }
+  if (magnitudeSquared === 1) {
+    return vector;
+  }
+  const magnitude = Math.sqrt(magnitudeSquared);
+  if (magnitude !== 0) {
+    vector[0] /= magnitude;
+    vector[1] /= magnitude;
+    if (vector.length >= 3) {
+      vector[2] /= magnitude;
     }
-    d = Math.sqrt(d);
-    if (d !== 0) {
-      v[0] /= d;
-      v[1] /= d;
-    } else {
-      v[0] = 0, v[1] = 0;
-    }
-  } else if (v.length >= 3) {
-    d = v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
-    if (d === 1) {
-      return v;
-    }
-    d = Math.sqrt(d);
-    if (d !== 0) {
-      v[0] /= d;
-      v[1] /= d;
-      v[2] /= d;
-    } else {
-      v[0] = 0, v[1] = 0, v[2] = 0;
+  } else {
+    vector[0] = 0;
+    vector[1] = 0;
+    if (vector.length >= 3) {
+      vector[2] = 0;
     }
   }
-  return v;
-};
-
-// Cross product of two vectors
-Vector.cross = function (v1, v2) {
-  if (v1.length === 2) {
-    return v1[0] * v2[1] - v1[1] * v2[0];
-  } else if (v1.length === 3) {
-    return [v1[1] * v2[2] - v1[2] * v2[1], v1[2] * v2[0] - v1[0] * v2[2], v1[0] * v2[1] - v1[1] * v2[0]];
+  return vector;
+}
+function cross(first, second) {
+  if (first.length === 2) {
+    return first[0] * second[1] - first[1] * second[0];
   }
-};
-
-// Dot product of two vectors
-Vector.dot = function (v1, v2) {
-  var n = 0;
-  var lim = Math.min(v1.length, v2.length);
-  for (var i = 0; i < lim; i++) {
-    n += v1[i] * v2[i];
+  if (first.length === 3) {
+    return [first[1] * second[2] - first[2] * second[1], first[2] * second[0] - first[0] * second[2], first[0] * second[1] - first[1] * second[0]];
   }
-  return n;
+  return undefined;
+}
+function dot(first, second) {
+  const length = Math.min(first.length, second.length);
+  let result = 0;
+  for (let index = 0; index < length; index++) {
+    result += first[index] * second[index];
+  }
+  return result;
+}
+
+/** Tangram's numeric vector operations. */
+const Vector = {
+  copy,
+  neg: negate,
+  add,
+  sub: subtract,
+  signed_area: signedArea,
+  mult: multiply,
+  div: divide,
+  perp: perpendicular,
+  rot: rotate,
+  angle,
+  angleBetween,
+  isEqual,
+  lengthSq: lengthSquared,
+  length: getLength,
+  normalize,
+  cross,
+  dot
 };
 
 var ambient_source = `// Tangram
@@ -37621,7 +37584,7 @@ return Tangram$1;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = 'd3fb685a56a4715cfe15f9c51c9ce44dff89ea2d';
+	Tangram.debug.SHA = '6534b14943785ad26cb17ef28de32ec1ad260e56';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}
