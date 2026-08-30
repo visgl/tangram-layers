@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-let debugSettings;
-
-export default debugSettings = {
+export const debugSettings = {
     // draws a blue rectangle border around the collision box of a label
     draw_label_collision_boxes: false,
 
@@ -26,6 +24,8 @@ export default debugSettings = {
     // draw scene in wireframe mode
     wireframe: false
 };
+
+export default debugSettings;
 
 export function mergeDebugSettings (settings) {
     Object.assign(debugSettings, settings);
