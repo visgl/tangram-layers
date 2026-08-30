@@ -137,7 +137,13 @@ describe('renderer runtime support', () => {
   it('reports unsupported media capture without browser APIs', async () => {
     globalThis.self.postMessage = () => {};
     const capture = new MediaCapture();
-    expect(capture.startVideoCapture()).toBe(false);
+    const originalWindow = globalThis.window;
+    Reflect.deleteProperty(globalThis, 'window');
+    try {
+      expect(capture.startVideoCapture()).toBe(false);
+    } finally {
+      globalThis.window = originalWindow;
+    }
     expect(await capture.stopVideoCapture()).toEqual({});
     const canvas = {width: 1, height: 1};
     capture.setCanvas(canvas, {});

@@ -10,7 +10,20 @@
         {
           "type": "array",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "$ref": "#/definitions/__schema0"
+                }
+              }
+            ]
           }
         },
         {
@@ -118,13 +131,36 @@
             "type": "boolean"
           },
           "lighting": {
-            "type": "boolean"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "vertex",
+                  "fragment"
+                ]
+              }
+            ]
           },
           "blend": {
             "type": "string"
           },
           "raster": {
-            "type": "boolean"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "color",
+                  "normal",
+                  "custom"
+                ]
+              }
+            ]
           },
           "texture": {
             "allOf": [
