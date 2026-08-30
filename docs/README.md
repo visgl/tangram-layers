@@ -125,9 +125,9 @@ maintained outside this repository.
 
 ### Examples in this repository
 
-The [classic playground](/tangram-layers/examples/classic/) collects the
+The [classic playground](/tangram.gl/examples/classic/) collects the
 style-gallery experience in a buildable workspace package. The [deck.gl
-example](/tangram-layers/examples/deck/) shows the modern package boundary and
+example](/tangram.gl/examples/deck/) shows the modern package boundary and
 layer lifecycle. Candidate ports from the catalog above should keep their
 scene files in `/examples`, consume `@vis.gl/tangram-renderer`, and avoid
 embedding service credentials in source or generated assets.

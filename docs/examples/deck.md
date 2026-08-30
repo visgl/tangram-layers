@@ -13,7 +13,7 @@ embedded in the website so the Examples sidebar remains available while you
 explore it.
 
 <div>
-  <a className="button button--primary button--lg" href="/tangram-layers/examples/deck">
+  <a className="button button--primary button--lg" href="/tangram.gl/examples/deck">
     Open the interactive TangramLayer example
   </a>
 </div>
