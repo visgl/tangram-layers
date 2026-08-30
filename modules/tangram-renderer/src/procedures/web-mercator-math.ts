@@ -15,6 +15,7 @@ export function projectLngLatToMetersWithMath(
   const [worldX, worldY] = lngLatToWorld([coordinates[0], coordinates[1]]);
   return [
     (worldX / WORLD_SIZE) * CIRCUMFERENCE_METERS - HALF_CIRCUMFERENCE_METERS,
+    // math.gl 4.x world Y is north-positive: latitude +40 maps above WORLD_SIZE / 2.
     (worldY / WORLD_SIZE) * CIRCUMFERENCE_METERS - HALF_CIRCUMFERENCE_METERS
   ];
 }
@@ -25,6 +26,7 @@ export function unprojectMetersToLngLatWithMath(
 ): [number, number] {
   const worldX =
     ((coordinates[0] + HALF_CIRCUMFERENCE_METERS) / CIRCUMFERENCE_METERS) * WORLD_SIZE;
+  // Preserve math.gl's north-positive world-Y convention for the inverse transform.
   const worldY =
     ((coordinates[1] + HALF_CIRCUMFERENCE_METERS) / CIRCUMFERENCE_METERS) * WORLD_SIZE;
   return worldToLngLat([worldX, worldY]) as [number, number];

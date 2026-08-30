@@ -146,6 +146,11 @@ describe('vis.gl procedure conformance', () => {
       expect(mathLngLat[1]).toBeCloseTo(legacyLngLat[1], 10);
     });
 
+    it('preserves Tangram north-positive projected Y', () => {
+      expect(projectLngLatToMetersWithMath([0, 40])[1]).toBeGreaterThan(0);
+      expect(projectLngLatToMetersWithMath([0, -40])[1]).toBeLessThan(0);
+    });
+
     it('keeps the legacy production API in-place and identity-preserving', () => {
       const coordinates = [-74.009764, 40.705327];
       const projected = Geo.latLngToMeters(coordinates);
