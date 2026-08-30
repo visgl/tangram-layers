@@ -8,6 +8,7 @@ import type {HostFrameOptions, RendererOptions} from '@vis.gl/tangram-renderer';
 const frameOptions = {
   viewport: {width: 800, height: 600},
   geographicAnchor: {longitude: -74, latitude: 40.7, zoom: 12},
+  projection: {type: 'web-mercator'},
   renderViews: [
     {
       id: 'main',

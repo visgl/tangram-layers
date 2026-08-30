@@ -35,6 +35,11 @@ Tile selection should use the union of all render-view frusta, while each eye
 gets its own camera uniforms and render pass. This keeps the contract suitable
 for future WebXR and other stereoscopic hosts.
 
+`HostFrame.projection` now establishes the first part of that boundary with
+deck-independent `web-mercator` and `globe` identifiers. Web Mercator remains
+the only production renderer path. Globe frames fail before changing scene
+state until the projection and visibility adapters below are installed.
+
 ## Tranches
 
 ### 1. Extract the current Web Mercator behavior
@@ -76,6 +81,10 @@ Tangram custom position shaders should run before the host projection hook.
 Styles that replace geographic position entirely, such as the Albers morph,
 must declare Web Mercator-only compatibility until they provide their own globe
 projection behavior.
+
+The `HostFrame` projection discriminator is already available for this work;
+the next implementation should consume it in shader assembly rather than
+checking deck.gl viewport classes inside `tangram-renderer`.
 
 ### 5. Conformance and packaging
 

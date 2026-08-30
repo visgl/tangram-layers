@@ -41,6 +41,7 @@ describe('HostFrame', function () {
         });
         expect(frame.activeRenderViewId).toBe('default');
         expect(frame.getRenderView().id).toBe('default');
+        expect(frame.projection).toEqual({type: 'web-mercator'});
         expect(frame.tileBuffer).toBe(2);
     });
 
@@ -69,6 +70,17 @@ describe('HostFrame', function () {
         expect(frame.getRenderView('right-eye').camera.position[0]).toBeCloseTo(0.03, 10);
     });
 
+    it('normalizes an explicit globe projection for future renderer adapters', function () {
+        const frame = new HostFrame({
+            viewport: { width: 800, height: 600 },
+            geographicAnchor: { longitude: -74, latitude: 40.7, zoom: 3 },
+            projection: { type: 'globe' },
+            renderViews: [{ id: 'main', camera: createCamera() }]
+        });
+
+        expect(frame.projection).toEqual({type: 'globe'});
+    });
+
     it('rejects incomplete and ambiguous frame state', function () {
         expect(() => new HostFrame()).toThrow(/viewport/);
         expect(() => new HostFrame({
@@ -84,5 +96,11 @@ describe('HostFrame', function () {
                 { id: 'eye', camera: createCamera() }
             ]
         })).toThrow(/duplicated/);
+        expect(() => new HostFrame({
+            viewport: { width: 800, height: 600 },
+            geographicAnchor: { longitude: -74, latitude: 40.7, zoom: 3 },
+            projection: { type: 'albers' },
+            renderViews: [{ camera: createCamera() }]
+        })).toThrow(/projection type/);
     });
 });

@@ -3,6 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 const DEFAULT_RENDER_VIEW_ID = 'default';
+const DEFAULT_PROJECTION_TYPE = 'web-mercator';
+const PROJECTION_TYPES = new Set([DEFAULT_PROJECTION_TYPE, 'globe']);
 
 /**
  * Host-owned state for one Tangram frame.
@@ -18,6 +20,7 @@ export default class HostFrame {
      * @param {object} options Host frame options.
      * @param {{width: number, height: number}} options.viewport Full render-target size.
      * @param {{longitude: number, latitude: number, altitude?: number, zoom: number}} options.geographicAnchor Shared geographic anchor and LOD zoom.
+     * @param {{type: 'web-mercator'|'globe'}} [options.projection] Host geographic projection.
      * @param {Array<object>} options.renderViews Per-view viewport and camera state.
      * @param {string} [options.activeRenderViewId] Default render view.
      * @param {number} [options.tileBuffer=0] Extra Web Mercator tile buffer.
@@ -25,12 +28,14 @@ export default class HostFrame {
     constructor({
         viewport,
         geographicAnchor,
+        projection,
         renderViews,
         activeRenderViewId,
         tileBuffer = 0
     } = {}) {
         this.viewport = normalizeViewport(viewport, 'HostFrame viewport');
         this.geographicAnchor = normalizeGeographicAnchor(geographicAnchor);
+        this.projection = normalizeProjection(projection);
         this.renderViews = normalizeRenderViews(renderViews, this.viewport);
         this.tileBuffer = normalizeTileBuffer(tileBuffer);
         this.activeRenderViewId = activeRenderViewId || this.renderViews[0].id;
@@ -60,7 +65,7 @@ export default class HostFrame {
      * @param {object} frame Legacy frame object.
      * @returns {HostFrame} Normalized host frame.
      */
-    static fromLegacy({viewport, view, camera, tileBuffer = 0} = {}) {
+    static fromLegacy({viewport, view, projection, camera, tileBuffer = 0} = {}) {
         return new HostFrame({
             viewport,
             geographicAnchor: view && {
@@ -69,6 +74,7 @@ export default class HostFrame {
                 altitude: view.altitude || 0,
                 zoom: view.zoom
             },
+            projection,
             renderViews: [{
                 id: DEFAULT_RENDER_VIEW_ID,
                 viewport,
@@ -92,6 +98,14 @@ export default class HostFrame {
         }
         return renderView;
     }
+}
+
+function normalizeProjection(projection) {
+    const type = projection && projection.type || DEFAULT_PROJECTION_TYPE;
+    if (!PROJECTION_TYPES.has(type)) {
+        throw new Error(`HostFrame projection type '${type}' is invalid`);
+    }
+    return { type };
 }
 
 function normalizeRenderViews(renderViews, fallbackViewport) {

@@ -28,6 +28,7 @@ export declare class HostFrame {
   static fromLegacy(frame: LegacyHostFrame): HostFrame;
   readonly viewport: Required<Viewport>;
   readonly geographicAnchor: Required<HostFrameOptions['geographicAnchor']>;
+  readonly projection: NonNullable<HostFrameOptions['projection']>;
   readonly renderViews: readonly HostRenderView[];
   readonly activeRenderViewId: string;
   readonly tileBuffer: number;
