@@ -66,6 +66,7 @@ const TANGRAM_RENDERER_FILES = new Set([
   'modules/tangram-renderer/src/lights/point_light.glsl',
   'modules/tangram-renderer/src/lights/spot_light.glsl',
   'modules/tangram-renderer/src/scene/camera.js',
+  'modules/tangram-renderer/src/scene/camera.ts',
   'modules/tangram-renderer/src/scene/globals.js',
   'modules/tangram-renderer/src/scene/scene.js',
   'modules/tangram-renderer/src/scene/scene_bundle.js',
@@ -133,6 +134,7 @@ const TANGRAM_RENDERER_FILES = new Set([
   'modules/tangram-renderer/src/utils/version.ts',
   'modules/tangram-renderer/src/utils/worker_broker.js',
   'modules/tangram-renderer/test/data_source.browser.spec.js',
+  'modules/tangram-renderer/test/camera.browser.spec.js',
   'modules/tangram-renderer/test/fixtures/sample-scene.yaml',
   'modules/tangram-renderer/test/geo.browser.spec.js',
   'modules/tangram-renderer/test/helpers.js',
@@ -153,6 +155,7 @@ const TANGRAM_RENDERER_FILES = new Set([
 // Tangram-derived files that have received substantive vis.gl modifications.
 // Keep the original Tangram notice and append the vis.gl modification notice.
 const VISGL_MODIFIED_TANGRAM_FILES = new Set([
+  'modules/tangram-renderer/src/scene/camera.ts',
   'modules/tangram-renderer/src/styles/filter.js',
   'modules/tangram-renderer/src/utils/media_capture.js',
   'modules/tangram-renderer/src/utils/errors.ts',
@@ -167,6 +170,7 @@ const VISGL_MODIFIED_TANGRAM_FILES = new Set([
   'modules/tangram-renderer/src/utils/thread.ts',
   'modules/tangram-renderer/src/utils/version.ts',
   'modules/tangram-renderer/src/utils/vector.ts',
+  'modules/tangram-renderer/test/camera.browser.spec.js',
   'modules/tangram-renderer/test/geo.browser.spec.js'
 ]);
 
