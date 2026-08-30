@@ -10,6 +10,7 @@ import {pathToFileURL} from 'node:url';
 const SPDX_LINE = 'SPDX-License-Identifier: MIT';
 const TANGRAM_COPYRIGHT = 'Copyright (c) 2013-2016 Brett Camper and Mapzen';
 const VISGL_COPYRIGHT = 'Copyright (c) vis.gl contributors';
+const VISGL_2026_COPYRIGHT = 'Copyright (c) 2026 vis.gl contributors';
 
 const LINE_COMMENT_EXTENSIONS = new Set(['.cjs', '.glsl', '.js', '.mjs', '.ts']);
 const HASH_COMMENT_EXTENSIONS = new Set(['.yaml', '.yml']);
@@ -110,7 +111,7 @@ const TANGRAM_RENDERER_FILES = new Set([
   'modules/tangram-renderer/src/tile/tile_manager.js',
   'modules/tangram-renderer/src/tile/tile_pyramid.js',
   'modules/tangram-renderer/src/utils/debounce.ts',
-  'modules/tangram-renderer/src/utils/debug_settings.js',
+  'modules/tangram-renderer/src/utils/debug_settings.ts',
   'modules/tangram-renderer/src/utils/errors.ts',
   'modules/tangram-renderer/src/utils/functions.ts',
   'modules/tangram-renderer/src/utils/geo.js',
@@ -124,11 +125,11 @@ const TANGRAM_RENDERER_FILES = new Set([
   'modules/tangram-renderer/src/utils/slice.ts',
   'modules/tangram-renderer/src/utils/subscribe.ts',
   'modules/tangram-renderer/src/utils/task.js',
-  'modules/tangram-renderer/src/utils/thread.js',
+  'modules/tangram-renderer/src/utils/thread.ts',
   'modules/tangram-renderer/src/utils/urls.js',
   'modules/tangram-renderer/src/utils/utils.js',
   'modules/tangram-renderer/src/utils/vector.js',
-  'modules/tangram-renderer/src/utils/version.js',
+  'modules/tangram-renderer/src/utils/version.ts',
   'modules/tangram-renderer/src/utils/worker_broker.js',
   'modules/tangram-renderer/test/data_source.browser.spec.js',
   'modules/tangram-renderer/test/fixtures/sample-scene.yaml',
@@ -146,6 +147,20 @@ const TANGRAM_RENDERER_FILES = new Set([
   'modules/tangram-renderer/test/tile.browser.spec.js',
   'modules/tangram-renderer/test/vertex_data.browser.spec.js',
   'modules/tangram-renderer/test/vertex_layout.browser.spec.js'
+]);
+
+// Tangram-derived files that have received substantive vis.gl modifications.
+// Keep the original Tangram notice and append the vis.gl modification notice.
+const VISGL_MODIFIED_TANGRAM_FILES = new Set([
+  'modules/tangram-renderer/src/styles/filter.js',
+  'modules/tangram-renderer/src/utils/media_capture.js',
+  'modules/tangram-renderer/src/utils/errors.ts',
+  'modules/tangram-renderer/src/utils/functions.ts',
+  'modules/tangram-renderer/src/utils/merge.ts',
+  'modules/tangram-renderer/src/utils/props.ts',
+  'modules/tangram-renderer/src/utils/debug_settings.ts',
+  'modules/tangram-renderer/src/utils/thread.ts',
+  'modules/tangram-renderer/src/utils/version.ts'
 ]);
 
 const TANGRAM_ROOT_FILES = new Set([
@@ -226,9 +241,12 @@ export function isTangramInherited(filePath) {
 }
 
 export function getHeader(filePath, commentStyle) {
-  const projectName = isTangramInherited(filePath) ? 'Tangram' : 'tangram-layers';
-  const copyright = isTangramInherited(filePath) ? TANGRAM_COPYRIGHT : VISGL_COPYRIGHT;
-  const lines = [projectName, SPDX_LINE, copyright];
+  const isInherited = isTangramInherited(filePath);
+  const projectName = isInherited ? 'Tangram' : 'tangram-layers';
+  const lines = [projectName, SPDX_LINE, isInherited ? TANGRAM_COPYRIGHT : VISGL_COPYRIGHT];
+  if (VISGL_MODIFIED_TANGRAM_FILES.has(filePath)) {
+    lines.push(VISGL_2026_COPYRIGHT);
+  }
 
   switch (commentStyle) {
     case 'line':
@@ -277,12 +295,20 @@ function getExistingHeaderEnd(commentStyle, sourceAtHeader) {
     return markerIndex >= 0 ? markerIndex + marker.length : 0;
   }
 
-  const copyrightIndex = sourceAtHeader.indexOf('Copyright');
-  if (copyrightIndex < 0) {
-    return 0;
+  let headerEnd = 0;
+  for (const line of sourceAtHeader.match(/[^\n]*(?:\n|$)/g) || []) {
+    const headerValue = line.replace(/^(?:\/\/|#)\s?/, '').trim();
+    const isHeaderLine =
+      headerValue === 'Tangram' ||
+      headerValue === 'tangram-layers' ||
+      headerValue === SPDX_LINE ||
+      headerValue.startsWith('Copyright');
+    if (!isHeaderLine) {
+      break;
+    }
+    headerEnd += line.length;
   }
-  const lineEnd = sourceAtHeader.indexOf('\n', copyrightIndex);
-  return lineEnd >= 0 ? lineEnd + 1 : sourceAtHeader.length;
+  return headerEnd;
 }
 
 export function updateLicenseHeader(filePath, source) {
