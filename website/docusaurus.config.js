@@ -11,10 +11,10 @@ const config = {
   title: 'Tangram layers',
   tagline: 'Tangram rendering and deck.gl basemap integration',
   url: 'https://visgl.github.io',
-  baseUrl: '/tangram-layers/',
+  baseUrl: '/tangram.gl/',
   favicon: '/favicon.png',
   organizationName: 'visgl',
-  projectName: 'tangram-layers',
+  projectName: 'tangram.gl',
   onBrokenLinks: 'warn',
   headTags: [
     {
@@ -89,7 +89,7 @@ const config = {
           title: 'Resources',
           items: [
             {label: 'Documentation', to: '/docs'},
-            {label: 'Deck example', href: '/tangram-layers/examples/deck'}
+            {label: 'Deck example', href: '/tangram.gl/examples/deck'}
           ]
         },
         {

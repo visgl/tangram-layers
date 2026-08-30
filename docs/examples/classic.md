@@ -11,7 +11,7 @@ the Examples sidebar remains available from the documentation navigation. The
 playground itself is a buildable example package rather than an embedded iframe.
 
 <div>
-  <a className="button button--primary button--lg" href="/tangram-layers/examples/classic?scene=styles/crosshatch-preview.yaml">
+  <a className="button button--primary button--lg" href="/tangram.gl/examples/classic?scene=styles/crosshatch-preview.yaml">
     Open the classic playground
   </a>
 </div>
@@ -22,7 +22,7 @@ historical styles and shader experiments, or open Scene YAML to edit the
 active document. Pause briefly after editing to apply it; invalid YAML is
 reported in the panel title and is not submitted to Tangram.
 
-The [standalone playground](/tangram-layers/examples/classic/) is also
+The [standalone playground](/tangram.gl/examples/classic/) is also
 available when a full-window map is more convenient. The [source and style
 assets](https://github.com/visgl/tangram.gl/tree/master/examples/classic)
 are packaged and copied into the website during the build.
