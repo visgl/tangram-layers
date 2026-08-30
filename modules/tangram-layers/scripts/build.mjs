@@ -23,7 +23,7 @@ await build({
   format: 'esm',
   packages: 'external',
   platform: 'browser',
-  target: ['esnext'],
+  target: ocularConfig.bundle?.target || ['esnext'],
   sourcemap: true,
   sourcesContent: false,
   alias: ocularConfig.aliases,
