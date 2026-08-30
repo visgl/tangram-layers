@@ -28,7 +28,6 @@ let classicPlaygroundMountId = 0;
 
 export default function ClassicPlayground() {
   const classicBaseUrl = useBaseUrl('/examples/classic/');
-  const rendererUrl = useBaseUrl('/modules/tangram-renderer/dist/tangram.debug.mjs');
   const styleSchemaUrl = useBaseUrl('/modules/tangram-renderer/dist/tangram-style.schema.json');
   const [errorMessage, setErrorMessage] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -59,6 +58,7 @@ export default function ClassicPlayground() {
     window.tangramClassicBaseUrl = classicBaseUrl;
     window.tangramStyleSchemaUrl = styleSchemaUrl;
 
+    const mountId = ++classicPlaygroundMountId;
     const scripts = [
       [`https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.2.0/leaflet.js`, 'text/javascript'],
       [
@@ -67,14 +67,8 @@ export default function ClassicPlayground() {
       ],
       [`${classicBaseUrl}lib/FileSaver.js`, 'text/javascript'],
       [`${classicBaseUrl}lib/keymaster.js`, 'text/javascript'],
-      [rendererUrl, 'module'],
-      [`${classicBaseUrl}main.js?embedded=1`, 'text/javascript'],
-      [`${classicBaseUrl}app/url.js?embedded=1`, 'text/javascript'],
-      [`${classicBaseUrl}app/key.js?embedded=1`, 'text/javascript'],
-      [
-        `${classicBaseUrl}app/settings-panel.js?embedded=1&mount=${++classicPlaygroundMountId}`,
-        'module'
-      ]
+      [`${classicBaseUrl}main.js?embedded=1&mount=${mountId}`, 'module'],
+      [`${classicBaseUrl}app/settings-panel.js?embedded=1&mount=${mountId}`, 'module']
     ];
 
     (async () => {
@@ -115,7 +109,7 @@ export default function ClassicPlayground() {
       delete window.tangramClassicSettingsCleanup;
       delete window.tangramStyleSchemaUrl;
     };
-  }, [classicBaseUrl, rendererUrl, styleSchemaUrl]);
+  }, [classicBaseUrl, styleSchemaUrl]);
 
   return (
     <div className="classic-playground-embed">

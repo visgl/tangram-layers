@@ -2,46 +2,37 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-(function(){
-    var url_hash = getValuesFromUrl();
-    var map_start_location = url_hash ? url_hash.slice(0, 3) : [16, 40.70531887544228, -74.00976419448853];
+const DEFAULT_VIEW = [16, 40.70531887544228, -74.00976419448853];
 
-    /*** URL parsing ***/
-    // URL hash pattern #[zoom]/[lat]/[lng]
-    function getValuesFromUrl() {
-        var url_hash = window.location.hash.slice(1, window.location.hash.length).split('/');
-        if (url_hash.length < 3 || url_hash.slice(0, 3).some(function(value) {
-            return !Number.isFinite(parseFloat(value));
-        })) {
-            url_hash = false;
-        }
-        return url_hash;
-    }
+export function getViewFromUrl(hash = window.location.hash) {
+  const values = hash.slice(1).split('/').slice(0, 3).map(Number.parseFloat);
+  return values.length === 3 && values.every(Number.isFinite) ? values : null;
+}
 
-    // Put current state on URL
-    var update_url_throttle = 100;
-    var update_url_timeout = null;
+export function initializeUrlSync({map, layer, location = window.location}) {
+  const initialView = getViewFromUrl(location.hash) || DEFAULT_VIEW;
+  let updateTimeout = null;
 
-    function updateURL() {
-        clearTimeout(update_url_timeout);
-        update_url_timeout = setTimeout(function() {
-            var center = map.getCenter();
-            var url_options = [map.getZoom(), center.lat, center.lng];
+  function updateUrl() {
+    window.clearTimeout(updateTimeout);
+    updateTimeout = window.setTimeout(() => {
+      const center = map.getCenter();
+      location.hash = [map.getZoom(), center.lat, center.lng].join('/');
+    }, 100);
+  }
 
-            window.location.hash = url_options.join('/');
-        }, update_url_throttle);
-    }
+  function updateInitialView() {
+    updateUrl();
+    map.setView(initialView.slice(1, 3), initialView[0]);
+  }
 
-    function initializeUrlSync() {
-        map.on('move', updateURL);
-        map.setView(map_start_location.slice(1, 3), map_start_location[0]);
-    }
+  map.on('move', updateUrl);
+  map.setView(initialView.slice(1, 3), initialView[0]);
+  layer.on('init', updateInitialView);
 
-    function updateInitialView(){
-        updateURL();
-        map.setView(map_start_location.slice(1, 3), map_start_location[0]);
-    }
-
-    initializeUrlSync();
-    layer.on('init', updateInitialView);
-})();
+  return function destroyUrlSync() {
+    window.clearTimeout(updateTimeout);
+    map.off('move', updateUrl);
+    layer.off('init', updateInitialView);
+  };
+}

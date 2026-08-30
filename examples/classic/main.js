@@ -2,15 +2,19 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
+import Tangram from '../../modules/tangram-renderer/dist/tangram.debug.mjs';
+import {initializeApiKey} from './app/key.js';
+import {initializeUrlSync} from './app/url.js';
+
 /*
     Hello source-viewers!
     We're glad you're interested in how Tangram can be used to make amazing maps!
     - The Tangram team
 */
 
-(function () {
+export function createClassicDemo() {
     if (window.tangramClassicCancelled) {
-        return;
+        return null;
     }
 
     var scene_url = 'styles/local-basemap.yaml';
@@ -227,7 +231,11 @@
     window.map = map;
     window.layer = layer;
     window.scene = layer.scene;
+    window.Tangram = Tangram;
     window.tangramUpdateCartoBasemap = updateCartoBasemap;
+
+    const destroyApiKey = initializeApiKey({scene: layer.scene});
+    const destroyUrlSync = initializeUrlSync({map, layer});
 
     function initializeClassicDemo() {
         layer.addTo(map);
@@ -240,14 +248,22 @@
         initializeClassicDemo();
     }
 
-    window.tangramClassicDestroy = function destroyClassicDemo() {
-        if (window.map) {
-            window.map.remove();
-        }
+    function destroyClassicDemo() {
+        window.removeEventListener('load', initializeClassicDemo);
+        destroyApiKey();
+        destroyUrlSync();
+        window.tangramClassicSettingsCleanup?.();
+        map.remove();
         window.map = null;
         window.layer = null;
         window.scene = null;
         cartoBasemap = null;
         window.tangramUpdateCartoBasemap = null;
-    };
-}());
+        window.tangramClassicDestroy = null;
+    }
+
+    window.tangramClassicDestroy = destroyClassicDemo;
+    return {map, layer, scene: layer.scene, destroy: destroyClassicDemo};
+}
+
+createClassicDemo();

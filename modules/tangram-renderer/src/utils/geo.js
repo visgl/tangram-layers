@@ -4,8 +4,8 @@
 
 // Miscellaneous geo functions
 
-var Geo;
-export default Geo = {};
+export const Geo = {};
+export default Geo;
 
 // Projection constants
 Geo.default_source_max_zoom = 18;

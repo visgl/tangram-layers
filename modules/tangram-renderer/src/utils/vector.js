@@ -4,8 +4,8 @@
 
 /*** Vector functions - vectors provided as [x, y] or [x, y, z] arrays ***/
 
-var Vector;
-export default Vector = {};
+export const Vector = {};
+export default Vector;
 
 Vector.copy = function (v) {
     var V = [];

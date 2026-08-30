@@ -4,8 +4,8 @@
 
 // WebGL context wrapper
 
-var Context;
-export default Context = {};
+export const Context = {};
+export default Context;
 
 let context_id = 0;
 const context_scopes = new WeakMap();
