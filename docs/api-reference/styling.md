@@ -136,5 +136,5 @@ same scene document can therefore be passed to `@vis.gl/tangram-renderer` or
 to `@vis.gl/tangram-layers` without changing the style format.
 
 For a complete working document, see the scene files in
-[`examples/classic/styles`](https://github.com/visgl/tangram-layers/tree/master/examples/classic/styles)
+[`examples/classic/styles`](https://github.com/visgl/tangram.gl/tree/master/examples/classic/styles)
 and the [classic playground](../examples/classic).

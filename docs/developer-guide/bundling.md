@@ -8,7 +8,7 @@ Copyright (c) vis.gl contributors
 
 The deck example is a useful baseline for understanding the cost of adding a
 Tangram basemap to a small deck.gl application. The application source is
-[`examples/deck/app.js`](https://github.com/visgl/tangram-layers/blob/master/examples/deck/app.js).
+[`examples/deck/app.js`](https://github.com/visgl/tangram.gl/blob/master/examples/deck/app.js).
 It creates a deck instance, adds `TangramLayer`, and renders a small overlay.
 
 ## Current reference footprint
