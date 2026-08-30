@@ -39,11 +39,11 @@ export default function subscribeMixin<Target extends object>(
     },
 
     trigger(event: string, ...data: unknown[]): void {
-      for (const listener of listeners) {
+      for (const listener of [...listeners]) {
         const handler = listener[event];
         if (typeof handler === 'function') {
           try {
-            handler(...data);
+            handler.call(listener, ...data);
           } catch (error) {
             log('warn', `Caught exception in listener for event '${event}':`, error);
           }

@@ -1125,11 +1125,11 @@ function subscribeMixin(target) {
       listeners = [];
     },
     trigger(event, ...data) {
-      for (const listener of listeners) {
+      for (const listener of [...listeners]) {
         const handler = listener[event];
         if (typeof handler === 'function') {
           try {
-            handler(...data);
+            handler.call(listener, ...data);
           } catch (error) {
             log('warn', `Caught exception in listener for event '${event}':`, error);
           }
@@ -38153,7 +38153,7 @@ return Tangram$1;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = 'd2d8d25483cd4958e375c345c6743c085ca7afa7';
+	Tangram.debug.SHA = 'abf89269feef707066b377225d2779b518face2a';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

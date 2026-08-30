@@ -20,4 +20,37 @@ describe('migrated subscription utility', () => {
     expect(handler).toHaveBeenCalledOnce();
     expect(handler).toHaveBeenCalledWith('scene.yaml');
   });
+
+  it('preserves the listener as a handler receiver', () => {
+    const target = subscribeMixin({name: 'scene'});
+    const listener = {
+      count: 0,
+      update() {
+        this.count++;
+      }
+    };
+
+    target.subscribe(listener);
+    target.trigger('update');
+
+    expect(listener.count).toBe(1);
+  });
+
+  it('waits until the next trigger to notify new listeners', () => {
+    const target = subscribeMixin({name: 'scene'});
+    const lateHandler = vi.fn();
+    const lateListener = {update: lateHandler};
+    const initialListener = {
+      update() {
+        target.subscribe(lateListener);
+      }
+    };
+
+    target.subscribe(initialListener);
+    target.trigger('update');
+    expect(lateHandler).not.toHaveBeenCalled();
+
+    target.trigger('update');
+    expect(lateHandler).toHaveBeenCalledOnce();
+  });
 });

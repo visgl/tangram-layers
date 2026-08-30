@@ -1256,10 +1256,6 @@ var Task = {
   }
 };
 
-// Tangram
-// SPDX-License-Identifier: MIT
-// Copyright (c) 2013-2016 Brett Camper and Mapzen
-
 function subscribeMixin(target) {
   var listeners = [];
   return Object.assign(target, {
@@ -1281,12 +1277,12 @@ function subscribeMixin(target) {
       for (var _len = arguments.length, data = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
         data[_key - 1] = arguments[_key];
       }
-      for (var _i = 0, _listeners = listeners; _i < _listeners.length; _i++) {
-        var _listener = _listeners[_i];
+      for (var _i = 0, _arr = _toConsumableArray(listeners); _i < _arr.length; _i++) {
+        var _listener = _arr[_i];
         var handler = _listener[event];
         if (typeof handler === 'function') {
           try {
-            handler.apply(void 0, data);
+            handler.call.apply(handler, [_listener].concat(data));
           } catch (error) {
             log('warn', "Caught exception in listener for event '".concat(event, "':"), error);
           }
@@ -40460,7 +40456,7 @@ return Tangram$1;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = 'd2d8d25483cd4958e375c345c6743c085ca7afa7';
+	Tangram.debug.SHA = 'abf89269feef707066b377225d2779b518face2a';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}
