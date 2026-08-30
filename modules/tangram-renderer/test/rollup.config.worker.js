@@ -22,7 +22,8 @@ const config = {
     plugins: [
         resolve({
             browser: true,
-            preferBuiltins: false
+            preferBuiltins: false,
+            extensions: ['.mjs', '.js', '.json', '.node', '.ts']
         }),
         commonjs(),
         json(), // load JSON files
@@ -31,6 +32,7 @@ const config = {
         }),
         babel({
           exclude: 'node_modules/**',
+          extensions: ['.js', '.mjs', '.ts'],
           babelHelpers: 'runtime',
           configFile: '../../babel.config.js'
         })

@@ -48,7 +48,8 @@ export default function (config) {
             plugins: [
                 resolve({
                     browser: true,
-                    preferBuiltins: false
+                    preferBuiltins: false,
+                    extensions: ['.mjs', '.js', '.json', '.node', '.ts']
                 }),
                 commonjs(),
 
@@ -61,6 +62,7 @@ export default function (config) {
 
                 babel({
                     exclude: ['node_modules/**', '*.json'],
+                    extensions: ['.js', '.mjs', '.ts'],
                     babelHelpers: "runtime"
                 }),
 
