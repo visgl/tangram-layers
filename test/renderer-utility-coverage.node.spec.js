@@ -5,7 +5,7 @@
 import {beforeAll, beforeEach, describe, expect, it} from 'vitest';
 import {MethodNotImplemented} from '../modules/tangram-renderer/src/utils/errors.js';
 import {compileFunctionString, compileFunctionStrings, clearFunctionStringCache, functionStringCache} from '../modules/tangram-renderer/src/utils/functions.js';
-import Geo from '../modules/tangram-renderer/src/utils/geo.js';
+import Geo from '../modules/tangram-renderer/src/utils/geo.ts';
 import {buildFilter} from '../modules/tangram-renderer/src/styles/filter.js';
 import CollisionGrid from '../modules/tangram-renderer/src/labels/collision_grid.js';
 import {boxIntersectsBox, boxIntersectsList} from '../modules/tangram-renderer/src/labels/intersect.js';
