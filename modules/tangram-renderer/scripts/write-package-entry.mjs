@@ -4,13 +4,24 @@ import {fileURLToPath} from 'node:url';
 
 const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const outputPath = resolve(packageDirectory, 'dist/index.js');
+const packageEntry = `import Tangram from './tangram.debug.mjs';
+
+const {leafletLayer, Scene, ClassicWebGLRenderer, HostFrame, LumaDeviceRenderer, debug, version} =
+  Tangram;
+const Renderer = ClassicWebGLRenderer;
+
+export {
+  leafletLayer,
+  Scene,
+  ClassicWebGLRenderer,
+  Renderer,
+  HostFrame,
+  LumaDeviceRenderer,
+  debug,
+  version
+};
+export default Tangram;
+`;
 
 await mkdir(dirname(outputPath), {recursive: true});
-await writeFile(
-  outputPath,
-  `import Tangram from './tangram.debug.mjs';\n\n` +
-    `const {leafletLayer, Scene, ClassicWebGLRenderer, HostFrame, LumaDeviceRenderer, debug, version} = Tangram;\n` +
-    `const Renderer = ClassicWebGLRenderer;\n\n` +
-    `export {leafletLayer, Scene, ClassicWebGLRenderer, Renderer, HostFrame, LumaDeviceRenderer, debug, version};\n` +
-    `export default Tangram;\n`
-);
+await writeFile(outputPath, packageEntry);
