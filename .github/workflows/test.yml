@@ -118,7 +118,7 @@ jobs:
         run: node scripts/write-coverage-summary.mjs
       - name: Publish renderer coverage to Coveralls
         if: success()
-        uses: coverallsapp/github-action@648aeb78e6d50909eff900e4ec85cab4524a45b # v2.3.6
+        uses: coverallsapp/github-action@648a8eb78e6d50909eff900e4ec85cab4524a45b # v2.3.6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           file: coverage/lcov.info
