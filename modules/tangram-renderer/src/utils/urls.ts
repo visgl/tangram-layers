@@ -1,11 +1,17 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 import log from './log';
 
+type URLParameters = Record<string, string | number | boolean | null | undefined>;
+type ObjectURLSource = Blob | MediaSource;
+type URLResult = [string, Array<[string, URLParameters[string]]>];
+
 // Adds a base origin to relative URLs
-export function addBaseURL (url, base) {
+/** Adds a base origin to a relative URL. */
+export function addBaseURL(url: string, base?: string): string {
     if (!url || !isRelativeURL(url)) {
         return url;
     }
@@ -35,7 +41,8 @@ export function addBaseURL (url, base) {
     return url;
 }
 
-export function pathForURL (url) {
+/** Returns the directory path portion of a URL. */
+export function pathForURL(url: string): string {
     if (typeof url === 'string' && url.search(/^(data|blob):/) === -1) {
         let qs = url.indexOf('?');
         if (qs > -1) {
@@ -52,30 +59,34 @@ export function pathForURL (url) {
     return '';
 }
 
-export function extensionForURL (url) {
-    url = url.split('/').pop();
-    let last_dot = url.lastIndexOf('.');
+/** Returns the filename extension portion of a URL. */
+export function extensionForURL(url: string): string | undefined {
+    const filename = url.split('/').pop() || '';
+    let last_dot = filename.lastIndexOf('.');
     if (last_dot > -1) {
-        return url.substring(last_dot + 1);
+        return filename.substring(last_dot + 1);
     }
 }
 
-export function isLocalURL (url) {
+/** Returns whether a URL uses a local data or blob scheme. */
+export function isLocalURL(url: unknown): boolean {
     if (typeof url !== 'string') {
-        return;
+        return false;
     }
     return (url.search(/^(data|blob):/) > -1);
 }
 
-export function isRelativeURL (url) {
+/** Returns whether a URL is relative to its current document. */
+export function isRelativeURL(url: unknown): boolean {
     if (typeof url !== 'string') {
-        return;
+        return false;
     }
     return !(url.search(/^(http|https|data|blob):/) > -1 || url.substr(0, 2) === '//');
 }
 
 // Resolves './' and '../' components from relative path, to get a "flattened" path
-export function flattenRelativeURL (url) {
+/** Resolves dot-directory components in a relative URL path. */
+export function flattenRelativeURL(url: string): string {
     let dirs = (url || '').split('/');
     for (let d = 1; d < dirs.length; d++) {
         if (dirs[d] === '.') {
@@ -94,7 +105,8 @@ export function flattenRelativeURL (url) {
 // Add a set of query string params to a URL
 // params: hash of key/value pairs of query string parameters
 // returns array of: [modified URL, array of duplicate param name and values]
-export function addParamsToURL (url, params) {
+/** Adds query parameters and returns any parameters already present in the URL. */
+export function addParamsToURL(url: string, params?: URLParameters): URLResult {
     if (!params || Object.keys(params).length === 0) {
         return [url, []];
     }
@@ -118,7 +130,7 @@ export function addParamsToURL (url, params) {
 
     // Build query string params
     var url_params = '';
-    var dupes = [];
+    const dupes: Array<[string, URLParameters[string]]> = [];
     for (var p in params) {
         if (getURLParameter(p, url) !== '') {
             dupes.push([p, params[p]]);
@@ -134,38 +146,41 @@ export function addParamsToURL (url, params) {
 }
 
 // Polyfill (for Safari compatibility)
-let _createObjectURL;
-export function createObjectURL (url) {
-    if (_createObjectURL === undefined) {
-        _createObjectURL = (window.URL && window.URL.createObjectURL) || (window.webkitURL && window.webkitURL.createObjectURL);
+let createObjectURLFunction: typeof URL.createObjectURL | null | undefined;
+/** Creates a blob URL, using the vendor-prefixed fallback when necessary. */
+export function createObjectURL(url: ObjectURLSource): string | ObjectURLSource {
+    if (createObjectURLFunction === undefined) {
+        createObjectURLFunction = (window.URL && window.URL.createObjectURL) || (window.webkitURL && window.webkitURL.createObjectURL);
 
-        if (typeof _createObjectURL !== 'function') {
-            _createObjectURL = null;
+        if (typeof createObjectURLFunction !== 'function') {
+            createObjectURLFunction = null;
             log('warn', 'window.URL.createObjectURL (or vendor prefix) not found, unable to create local blob URLs');
         }
     }
 
-    if (_createObjectURL) {
-        return _createObjectURL(url);
+    if (createObjectURLFunction) {
+        return createObjectURLFunction(url);
     }
     else {
         return url;
     }
 }
 
-let _revokeObjectURL;
-export function revokeObjectURL (url) {
-    if (_revokeObjectURL === undefined) {
-        _revokeObjectURL = (window.URL && window.URL.revokeObjectURL) || (window.webkitURL && window.webkitURL.revokeObjectURL);
+let revokeObjectURLFunction: typeof URL.revokeObjectURL | null | undefined;
+/** Revokes a blob URL, using the vendor-prefixed fallback when necessary. */
+export function revokeObjectURL(url: string): string | undefined {
+    if (revokeObjectURLFunction === undefined) {
+        revokeObjectURLFunction = (window.URL && window.URL.revokeObjectURL) || (window.webkitURL && window.webkitURL.revokeObjectURL);
 
-        if (typeof _revokeObjectURL !== 'function') {
-            _revokeObjectURL = null;
+        if (typeof revokeObjectURLFunction !== 'function') {
+            revokeObjectURLFunction = null;
             log('warn', 'window.URL.revokeObjectURL (or vendor prefix) not found, unable to create local blob URLs');
         }
     }
 
-    if (_revokeObjectURL) {
-        return _revokeObjectURL(url);
+    if (revokeObjectURLFunction) {
+        revokeObjectURLFunction(url);
+        return undefined;
     }
     else {
         return url;
@@ -175,19 +190,21 @@ export function revokeObjectURL (url) {
 // Get URL that the current script was loaded from
 // If currentScript is not available, loops through <script> elements searching for a list of provided paths
 // e.g. findCurrentURL('tangram.debug.js', 'tangram.min.js');
-export function findCurrentURL (...paths) {
+/** Finds the URL of the current script or a matching script element. */
+export function findCurrentURL(...paths: string[]): string | undefined {
     // Find currently executing script
     var script = document.currentScript;
     if (script) {
-        return script.src;
+        return (script as HTMLScriptElement).src;
     }
     else if (Array.isArray(paths)) {
         // Fallback on looping through <script> elements if document.currentScript is not supported
         var scripts = document.getElementsByTagName('script');
         for (var s=0; s < scripts.length; s++) {
             for (let p=0; p < paths.length; p++) {
-                if (scripts[s].src.indexOf(paths[p]) > -1) {
-                    return scripts[s].src;
+                const script = scripts[s] as HTMLScriptElement;
+                if (script.src.indexOf(paths[p]) > -1) {
+                    return script.src;
                 }
             }
         }
@@ -195,7 +212,7 @@ export function findCurrentURL (...paths) {
 }
 
 // Via https://davidwalsh.name/query-string-javascript
-function getURLParameter (name, url) {
+function getURLParameter(name: string, url: string): string {
     name = name.replace(/[[]/, '\\[').replace(/[\]]/, '\\]');
     var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
     var results = regex.exec(url);
