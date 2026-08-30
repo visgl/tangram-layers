@@ -38,7 +38,10 @@ export default class View {
         this.aspect = null;
 
         this.buffer = 0;
-        this.external_camera = options.externalCamera === true;
+        // Host-driven renderers own camera projection. `externalCamera` remains
+        // as a compatibility alias while callers migrate to the explicit mode.
+        this.camera_mode = options.cameraMode || (options.externalCamera === true ? 'external' : 'scene');
+        this.external_camera = this.camera_mode === 'external';
         this.continuous_zoom = (typeof options.continuousZoom === 'boolean') ? options.continuousZoom : true;
         this.wrap = (options.wrapView === false) ? false : true;
         this.preserve_tiles_within_zoom = 1;
@@ -67,7 +70,7 @@ export default class View {
     // Supply camera matrices from an embedding renderer
     setCameraMatrices (matrices) {
         if (!this.camera || this.camera.type !== 'external') {
-            throw new Error('View must be constructed with externalCamera to accept camera matrices');
+            throw new Error('View must use cameraMode \'external\' to accept camera matrices');
         }
         this.camera.setMatrices(matrices);
     }

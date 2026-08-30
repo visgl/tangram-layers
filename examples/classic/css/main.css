@@ -78,25 +78,40 @@ div > .leaflet-pelias-control {
     display: flex;
     flex: 1;
     flex-direction: column;
+    overflow: hidden;
 }
 
-.classic-settings-host [data-sidebar-shell] section:last-child {
+.classic-settings-host [data-sidebar-shell] section:last-child:has(.tangram-scene-editor) {
     display: flex;
     min-height: 0;
     flex: 1;
     flex-direction: column;
 }
 
-.classic-settings-host [data-sidebar-shell] section:last-child > div {
-    display: flex;
+.classic-settings-host [data-sidebar-shell] section:last-child:has(.tangram-scene-editor) > div {
     min-height: 0;
     flex: 1;
-    flex-direction: column;
+    overflow: hidden;
 }
 
-.classic-settings-host [data-sidebar-shell] section:last-child .monaco-editor {
-    min-height: 240px;
+.classic-settings-host .tangram-scene-editor,
+.classic-settings-host .tangram-scene-editor > div,
+.classic-settings-host .tangram-scene-editor [data-text-editor-host] {
+    min-height: 0 !important;
     flex: 1;
+}
+
+.classic-settings-host .tangram-scene-editor,
+.classic-settings-host .tangram-scene-editor > div,
+.classic-settings-host .tangram-scene-editor [data-text-editor-host],
+.classic-settings-host .tangram-scene-editor .monaco-editor,
+.classic-settings-host .tangram-scene-editor .monaco-editor .overflow-guard {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.classic-settings-host .tangram-scene-editor {
+    overflow: hidden;
 }
 
 .classic-settings-host .top-left [class~="deck-widget-panel"] {

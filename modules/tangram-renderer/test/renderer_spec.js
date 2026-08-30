@@ -28,6 +28,7 @@ describe('Renderer', function () {
         });
 
         assert.isFalse(scene.render_loop);
+        assert.strictEqual(scene.view.camera_mode, 'external');
         assert.isTrue(scene.view.external_camera);
         assert.isTrue(scene.resizeMap.calledWith(800, 600));
         assert.isTrue(scene.view.setView.calledWith({ lng: -74, lat: 40.7, zoom: 16 }));

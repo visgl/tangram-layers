@@ -47,6 +47,14 @@ The prototype supports one Web Mercator view. deck.gl remains authoritative for
 longitude, latitude, zoom, bearing, and pitch; Tangram receives the deck camera
 matrices so vector and raster basemaps remain aligned with deck layers while the
 controller tilts and rotates the view.
+
+Use `?view=mapFlat` or `?view=mapPerspective` to compare the two supported
+`MapView` configurations. `?view=globe` and `?view=firstPerson` are explicit
+deck.gl-only capability previews: the example keeps the deck overlays active
+and explains why Tangram is hidden. Globe rendering needs to project Tangram's
+tile vertices onto deck.gl's sphere, while first-person rendering needs a
+host-provided geographic tile-selection anchor and level of detail in addition
+to camera matrices.
 Tangram renders into deck.gl's active luma.gl render pass. On WebGL, the layer
 brackets Tangram GPU work with the WebGLDevice state stack and then leaves a
 clean depth/stencil buffer for the deck layers above it. The WebGPU path owns
