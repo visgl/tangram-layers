@@ -28,9 +28,9 @@ page, so the examples sidebar stays visible while you move between demos.
     <span>An orthographic Web Mercator view using the same host-driven renderer contract.</span>
   </a>
   <a className="example-tile" href="/tangram.gl/examples/deck-globe">
-    <span className="example-tile__eyebrow">TangramLayer</span>
+    <span className="example-tile__eyebrow">TangramLayer · experimental</span>
     <strong>GlobeView</strong>
-    <span>Explore deck.gl’s globe and the remaining Tangram vertex-projection work.</span>
+    <span>Project Tangram’s vector-tile geometry onto deck.gl’s host-controlled globe.</span>
   </a>
   <a className="example-tile" href="/tangram.gl/examples/deck-first-person">
     <span className="example-tile__eyebrow">Capability preview</span>

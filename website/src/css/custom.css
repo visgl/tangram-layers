@@ -113,6 +113,7 @@
 .deck-example-embed,
 .classic-playground-embed {
   position: relative;
+  height: 680px;
   min-height: 680px;
   margin: 0;
   overflow: hidden;

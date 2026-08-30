@@ -17,9 +17,10 @@ Copyright (c) vis.gl contributors
 - `HostFrame` separates shared geographic state from named render views and
   establishes a multi-view contract suitable for future stereo and WebXR
   basemap rendering.
-- `HostFrame.projection` identifies `web-mercator` and future `globe` frames
-  without introducing a deck.gl dependency in the renderer. Globe frames
-  remain guarded until the spherical rendering pipeline is implemented.
+- `HostFrame.projection` identifies `web-mercator` and experimental `globe`
+  frames without introducing a deck.gl dependency in the renderer. GlobeView
+  matrices and visibility bounds now drive spherical WebGL 2 and WebGPU
+  rendering while advanced culling and tessellation remain under development.
 - The deck example is under `examples/deck/` and supports shared luma.gl
   WebGL and WebGPU devices, vector styles, and the animated TRON style.
 - The repository uses Yarn workspaces and `@vis.gl/dev-tools` for bootstrap,

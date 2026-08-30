@@ -20,7 +20,7 @@ export default class HostFrame {
      * @param {object} options Host frame options.
      * @param {{width: number, height: number}} options.viewport Full render-target size.
      * @param {{longitude: number, latitude: number, altitude?: number, zoom: number}} options.geographicAnchor Shared geographic anchor and LOD zoom.
-     * @param {{type: 'web-mercator'|'globe'}} [options.projection] Host geographic projection.
+     * @param {{type: 'web-mercator'}|{type: 'globe', visibleBounds: number[]}} [options.projection] Host geographic projection.
      * @param {Array<object>} options.renderViews Per-view viewport and camera state.
      * @param {string} [options.activeRenderViewId] Default render view.
      * @param {number} [options.tileBuffer=0] Extra Web Mercator tile buffer.
@@ -104,6 +104,14 @@ function normalizeProjection(projection) {
     const type = projection && projection.type || DEFAULT_PROJECTION_TYPE;
     if (!PROJECTION_TYPES.has(type)) {
         throw new Error(`HostFrame projection type '${type}' is invalid`);
+    }
+    if (type === 'globe') {
+        const visibleBounds = projection && projection.visibleBounds;
+        if (!Array.isArray(visibleBounds) || visibleBounds.length !== 4 ||
+            visibleBounds.some(value => !Number.isFinite(value))) {
+            throw new Error('HostFrame globe projection requires finite visibleBounds');
+        }
+        return { type, visibleBounds: Array.from(visibleBounds) };
     }
     return { type };
 }

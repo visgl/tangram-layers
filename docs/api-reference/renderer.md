@@ -62,9 +62,11 @@ const frameOptions = {
 - `viewport` describes the complete render target.
 - `geographicAnchor` supplies longitude, latitude, altitude, and the current
   tile-selection zoom.
+- `projection` selects Web Mercator or the experimental globe projection; globe
+  frames also supply `[west, south, east, north]` visibility bounds.
 - `renderViews` contains one or more named viewport/camera pairs.
 - `activeRenderViewId` selects the default view.
-- `tileBuffer` requests additional Web Mercator tiles around the visible area.
+- `tileBuffer` requests additional tiles around the visible area.
 
 The original `{viewport, view, camera, tileBuffer}` object remains accepted and
 is normalized to a single-view `HostFrame`.

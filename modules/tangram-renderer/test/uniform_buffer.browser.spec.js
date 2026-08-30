@@ -31,18 +31,20 @@ describe('UniformBuffer', function () {
 
         const uniform_buffer = new UniformBuffer(createFakeWebGL2Context(), {
             name: 'TangramView',
-            uniforms: { time: 'float', resolution: 'vec2' }
+            uniforms: { time: 'float', resolution: 'vec2', projection_mode: 'int' }
         });
         assert.strictEqual(uniform_buffer.getDeclaration(), [
             'layout(std140) uniform TangramView {',
             '    float time;',
             '    vec2 resolution;',
+            '    highp int projection_mode;',
             '};'
         ].join('\n'));
         assert.strictEqual(uniform_buffer.getDeclaration({ language: 'wgsl', group: 2 }), [
             'struct TangramViewUniforms {',
             '    time: f32,',
             '    resolution: vec2<f32>,',
+            '    projection_mode: i32,',
             '};',
             '@group(2) @binding(0) var<uniform> TangramView: TangramViewUniforms;'
         ].join('\n'));
@@ -51,7 +53,7 @@ describe('UniformBuffer', function () {
             name: 'TangramView',
             group: 2,
             location: 0,
-            minBindingSize: 16
+            minBindingSize: 32
         });
 
         const padded_uniform_buffer = new UniformBuffer(createFakeWebGL2Context(), {
@@ -657,7 +659,8 @@ function createTangramUniformBlocks(gl) {
                 u_meters_per_pixel: 'float',
                 u_device_pixel_ratio: 'float',
                 u_view_pan_snap_timer: 'float',
-                u_view_panning: 'bool'
+                u_view_panning: 'bool',
+                u_projection_mode: 'int'
             }
         }),
         TangramCamera: new UniformBuffer(gl, {

@@ -41,14 +41,14 @@ selection and style evaluation.
 
 The deck-independent geographic projection contract. It defaults to
 `{type: 'web-mercator'}` for backward compatibility and also recognizes
-`{type: 'globe'}` so host adapters can describe spherical frames without
-importing deck.gl classes into the renderer package.
+`{type: 'globe', visibleBounds: [west, south, east, north]}` so host adapters
+can describe spherical frames without importing deck.gl classes into the
+renderer package.
 
-The current renderer intentionally rejects a `globe` frame before mutating
-scene state. Accepting the frame shape is groundwork for the spherical vertex
-projection, tile traversal, tessellation, label, and picking work tracked in
-[GlobeView support](https://github.com/visgl/tangram.gl/issues/48); it does not
-claim that globe rendering is implemented yet.
+The experimental globe path converts Web Mercator tile vertices to deck's
+radius-256 sphere and uses `visibleBounds` for tile selection. Horizon-aware
+culling, adaptive tessellation, label orientation, and picking refinements are
+tracked in [GlobeView support](https://github.com/visgl/tangram.gl/issues/48).
 
 ### `renderViews`
 
@@ -78,7 +78,8 @@ defaults to the first render view.
 ### `tileBuffer`
 
 A finite non-negative number of additional Web Mercator tiles to retain around
-the current bounds. It defaults to zero.
+the current bounds. It defaults to zero. Globe adapters normally provide zero
+because their geographic visibility bounds already cover the host viewport.
 
 ## Static methods
 

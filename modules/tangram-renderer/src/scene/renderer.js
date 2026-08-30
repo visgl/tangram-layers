@@ -43,11 +43,6 @@ export default class Renderer {
      */
     setFrame(frame, { renderViewId } = {}) {
         const host_frame = HostFrame.from(frame);
-        if (host_frame.projection.type !== 'web-mercator') {
-            throw new Error(
-                `Tangram renderer does not yet support host projection '${host_frame.projection.type}'`
-            );
-        }
         const render_view = host_frame.getRenderView(renderViewId);
         const viewport = render_view.viewport;
         const anchor = host_frame.geographicAnchor;
@@ -55,6 +50,7 @@ export default class Renderer {
 
         this.host_frame = host_frame;
         this.active_render_view_id = render_view.id;
+        this.scene.view.setProjection(host_frame.projection);
         if (this.scene.view.size.css.width !== viewport.width ||
             this.scene.view.size.css.height !== viewport.height) {
             this.scene.resizeMap(viewport.width, viewport.height);

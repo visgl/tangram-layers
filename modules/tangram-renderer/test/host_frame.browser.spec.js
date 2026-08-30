@@ -70,15 +70,18 @@ describe('HostFrame', function () {
         expect(frame.getRenderView('right-eye').camera.position[0]).toBeCloseTo(0.03, 10);
     });
 
-    it('normalizes an explicit globe projection for future renderer adapters', function () {
+    it('normalizes an explicit globe projection with host visibility bounds', function () {
         const frame = new HostFrame({
             viewport: { width: 800, height: 600 },
             geographicAnchor: { longitude: -74, latitude: 40.7, zoom: 3 },
-            projection: { type: 'globe' },
+            projection: { type: 'globe', visibleBounds: [-120, -45, 20, 70] },
             renderViews: [{ id: 'main', camera: createCamera() }]
         });
 
-        expect(frame.projection).toEqual({type: 'globe'});
+        expect(frame.projection).toEqual({
+            type: 'globe',
+            visibleBounds: [-120, -45, 20, 70]
+        });
     });
 
     it('rejects incomplete and ambiguous frame state', function () {
@@ -102,5 +105,11 @@ describe('HostFrame', function () {
             projection: { type: 'albers' },
             renderViews: [{ camera: createCamera() }]
         })).toThrow(/projection type/);
+        expect(() => new HostFrame({
+            viewport: { width: 800, height: 600 },
+            geographicAnchor: { longitude: -74, latitude: 40.7, zoom: 3 },
+            projection: { type: 'globe' },
+            renderViews: [{ camera: createCamera() }]
+        })).toThrow(/visibleBounds/);
     });
 });

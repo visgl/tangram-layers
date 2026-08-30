@@ -35,10 +35,11 @@ Tile selection should use the union of all render-view frusta, while each eye
 gets its own camera uniforms and render pass. This keeps the contract suitable
 for future WebXR and other stereoscopic hosts.
 
-`HostFrame.projection` now establishes the first part of that boundary with
-deck-independent `web-mercator` and `globe` identifiers. Web Mercator remains
-the only production renderer path. Globe frames fail before changing scene
-state until the projection and visibility adapters below are installed.
+`HostFrame.projection` establishes the first part of that boundary with
+deck-independent `web-mercator` and `globe` identifiers. The experimental
+globe adapter additionally supplies geographic visibility bounds. It keeps
+deck.gl out of the renderer while the remaining culling and tessellation
+policies are extracted behind stronger interfaces.
 
 ## Tranches
 
@@ -70,20 +71,22 @@ elevation, and footprints crossing the antimeridian remain follow-up work.
 
 ### 4. Implement GlobeView
 
-Globe support needs a new vertex-projection hook. Convert each tile vertex from
-Web Mercator meters to longitude/latitude and then to deck.gl globe coordinates
-before applying the host camera matrix. Subdivide coarse tile geometry enough
-to follow the sphere, reject tiles behind the horizon, and choose LOD from
-screen-space error.
+The first GlobeView tranche converts each tile vertex from Web Mercator meters
+to longitude/latitude and then to deck.gl globe coordinates before applying
+the host camera matrix. It uses bounds supplied by `GlobeViewport` to select
+tiles on both WebGL 2 and WebGPU.
+
+The remaining production-hardening work is to subdivide coarse tile geometry
+enough to follow the sphere, reject tiles behind the horizon, choose LOD from
+screen-space error, orient labels, and align picking with bent geometry.
 
 Tangram custom position shaders should run before the host projection hook.
 Styles that replace geographic position entirely, such as the Albers morph,
 must declare Web Mercator-only compatibility until they provide their own globe
 projection behavior.
 
-The `HostFrame` projection discriminator is already available for this work;
-the next implementation should consume it in shader assembly rather than
-checking deck.gl viewport classes inside `tangram-renderer`.
+The renderer consumes only the `HostFrame` projection discriminator and bounds;
+the deck.gl viewport check and matrix extraction stay in `tangram-layers`.
 
 ### 5. Conformance and packaging
 

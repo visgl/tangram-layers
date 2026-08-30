@@ -9,14 +9,14 @@ const INVALID_INDEX = 0xFFFFFFFF;
 
 const TYPES = {
     float: { alignment: 4, size: 4, components: 1, kind: 'float', wgsl: 'f32' },
-    int: { alignment: 4, size: 4, components: 1, kind: 'int', wgsl: 'i32' },
+    int: { alignment: 4, size: 4, components: 1, kind: 'int', glsl: 'highp int', wgsl: 'i32' },
     bool: { alignment: 4, size: 4, components: 1, kind: 'int', wgsl: 'u32' },
     vec2: { alignment: 8, size: 8, components: 2, kind: 'float', wgsl: 'vec2<f32>' },
-    ivec2: { alignment: 8, size: 8, components: 2, kind: 'int', wgsl: 'vec2<i32>' },
+    ivec2: { alignment: 8, size: 8, components: 2, kind: 'int', glsl: 'highp ivec2', wgsl: 'vec2<i32>' },
     vec3: { alignment: 16, size: 12, components: 3, kind: 'float', wgsl: 'vec3<f32>' },
-    ivec3: { alignment: 16, size: 12, components: 3, kind: 'int', wgsl: 'vec3<i32>' },
+    ivec3: { alignment: 16, size: 12, components: 3, kind: 'int', glsl: 'highp ivec3', wgsl: 'vec3<i32>' },
     vec4: { alignment: 16, size: 16, components: 4, kind: 'float', wgsl: 'vec4<f32>' },
-    ivec4: { alignment: 16, size: 16, components: 4, kind: 'int', wgsl: 'vec4<i32>' },
+    ivec4: { alignment: 16, size: 16, components: 4, kind: 'int', glsl: 'highp ivec4', wgsl: 'vec4<i32>' },
     mat3: { alignment: 16, size: 48, columns: 3, rows: 3, kind: 'float', wgsl: 'mat3x3<f32>' },
     mat4: { alignment: 16, size: 64, columns: 4, rows: 4, kind: 'float', wgsl: 'mat4x4<f32>' }
 };
@@ -107,7 +107,7 @@ export default class UniformBuffer {
             throw new Error(`UniformBuffer: unsupported shader language '${language}'`);
         }
         const declarations = Object.values(this.layout.uniforms)
-            .map(uniform => `    ${uniform.type} ${uniform.name};`)
+            .map(uniform => `    ${uniform.glsl || uniform.type} ${uniform.name};`)
             .join('\n');
         return `layout(std140) uniform ${this.name} {\n${declarations}\n};`;
     }

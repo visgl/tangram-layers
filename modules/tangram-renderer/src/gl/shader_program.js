@@ -473,7 +473,8 @@ export default class ShaderProgram {
                 this.computed_fragment_source = this.computed_fragment_source.replace(declaration, '');
             }
 
-            const declaration = uniform_buffer.getDeclaration() + '\n';
+            const block_define = `TANGRAM_UNIFORM_BLOCK_${uniform_buffer.name.replace(/[^A-Za-z0-9_]/g, '_').toUpperCase()}`;
+            const declaration = `#define ${block_define}\n${uniform_buffer.getDeclaration()}\n`;
             this.computed_vertex_source = declaration + this.computed_vertex_source;
             this.computed_fragment_source = declaration + this.computed_fragment_source;
         }
@@ -942,6 +943,11 @@ ShaderProgram.buildDefineString = function (defines) {
         else if (typeof defines[d] === 'number' && Math.floor(defines[d]) === defines[d]) { // int to float conversion to satisfy GLSL floats
             define_str += '#define ' + d + ' ' + defines[d].toFixed(1) + '\n';
         }
+        else if (typeof defines[d] === 'number') {
+            // GLSL floats do not benefit from JavaScript's full double precision, and
+            // some WebGL compilers reject excessively precise decimal literals.
+            define_str += '#define ' + d + ' ' + Number(defines[d].toPrecision(12)) + '\n';
+        }
         else { // any other float or string value
             define_str += '#define ' + d + ' ' + defines[d] + '\n';
         }
@@ -1030,6 +1036,9 @@ ShaderProgram.updateProgram = function (gl, program, vertex_shader_source, fragm
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
         let message = new Error(
             `WebGL program error:
+            PROGRAM_INFO_LOG: ${gl.getProgramInfoLog(program)}
+            VERTEX_SHADER_INFO_LOG: ${gl.getShaderInfoLog(vertex_shader)}
+            FRAGMENT_SHADER_INFO_LOG: ${gl.getShaderInfoLog(fragment_shader)}
             VALIDATE_STATUS: ${gl.getProgramParameter(program, gl.VALIDATE_STATUS)}
             ERROR: ${gl.getError()}
             --- Vertex Shader ---

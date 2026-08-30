@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {GLOBE_PROJECTION_WGSL} from '../globe_projection_wgsl';
+
 /**
  * Build the portable point shader used by the luma.gl WebGPU renderer.
  *
@@ -15,6 +17,7 @@ export function buildPointsWGSL() {
     return `
 @group(0) @binding(3) var u_texture: texture_2d<f32>;
 @group(0) @binding(4) var u_textureSampler: sampler;
+${GLOBE_PROJECTION_WGSL}
 
 struct PointAttributes {
     @location(0) a_position: vec4<i32>,
@@ -89,8 +92,7 @@ fn vertexMain(attributes: PointAttributes) -> PointVaryings {
         f32(attributes.a_position.z),
         1.0
     );
-    var clip_position = TangramCamera.u_projection *
-        (TangramTile.u_modelView * local_position);
+    var clip_position = TangramCamera.u_projection * tangramModelView(local_position);
     let screen_offset = shape * clip_position.w * 2.0 *
         TangramView.u_device_pixel_ratio / TangramView.u_resolution;
     clip_position = vec4<f32>(

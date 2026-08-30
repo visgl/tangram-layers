@@ -9,7 +9,9 @@ uniform vec4 u_tile_origin;
 uniform float u_tile_proxy_order_offset;
 uniform float u_meters_per_pixel;
 uniform float u_device_pixel_ratio;
-
+#ifndef TANGRAM_UNIFORM_BLOCK_TANGRAMVIEW
+uniform int u_projection_mode;
+#endif
 uniform mat4 u_model;
 uniform mat4 u_modelView;
 uniform mat3 u_normalMatrix;
@@ -73,6 +75,30 @@ varying vec4 v_world_position;
 #pragma tangram: raster
 #pragma tangram: global
 
+vec3 tangramGlobePosition(vec3 mercator_position) {
+    const float MERCATOR_RADIUS = 6378137.;
+    const float GLOBE_EARTH_RADIUS = 6370972.;
+    const float GLOBE_RADIUS = 256.;
+    const float HALF_PI = 1.5707963;
+    float longitude = mercator_position.x / MERCATOR_RADIUS;
+    float latitude = 2. * atan(exp(mercator_position.y / MERCATOR_RADIUS)) - HALF_PI;
+    float radius = (mercator_position.z / GLOBE_EARTH_RADIUS + 1.) * GLOBE_RADIUS;
+    float latitude_cosine = cos(latitude);
+    return vec3(
+        sin(longitude) * latitude_cosine,
+        -cos(longitude) * latitude_cosine,
+        sin(latitude)
+    ) * radius;
+}
+
+vec4 tangramModelView(vec4 local_position, out vec4 world_position) {
+    world_position = u_model * local_position;
+    if (u_projection_mode == 1) {
+        return vec4(tangramGlobePosition(world_position.xyz), 1.);
+    }
+    return u_modelView * local_position;
+}
+
 void main() {
     // Initialize globals
     #pragma tangram: setup
@@ -131,10 +157,8 @@ void main() {
     #endif
 
     // World coordinates for 3d procedural textures
-    v_world_position = wrapWorldPosition(u_model * position);
-
-    // Adjust for tile and view position
-    position = u_modelView * position;
+    position = tangramModelView(position, v_world_position);
+    v_world_position = wrapWorldPosition(v_world_position);
 
     // Modify position before camera projection
     #pragma tangram: position

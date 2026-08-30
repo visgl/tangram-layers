@@ -347,7 +347,8 @@ export default class Scene {
                 u_meters_per_pixel: 'float',
                 u_device_pixel_ratio: 'float',
                 u_view_pan_snap_timer: 'float',
-                u_view_panning: 'bool'
+                u_view_panning: 'bool',
+                u_projection_mode: 'int'
             }
         });
         this.uniform_buffers.TangramCamera = this.createUniformBuffer({

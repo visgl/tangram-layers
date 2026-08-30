@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import Geo from '../../utils/geo';
+import {GLOBE_PROJECTION_WGSL} from '../globe_projection_wgsl';
 
 const LAYER_DELTA = 1 / (1 << 14);
 
@@ -27,6 +28,7 @@ export function buildPolygonsWGSL({ raster = false } = {}) {
 
     return `
 ${raster_declarations}
+${GLOBE_PROJECTION_WGSL}
 struct PolygonAttributes {
     @location(0) a_position: vec4<i32>,
     @location(1) a_normal: vec4<f32>,
@@ -48,8 +50,7 @@ fn vertexMain(attributes: PolygonAttributes) -> PolygonVaryings {
         f32(attributes.a_position.z) / ${Geo.height_scale}.0,
         1.0
     );
-    var clip_position = TangramCamera.u_projection *
-        (TangramTile.u_modelView * local_position);
+    var clip_position = TangramCamera.u_projection * tangramModelView(local_position);
     let layer = f32(attributes.a_position.w) +
         TangramTile.u_tile_proxy_order_offset + 1.0;
     clip_position.z -= layer * ${LAYER_DELTA} * clip_position.w;

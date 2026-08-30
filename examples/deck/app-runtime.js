@@ -97,16 +97,14 @@ export function initializeDeckExample({
       supportsTangram: true
     },
     globe: {
-      label: 'GlobeView — renderer adapter needed',
+      label: 'GlobeView — experimental',
       view: new GlobeView({id: 'main', controller: true}),
       initialViewState: {
         longitude: mapViewState.longitude,
         latitude: mapViewState.latitude,
         zoom: 3
       },
-      supportsTangram: false,
-      limitation:
-        'GlobeView is a deck.gl-only preview: Tangram tile vertices still need a globe projection adapter.'
+      supportsTangram: true
     },
     firstPerson: {
       label: 'FirstPersonView',

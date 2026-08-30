@@ -20,6 +20,7 @@ describe('Line WGSL', function () {
         expect(source).toContain('TangramView.u_map_position.z');
         expect(source).toContain('TangramTile.u_tile_origin.z');
         expect(source).toContain('TangramTile.u_modelView * local_position');
+        expect(source).toContain('TangramView.u_projection_mode == 1');
         expect(source).toContain('TangramCamera.u_projection');
         expect(source).toContain('width_scale * midpoint_zoom_delta');
         expect(source).toContain('offset_width_scale');

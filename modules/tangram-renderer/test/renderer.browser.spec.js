@@ -55,7 +55,7 @@ describe('Renderer', function () {
         assert.isTrue(renderer.scene.processTasks.calledOnce);
     });
 
-    it('rejects globe frames before mutating renderer state', function () {
+    it('accepts globe frames and selects tiles from host visibility bounds', function () {
         const renderer = Renderer.create({});
         const scene = renderer.scene;
         sinon.spy(scene, 'resizeMap');
@@ -63,7 +63,7 @@ describe('Renderer', function () {
         const frame = new HostFrame({
             viewport: { width: 800, height: 600 },
             geographicAnchor: { longitude: -74, latitude: 40.7, zoom: 3 },
-            projection: { type: 'globe' },
+            projection: { type: 'globe', visibleBounds: [-100, 20, -50, 60] },
             renderViews: [{
                 id: 'main',
                 camera: {
@@ -74,13 +74,18 @@ describe('Renderer', function () {
             }]
         });
 
-        assert.throws(
-            () => renderer.setFrame(frame),
-            /does not yet support host projection 'globe'/
-        );
-        assert.isNull(renderer.host_frame);
-        assert.isFalse(scene.resizeMap.called);
-        assert.isFalse(scene.view.setView.called);
+        renderer.setFrame(frame);
+
+        assert.strictEqual(renderer.host_frame, frame);
+        assert.deepEqual(scene.view.projection, {
+            type: 'globe',
+            visibleBounds: [-100, 20, -50, 60]
+        });
+        assert.isTrue(scene.resizeMap.calledWith(800, 600));
+        assert.isTrue(scene.view.setView.calledWith({lng: -74, lat: 40.7, zoom: 3}));
+        const coordinates = scene.view.findVisibleTileCoordinates();
+        assert.isAbove(coordinates.length, 0);
+        assert.isTrue(coordinates.every(coordinate => coordinate.z === 3));
     });
 
     it('selects multiple render views over shared geographic state', function () {
