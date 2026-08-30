@@ -17,7 +17,11 @@ Tangram is a JavaScript library for rendering 2D & 3D maps live in a web browser
 
 Here's a [simple demo](https://tangrams.github.io/simple-demo/) ([repo here](https://github.com/tangrams/simple-demo)) with a basic example of a Tangram map.
 
-Tangram is instantiated as a [Leaflet](http://leafletjs.com/) plugin for integration with standard web maps. [Tangram ES](https://github.com/tangrams/tangram-es) is a native mobile version of the Tangram library, written in C++.
+The renderer is host-framework independent. Applications can drive it directly or use
+`@vis.gl/tangram-layers` to integrate it with deck.gl. The repository's classic example
+contains an example-local Leaflet compatibility adapter; Leaflet is not part of this package.
+[Tangram ES](https://github.com/tangrams/tangram-es) is a native mobile version of the
+Tangram library, written in C++.
 
 ## Getting Started
 
@@ -37,14 +41,11 @@ Specific Tangram library versions can also be loaded with `@version` syntax(see 
 
 Tangram is [published on NPM](https://www.npmjs.com/package/tangram) and can be [bundled using `import` or `require`](https://github.com/tangrams/tangram-play/wiki/Using-Tangram-with-Bundlers-&-Frameworks).
 
-The library includes a [Leaflet](http://leafletjs.com) plugin, `Tangram.LeafletLayer`, to provide basic web map pan/zoom functionality.
-
-Data sources, layers, and styling rules are written in a *scene file* ([here's an example](https://github.com/tangrams/simple-demo/blob/master/scene.yaml)). Armed with a scene file like `scene.yaml`, you can create a Tangram scene and add it to a Leaflet map like so:
+Data sources, layers, and styling rules are written in a *scene file* ([here's an example](https://github.com/tangrams/simple-demo/blob/master/scene.yaml)). The renderer can load a scene directly:
 
 ```js
-var map = L.map('map');
-var layer = Tangram.leafletLayer({ scene: 'scene.yaml' });
-layer.addTo(map);
+const scene = Tangram.Scene.create('scene.yaml', {container});
+await scene.load();
 ```
 
 Read on for more info, or see the [documentation](https://tangrams.readthedocs.io/) ([github repo](https://github.com/tangrams/tangram-docs/)).

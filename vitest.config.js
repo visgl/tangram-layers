@@ -57,7 +57,6 @@ export default getVitestConfig({
           'test/**/*.browser.spec.{js,ts}',
           'modules/**/test/**/*.browser.spec.{js,ts}'
         ],
-        exclude: ['modules/tangram-renderer/test/leaflet_layer.browser.spec.js'],
         globals: true,
         setupFiles: ['./test/vitest-browser-setup.js']
       }

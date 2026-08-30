@@ -13,15 +13,17 @@ Copyright (c) vis.gl contributors
 
 `Scene` owns loaded configuration, sources, tiles, styles, labels, selection,
 workers, and render resources. A classic Leaflet layer exposes it as
-`layer.scene`; `ClassicWebGLRenderer` exposes it as `renderer.scene`.
+the example adapter as `layer.scene`; `ClassicWebGLRenderer` exposes it as
+`renderer.scene`.
 
 ## Creation and lifetime
 
 ### `Scene.create(config, options)`
 
-Creates a scene from a URL or configuration object. Most applications should
-use `leafletLayer()` or `ClassicWebGLRenderer.create()` so camera, device, and
-render-loop ownership are configured consistently.
+Creates a scene from a URL or configuration object. Host-driven applications
+should normally use `ClassicWebGLRenderer.create()` so camera, device, and
+render-loop ownership are configured consistently. The classic example shows
+how an external adapter can drive a `Scene` from Leaflet.
 
 ### `load(config, options)`
 

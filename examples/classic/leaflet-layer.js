@@ -2,11 +2,22 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-import Thread from './utils/thread';
-import Scene from './scene/scene';
-import Geo from './utils/geo';
-import debounce from './utils/debounce';
-import {mergeDebugSettings} from './utils/debug_settings';
+import Tangram from '../../modules/tangram-renderer/dist/tangram.debug.mjs';
+
+const {Scene} = Tangram;
+const {Geo, debugSettings} = Tangram.debug;
+
+function mergeDebugSettings(settings) {
+    Object.assign(debugSettings, settings);
+}
+
+function debounce(function_, wait) {
+    let timeout;
+    return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => function_.apply(this, args), wait);
+    };
+}
 
 // Exports must appear outside a function, but will only be defined in main thread (below)
 export var LeafletLayer;
@@ -29,8 +40,8 @@ function extendLeaflet(options) {
         return new LeafletLayer(options);
     }
 
-    // Leaflet layer functionality is only defined in main thread
-    if (Thread.is_main) {
+    // Leaflet compatibility is example-local and only runs in the browser.
+    if (typeof window !== 'undefined') {
 
         let L = options.leaflet || window.L;
 

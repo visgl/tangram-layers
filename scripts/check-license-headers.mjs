@@ -28,6 +28,7 @@ const VENDORED_PATH_PREFIXES = [
 ];
 
 const TANGRAM_RENDERER_FILES = new Set([
+  'examples/classic/leaflet-layer.js',
   'modules/tangram-renderer/src/builders/common.js',
   'modules/tangram-renderer/src/builders/points.js',
   'modules/tangram-renderer/src/builders/polygons.js',
@@ -56,7 +57,6 @@ const TANGRAM_RENDERER_FILES = new Set([
   'modules/tangram-renderer/src/labels/point_anchor.js',
   'modules/tangram-renderer/src/labels/point_placement.js',
   'modules/tangram-renderer/src/labels/repeat_group.js',
-  'modules/tangram-renderer/src/leaflet_layer.js',
   'modules/tangram-renderer/src/lights/ambient_light.glsl',
   'modules/tangram-renderer/src/lights/directional_light.glsl',
   'modules/tangram-renderer/src/lights/light.js',
@@ -135,7 +135,6 @@ const TANGRAM_RENDERER_FILES = new Set([
   'modules/tangram-renderer/test/geo.browser.spec.js',
   'modules/tangram-renderer/test/helpers.js',
   'modules/tangram-renderer/test/layer.browser.spec.js',
-  'modules/tangram-renderer/test/leaflet_layer.browser.spec.js',
   'modules/tangram-renderer/test/merge.browser.spec.js',
   'modules/tangram-renderer/test/obb.browser.spec.js',
   'modules/tangram-renderer/test/rollup.config.worker.js',
