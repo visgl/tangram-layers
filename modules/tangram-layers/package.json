@@ -27,7 +27,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "node ./scripts/build.mjs",
+    "build": "yarn build:bundle",
+    "build:bundle": "node ./scripts/build.mjs",
     "prepack": "yarn build",
     "lint": "eslint src/"
   },

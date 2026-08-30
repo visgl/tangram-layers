@@ -9,7 +9,13 @@ const config = {
   lint: {
     paths: ['dev-modules', 'modules', 'examples', 'website']
   },
-  babel: false
+  babel: false,
+  // Shared defaults for packages that can use ocular-bundle. The renderer's
+  // worker/GLSL bundle remains on its dedicated Rollup pipeline for now.
+  bundle: {
+    target: ['chrome110', 'firefox110', 'safari15'],
+    format: 'esm'
+  }
 };
 
 export default config;
