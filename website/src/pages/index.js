@@ -9,9 +9,9 @@ import TronHeroBackground from '../components/TronHeroBackground';
 export default function Home() {
   return (
     <Layout title="tangram.gl" description="Tangram rendering and deck.gl basemap integration">
-      <header className="hero hero--primary">
+      <header className="hero hero--primary tron-map-effect">
         <TronHeroBackground />
-        <div className="container">
+        <div className="container tron-map-effect__content">
           <h1 className="hero__title">tangram.gl</h1>
           <p className="hero__subtitle">
             <a href="https://github.com/tangrams/tangram">Tangram</a> basemaps, reincarnated in the{' '}

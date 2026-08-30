@@ -15,9 +15,13 @@
 }
 
 .hero--primary {
+  min-height: 420px;
+}
+
+/* Reusable overlay treatment for content presented over a live or static map. */
+.tron-map-effect {
   position: relative;
   isolation: isolate;
-  min-height: 420px;
   background:
     linear-gradient(90deg, rgba(2, 8, 18, 0.78), rgba(7, 25, 44, 0.5));
   overflow: hidden;
@@ -41,12 +45,12 @@
   opacity: 0.72;
 }
 
-.hero--primary .container {
+.tron-map-effect__content {
   position: relative;
   z-index: 1;
 }
 
-.hero--primary::after {
+.tron-map-effect::after {
   position: absolute;
   inset: 0;
   z-index: -1;
