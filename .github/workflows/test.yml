@@ -21,6 +21,36 @@ env:
   COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
 
 jobs:
+  generated-artifacts:
+    name: Generated artifact smoke test
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.15.0
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Install workspace dependencies
+        run: yarn install --immutable
+      - name: Confirm renderer artifacts are not committed
+        run: test ! -e modules/tangram-renderer/dist
+      - name: Build website and examples from source
+        run: yarn website:build
+      - name: Pack the renderer package
+        run: yarn workspace @vis.gl/tangram-renderer pack --out /tmp/tangram-renderer.tgz
+      - name: Confirm generated outputs
+        run: |
+          test -f modules/tangram-renderer/dist/index.js
+          test -f modules/tangram-renderer/dist/tangram.min.mjs
+          test -f modules/tangram-renderer/dist/tangram-style.schema.json
+          test -f website/build/modules/tangram-renderer/dist/index.js
+          test -f website/build/examples/deck/index.html
+          test -f website/build/examples/classic/index.html
+          test -f /tmp/tangram-renderer.tgz
+
   lint:
     runs-on: ubuntu-22.04
     steps:

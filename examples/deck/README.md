@@ -16,10 +16,12 @@ The page opts out of search indexing and the published site includes a
 `robots.txt` that disallows crawling. It is an experimental fork demo, not an
 official Tangram site.
 
-To run it locally, serve the Tangram checkout as the web root:
+To run it locally from a fresh checkout, build the package entrypoints and then
+serve the repository as the web root:
 
 ```sh
-python3 -m http.server 8000 --directory /Users/ibgreen/code/tangram
+yarn build:modules
+python3 -m http.server 8000
 ```
 
 Then open:

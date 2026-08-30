@@ -5,8 +5,9 @@
   "description": "Documentation and examples website for Tangram layers",
   "packageManager": "yarn@4.18.0",
   "scripts": {
-    "start": "docusaurus start",
-    "build": "yarn workspace @vis.gl/tangram-classic build && node scripts/copy-assets.mjs && docusaurus build",
+    "prepare-assets": "yarn workspace @vis.gl/tangram-renderer build && yarn workspace @vis.gl/tangram-layers build && yarn workspace @vis.gl/tangram-classic build && node scripts/copy-assets.mjs",
+    "start": "yarn prepare-assets && docusaurus start",
+    "build": "yarn prepare-assets && docusaurus build",
     "serve": "docusaurus serve",
     "deploy": "docusaurus deploy",
     "clear": "docusaurus clear"

@@ -24,6 +24,7 @@ website/static/examples
 website/static/modules
 website/static/robots.txt
 modules/tangram-layers/dist
+modules/tangram-renderer/dist
 examples/classic/dist
 
 # OS misc
