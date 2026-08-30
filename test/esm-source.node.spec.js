@@ -13,7 +13,7 @@ describe('renderer ESM sources', () => {
       'modules/tangram-renderer/src/gl/constants.js',
       'modules/tangram-renderer/src/gl/context.js',
       'modules/tangram-renderer/src/utils/debug_settings.ts',
-      'modules/tangram-renderer/src/utils/geo.js',
+      'modules/tangram-renderer/src/utils/geo.ts',
       'modules/tangram-renderer/src/utils/vector.ts',
       'modules/tangram-renderer/src/utils/worker_broker.js'
     ];

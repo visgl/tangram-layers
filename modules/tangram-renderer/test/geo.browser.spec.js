@@ -1,6 +1,7 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 import {beforeEach, describe, expect, it} from 'vitest';
 
@@ -65,7 +66,7 @@ describe('Geo', () => {
         expect(Geo.ringWinding(ring)).toBe('CW');
         expect(Geo.centroid([ring])).toEqual([1, 1]);
         expect(Geo.multiCentroid([[ring], [ring]])).toEqual([1, 1]);
-        expect(Geo.boxIntersect({sw: [0, 0], ne: [1, 1]}, {sw: [0.5, 0.5], ne: [2, 2]})).toBe(true);
+        expect(Geo.boxIntersect({sw: {x: 0, y: 0}, ne: {x: 1, y: 1}}, {sw: {x: 0.5, y: 0.5}, ne: {x: 2, y: 2}})).toBe(true);
     });
 
 });

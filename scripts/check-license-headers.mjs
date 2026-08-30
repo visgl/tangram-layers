@@ -115,6 +115,7 @@ const TANGRAM_RENDERER_FILES = new Set([
   'modules/tangram-renderer/src/utils/errors.ts',
   'modules/tangram-renderer/src/utils/functions.ts',
   'modules/tangram-renderer/src/utils/geo.js',
+  'modules/tangram-renderer/src/utils/geo.ts',
   'modules/tangram-renderer/src/utils/gl-matrix.js',
   'modules/tangram-renderer/src/utils/hash.ts',
   'modules/tangram-renderer/src/utils/log.ts',
@@ -162,9 +163,11 @@ const VISGL_MODIFIED_TANGRAM_FILES = new Set([
   'modules/tangram-renderer/src/utils/props.ts',
   'modules/tangram-renderer/src/utils/task.ts',
   'modules/tangram-renderer/src/utils/debug_settings.ts',
+  'modules/tangram-renderer/src/utils/geo.ts',
   'modules/tangram-renderer/src/utils/thread.ts',
   'modules/tangram-renderer/src/utils/version.ts',
-  'modules/tangram-renderer/src/utils/vector.ts'
+  'modules/tangram-renderer/src/utils/vector.ts',
+  'modules/tangram-renderer/test/geo.browser.spec.js'
 ]);
 
 const TANGRAM_ROOT_FILES = new Set([
