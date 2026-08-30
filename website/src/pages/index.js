@@ -39,10 +39,6 @@ export default function Home() {
                 <li>deck.gl basemaps with wicked styling</li>
                 <li>a luma.gl powered basemap renderer</li>
               </ul>
-              <p>
-                The renderer owns Tangram scenes and GPU resources. The layer package adapts it to
-                deck.gl’s device, viewport, and render-pass lifecycle.
-              </p>
             </div>
             <div className="col col--6">
               <h2>Fully Modernized</h2>
