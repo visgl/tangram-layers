@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import { assert } from 'chai';
+import {describe, expect, it} from 'vitest';
 import LumaDeviceRenderer from '../src/gpu/luma_device_renderer';
 
 describe('LumaDeviceRenderer', function () {
@@ -32,11 +32,11 @@ describe('LumaDeviceRenderer', function () {
             data: new Uint8Array([255, 255, 255, 255])
         });
 
-        assert.deepEqual(calls.map(call => call[0]), [
+        expect(calls.map(call => call[0])).toEqual([
             'buffer', 'buffer', 'shader', 'texture', 'texture-write'
         ]);
-        assert.strictEqual(options.meshRenderer, renderer);
-        assert.strictEqual(options.maxTextureSize, 4096);
+        expect(options.meshRenderer).toBe(renderer);
+        expect(options.maxTextureSize).toBe(4096);
     });
 
     it('omits WebGL compatibility uniforms from WebGPU draw calls', function () {
@@ -48,13 +48,13 @@ describe('LumaDeviceRenderer', function () {
         const program = createProgram({ u_scale: 2 });
         const mesh = createMesh();
 
-        assert.isFalse(renderer.drawMesh({
+        expect(renderer.drawMesh({
             mesh,
             program,
             renderPass: render_pass,
             visibleTime: 0
-        }));
-        assert.deepEqual(render_pass.draws, [{
+        })).toBe(false);
+        expect(render_pass.draws).toEqual([{
             vertexCount: 3,
             indexCount: undefined,
             uniforms: undefined
@@ -70,21 +70,21 @@ describe('LumaDeviceRenderer', function () {
         const program = createProgram({});
         const mesh = createMesh();
 
-        assert.isFalse(renderer.drawMesh({
+        expect(renderer.drawMesh({
             mesh,
             program,
             renderPass: render_pass,
             visibleTime: 0
-        }));
-        assert.deepEqual(render_pass.draws, [{
+        })).toBe(false);
+        expect(render_pass.draws).toEqual([{
             vertexCount: 3,
             indexCount: undefined,
             uniforms: undefined
         }]);
 
         renderer.destroy();
-        assert.isTrue(device.pipeline.destroyed);
-        assert.isTrue(device.vertex_array.destroyed);
+        expect(device.pipeline.destroyed).toBe(true);
+        expect(device.vertex_array.destroyed).toBe(true);
     });
 
     it('preserves Tangram depth, cull, and blend state in WebGPU pipelines', function () {
@@ -118,7 +118,7 @@ describe('LumaDeviceRenderer', function () {
             visibleTime: 0
         });
 
-        assert.strictEqual(device.pipeline.options.parameters, render_state);
+        expect(device.pipeline.options.parameters).toBe(render_state);
     });
 
     it('snapshots mutable uniform blocks per mesh for deferred WebGPU execution', function () {
@@ -175,25 +175,22 @@ describe('LumaDeviceRenderer', function () {
             visibleTime: 0
         });
 
-        assert.lengthOf(device.buffers, 4);
-        assert.notStrictEqual(render_pass.bindings[0].TangramTile, shared_tile_buffer);
-        assert.notStrictEqual(render_pass.bindings[0].TangramLine, shared_line_buffer);
-        assert.notStrictEqual(
-            render_pass.bindings[0].TangramTile,
+        expect(device.buffers).toHaveLength(4);
+        expect(render_pass.bindings[0].TangramTile).not.toBe(shared_tile_buffer);
+        expect(render_pass.bindings[0].TangramLine).not.toBe(shared_line_buffer);
+        expect(render_pass.bindings[0].TangramTile).not.toBe(
             render_pass.bindings[1].TangramTile
         );
-        assert.deepEqual(
-            render_pass.bindings.map(bindings => bindings.TangramTile.writes[0][0]),
-            [1, 2]
-        );
-        assert.deepEqual(
-            render_pass.bindings.map(bindings => bindings.TangramLine.writes[0][0]),
-            [10, 20]
-        );
+        expect(
+            render_pass.bindings.map(bindings => bindings.TangramTile.writes[0][0])
+        ).toEqual([1, 2]);
+        expect(
+            render_pass.bindings.map(bindings => bindings.TangramLine.writes[0][0])
+        ).toEqual([10, 20]);
 
         renderer.destroy();
-        assert.isTrue(device.buffers.every(buffer => buffer.destroyed));
-        assert.isTrue(device.buffers[1].destroyed);
+        expect(device.buffers.every(buffer => buffer.destroyed)).toBe(true);
+        expect(device.buffers[1].destroyed).toBe(true);
     });
 });
 
