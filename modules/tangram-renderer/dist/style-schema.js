@@ -1,4 +1,12 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
 import { z } from 'zod';
+
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 
 /**
  * Values accepted by Tangram scene styles. Style values may be constants,

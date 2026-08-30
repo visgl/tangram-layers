@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Render/GL stats: http://spite.github.io/rstats/
 (function(){
     var glS = new glStats();

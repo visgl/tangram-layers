@@ -1,3 +1,9 @@
+<!--
+tangram-layers
+SPDX-License-Identifier: MIT
+Copyright (c) vis.gl contributors
+-->
+
 # What's new
 
 ## 1.0.0-alpha.0 — vis.gl integration line

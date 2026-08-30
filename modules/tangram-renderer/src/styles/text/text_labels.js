@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Text label rendering methods, can be mixed into a rendering style
 
 import StyleParser from '../style_parser';

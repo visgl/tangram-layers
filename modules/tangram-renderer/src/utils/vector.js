@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 /*** Vector functions - vectors provided as [x, y] or [x, y, z] arrays ***/
 
 var Vector;

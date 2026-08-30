@@ -1,3 +1,7 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import Geo from '../../utils/geo';
 
 const LAYER_DELTA = 1 / (1 << 14);

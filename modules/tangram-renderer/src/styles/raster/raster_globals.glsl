@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Uniforms defining raster textures and macros for accessing them
 
 #ifdef TANGRAM_FRAGMENT_SHADER

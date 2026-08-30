@@ -1,3 +1,9 @@
+<!--
+tangram-layers
+SPDX-License-Identifier: MIT
+Copyright (c) vis.gl contributors
+-->
+
 # `@vis.gl/tangram-renderer`
 
 The renderer package owns Tangram scenes, tiles, styles, labels, resource

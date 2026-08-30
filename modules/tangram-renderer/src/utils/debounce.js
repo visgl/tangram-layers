@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Debounce a function
 // https://davidwalsh.name/javascript-debounce-function
 export default function debounce (func, wait) {

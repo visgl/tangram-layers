@@ -1,3 +1,9 @@
+<!--
+tangram-layers
+SPDX-License-Identifier: MIT
+Copyright (c) vis.gl contributors
+-->
+
 # Bundling a small deck.gl basemap app
 
 The deck example is a useful baseline for understanding the cost of adding a

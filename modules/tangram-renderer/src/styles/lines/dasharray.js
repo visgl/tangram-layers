@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Renders an array specifying a line pattern of alternating dashes and spaces,
 // similar to an SVG `dasharray` or Canvas setLineDash(), into a byte array of RGBA pixels
 // Returns:

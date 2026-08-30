@@ -1,3 +1,7 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import { assert } from 'chai';
 import createTangramLayerClass from '../src/tangram-layer';
 import Camera from '../../tangram-renderer/src/scene/camera';

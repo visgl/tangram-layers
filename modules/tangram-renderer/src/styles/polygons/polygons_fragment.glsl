@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 uniform vec2 u_resolution;
 uniform float u_time;
 uniform vec3 u_map_position;

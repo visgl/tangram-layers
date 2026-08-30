@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 import Tile from './tile';
 import {TileID} from './tile_id';
 import TilePyramid from './tile_pyramid';

@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Sets of values to match for directional and corner anchors
 const lefts = ['left', 'top-left', 'bottom-left'];
 const rights = ['right', 'top-right', 'bottom-right'];

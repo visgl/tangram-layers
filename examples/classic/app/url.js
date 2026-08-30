@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 (function(){
     var url_hash = getValuesFromUrl();
     var map_start_location = url_hash ? url_hash.slice(0, 3) : [16, 40.70531887544228, -74.00976419448853];

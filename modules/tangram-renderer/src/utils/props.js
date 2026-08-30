@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Get a value for a nested property with path provided as an array (`a.b.c` => ['a', 'b', 'c'])
 export function getPropertyPath (object, path) {
     const prop = path[path.length - 1];

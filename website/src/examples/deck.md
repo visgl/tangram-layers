@@ -4,6 +4,13 @@ title: Deck + TangramLayer
 description: A deck.gl basemap integration powered by Tangram.
 ---
 
+<!--
+tangram-layers
+SPDX-License-Identifier: MIT
+Copyright (c) vis.gl contributors
+-->
+
+
 import ExampleDeviceTabs from '@site/src/components/ExampleDeviceTabs';
 import DeckExample from '@site/src/components/DeckExample';
 

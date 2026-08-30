@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Create a standalone worker bundle, to allow the Karma suite to load the web worker
 // (regular two-pass code-splitting build process is not easily adaptable to Karma)
 

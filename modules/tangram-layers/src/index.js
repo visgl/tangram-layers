@@ -1,3 +1,7 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {Layer} from '@deck.gl/core';
 import {ClassicWebGLRenderer} from '@vis.gl/tangram-renderer';
 import createTangramLayerClass, {

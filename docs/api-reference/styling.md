@@ -1,3 +1,9 @@
+<!--
+tangram-layers
+SPDX-License-Identifier: MIT
+Copyright (c) vis.gl contributors
+-->
+
 # Styling reference
 
 Tangram styles are scene documents. A scene combines data sources, layers, and

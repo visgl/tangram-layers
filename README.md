@@ -1,3 +1,9 @@
+<!--
+Tangram
+SPDX-License-Identifier: MIT
+Copyright (c) 2013-2016 Brett Camper and Mapzen
+-->
+
 # Tangram layers
 
 This repository is a vis.gl-oriented monorepo for the Tangram renderer and its

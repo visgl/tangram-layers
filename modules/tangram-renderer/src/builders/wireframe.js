@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Rearranges element array for triangles into a new element array that draws a wireframe
 // Used for debugging
 export default function makeWireframeForTriangleElementData (element_data) {

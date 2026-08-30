@@ -1,3 +1,9 @@
+<!--
+Tangram
+SPDX-License-Identifier: MIT
+Copyright (c) 2013-2016 Brett Camper and Mapzen
+-->
+
 # Changelog
 
 All notable changes to the Tangram layers packages are documented here.

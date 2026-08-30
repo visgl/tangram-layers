@@ -1,3 +1,9 @@
+<!--
+tangram-layers
+SPDX-License-Identifier: MIT
+Copyright (c) vis.gl contributors
+-->
+
 # TangramLayer API
 
 `TangramLayer` is a deck.gl `Layer` that embeds a Tangram scene in deck's

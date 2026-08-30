@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 
 // Do AABB `a` and `b` intersect?
 export function boxIntersectsBox (a, b) {

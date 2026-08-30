@@ -1,3 +1,7 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 /** @type {import('@vis.gl/dev-tools').OcularConfig} */
 const config = {
   // Tangram's renderer retains a purpose-built Rollup pipeline for its worker

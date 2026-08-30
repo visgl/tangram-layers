@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 import Label from './label';
 import LabelPoint from './label_point';
 import {LabelLineStraight} from './label_line';

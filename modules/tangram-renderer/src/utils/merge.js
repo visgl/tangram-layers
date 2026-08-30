@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Deep/recursive merge of one or more source objects into a destination object
 export default function mergeObjects (dest, ...sources) {
     for (let s=0; s < sources.length; s++) {

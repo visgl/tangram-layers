@@ -1,3 +1,7 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import { assert } from 'chai';
 import { buildPolygonsWGSL } from '../src/styles/polygons/polygons_wgsl';
 

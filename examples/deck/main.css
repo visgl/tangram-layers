@@ -1,3 +1,9 @@
+/*
+ * tangram-layers
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) vis.gl contributors
+ */
+
 .tangram-deck-standalone,
 .tangram-deck-standalone #deck-container,
 .tangram-deck-embedded #deck-container {

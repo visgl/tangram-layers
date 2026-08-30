@@ -1,3 +1,9 @@
+<!--
+tangram-layers
+SPDX-License-Identifier: MIT
+Copyright (c) vis.gl contributors
+-->
+
 # Monorepo guide
 
 Tangram layers uses a Yarn 4 workspace layout modeled on the vis.gl projects.

@@ -1,3 +1,9 @@
+<!--
+tangram-layers
+SPDX-License-Identifier: MIT
+Copyright (c) vis.gl contributors
+-->
+
 # Release workflow
 
 Tangram layers follows the version-only-first release flow used by vis.gl

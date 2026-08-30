@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 import Geo from '../utils/geo';
 import {TileID} from '../tile/tile_id';
 import Camera from './camera';

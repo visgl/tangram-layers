@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 // Partial import of gl-matrix via modularized stack-gl forks
 // https://github.com/toji/gl-matrix
 // https://github.com/stackgl

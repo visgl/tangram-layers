@@ -37,7 +37,7 @@
     "build:nomodule": "ESM=false rollup -c",
     "build:module:minify": "ESM=true MINIFY=true rollup -c",
     "build:nomodule:minify": "ESM=false MINIFY=true rollup -c",
-    "build:style-schema": "rollup src/styles/style-schema.js --file dist/style-schema.js --format esm --external zod",
+    "build:style-schema": "rollup src/styles/style-schema.js --file dist/style-schema.js --format esm --external zod --banner '// tangram-layers\n// SPDX-License-Identifier: MIT\n// Copyright (c) vis.gl contributors'",
     "generate-style-schema": "node scripts/generate-style-schema.mjs",
     "build:size": "gzip dist/tangram.min.mjs -c | wc -c | awk '{kb=$1/1024; print kb}' OFMT='Module:\\t\\t%.0fk (min/gzip)' && gzip dist/tangram.min.js -c | wc -c | awk '{kb=$1/1024; print kb}' OFMT='No module:\\t%.0fk (min/gzip)'",
     "prepack": "yarn build",

@@ -1,3 +1,7 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {assert} from 'chai';
 import {buildTextWGSL} from '../src/styles/text/text_wgsl';
 

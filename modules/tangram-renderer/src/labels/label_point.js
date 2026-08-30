@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 import Label from './label';
 import PointAnchor from './point_anchor';
 import OBB from '../utils/obb';

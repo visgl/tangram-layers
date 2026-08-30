@@ -1,3 +1,9 @@
+<!--
+tangram-layers
+SPDX-License-Identifier: MIT
+Copyright (c) vis.gl contributors
+-->
+
 # TangramLayer bridge example
 
 The public example is deployed from the monorepo branch to:

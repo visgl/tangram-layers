@@ -1,3 +1,7 @@
+// Tangram
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2013-2016 Brett Camper and Mapzen
+
 import Label from './label';
 import RepeatGroup from './repeat_group';
 import CollisionGrid from './collision_grid';

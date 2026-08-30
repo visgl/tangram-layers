@@ -1,3 +1,7 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 const DEFAULT_RENDER_VIEW_ID = 'default';
 
 /**

@@ -1,3 +1,7 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import Scene from './scene';
 import HostFrame from './host_frame';
 import LumaDeviceRenderer from '../gpu/luma_device_renderer';

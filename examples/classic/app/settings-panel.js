@@ -1,3 +1,7 @@
+// tangram-layers
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 function configureMonacoWorkers() {
   if (window.MonacoEnvironment) {
     return;
