@@ -67,6 +67,44 @@ export type SceneLoadOptions = {
   [option: string]: unknown;
 };
 
+export type SceneUpdateOptions = {
+  loading?: boolean;
+  rebuild?: boolean | Record<string, unknown>;
+  serialize_funcs?: boolean;
+  texture_nodes?: Record<string, unknown>;
+  normalize?: boolean;
+  fade_in?: boolean;
+};
+
+export type SceneDataSource = {
+  type: string;
+  url?: string;
+  tilejson?: string | Record<string, unknown>;
+  data?: unknown;
+  [property: string]: unknown;
+};
+
+export type SceneFeature = {
+  id?: string | number;
+  properties: Record<string, unknown>;
+  geometry?: Record<string, unknown>;
+  [property: string]: unknown;
+};
+
+export type SceneQueryOptions = {
+  filter?: unknown;
+  unique?: boolean | string | readonly string[];
+  group_by?: string | readonly string[] | null;
+  visible?: boolean | null;
+  geometry?: boolean;
+};
+
+export type SceneScreenshot = {
+  url: string;
+  blob: Blob;
+  type: 'png';
+};
+
 export type RenderOptions = {
   frame?: HostFrameOptions | LegacyHostFrame;
   renderPass?: RenderPass | null;
@@ -74,8 +112,34 @@ export type RenderOptions = {
   force?: boolean;
 };
 
-export type SceneListener = (...arguments_: unknown[]) => void;
-export type SceneListeners = Record<string, SceneListener>;
+export type SceneConfigEvent = {config: Record<string, unknown>};
+export type SceneErrorEvent = {
+  type?: string;
+  message?: string;
+  error?: unknown;
+  [property: string]: unknown;
+};
+
+export type SceneEventMap = {
+  load: [event: SceneConfigEvent];
+  update: [event: SceneConfigEvent];
+  pre_update: [willRender: boolean];
+  post_update: [willRender: boolean];
+  view_complete: [event: {first: boolean}];
+  error: [event: SceneErrorEvent];
+  warning: [event: SceneErrorEvent];
+  move: [];
+};
+
+export type SceneListener<EventName extends keyof SceneEventMap = keyof SceneEventMap> = (
+  ...arguments_: SceneEventMap[EventName]
+) => void;
+
+export type SceneListeners = {
+  [EventName in keyof SceneEventMap]?: SceneListener<EventName>;
+} & {
+  [event: string]: ((...arguments_: never[]) => void) | undefined;
+};
 
 export type WorkerRequest<Message = unknown> = {
   type: 'main_send' | 'worker_send';

@@ -25,3 +25,12 @@ const frame = new HostFrame(frameOptions);
 const renderer = ClassicWebGLRenderer.create('scene.yaml', rendererOptions);
 
 renderer.setFrame(frame);
+renderer.load();
+renderer.scene.updateConfig({rebuild: false});
+renderer.scene.setDataSource('places', {type: 'GeoJSON', data: {type: 'FeatureCollection'}});
+renderer.scene.queryFeatures({filter: {kind: 'place'}, geometry: true});
+renderer.scene.screenshot({background: 'transparent'});
+renderer.subscribe({
+  load: event => event.config,
+  error: event => event.error
+});

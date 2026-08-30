@@ -9,9 +9,14 @@ import type {
   LegacyHostFrame,
   RendererOptions,
   RenderOptions,
+  SceneDataSource,
   SceneDefinition,
   SceneListeners,
   SceneLoadOptions,
+  SceneQueryOptions,
+  SceneScreenshot,
+  SceneFeature,
+  SceneUpdateOptions,
   Viewport
 } from './types.js';
 
@@ -33,7 +38,13 @@ export declare class Scene {
   static create(config: SceneDefinition, options?: RendererOptions): Scene;
   subscribe(listeners: SceneListeners): void;
   unsubscribe(listeners: SceneListeners): void;
-  load(config: SceneDefinition, options?: SceneLoadOptions): Promise<unknown>;
+  load(config?: SceneDefinition | null, options?: SceneLoadOptions): Promise<unknown>;
+  updateConfig(options?: SceneUpdateOptions): Promise<void>;
+  setDataSource(name: string, config: SceneDataSource): Promise<unknown> | undefined;
+  queryFeatures(
+    options?: SceneQueryOptions
+  ): Promise<SceneFeature[] | Record<string, SceneFeature[]>>;
+  screenshot(options?: {background?: string}): Promise<SceneScreenshot>;
   destroy(): unknown;
 }
 
@@ -46,7 +57,7 @@ export declare class ClassicWebGLRenderer {
     options?: {renderViewId?: string}
   ): HostFrame;
   render(options?: RenderOptions): boolean;
-  load(config: SceneDefinition, options?: SceneLoadOptions): Promise<unknown>;
+  load(config?: SceneDefinition | null, options?: SceneLoadOptions): Promise<unknown>;
   subscribe(listeners: SceneListeners): void;
   destroy(): unknown;
 }
