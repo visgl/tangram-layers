@@ -36,9 +36,11 @@ export default function DeckExample({
 
   useEffect(() => {
     let cancelled = false;
+    const mountId = String(++deckExampleMountId);
     document.body.classList.add('tangram-deck-embedded');
     window.tangramExampleBaseUrl = new URL(deckExampleBaseUrl, window.location.origin).href;
     window.tangramExampleViewMode = viewMode;
+    window.tangramDeckExampleMountId = mountId;
     stylesheetElement.current = appendStylesheet(`${deckExampleBaseUrl}main.css`);
 
     const importMapElement = document.createElement('script');
@@ -55,7 +57,7 @@ export default function DeckExample({
     document.head.appendChild(importMapElement);
     scriptElements.current.push(importMapElement);
 
-    appendScript(`${deckExampleBaseUrl}app.js?embedded=1&mount=${++deckExampleMountId}`, 'module')
+    appendScript(`${deckExampleBaseUrl}app.js?embedded=1&mount=${mountId}`, 'module')
       .then((scriptElement) => {
         scriptElements.current.push(scriptElement);
         if (cancelled) {
@@ -70,16 +72,21 @@ export default function DeckExample({
 
     return () => {
       cancelled = true;
-      window.tangramDeckExampleDestroy?.();
+      if (window.tangramDeckExampleMountId === mountId) {
+        window.tangramDeckExampleDestroy?.();
+      }
       stylesheetElement.current?.remove();
       scriptElements.current.forEach((scriptElement) => {
         scriptElement.remove();
       });
       scriptElements.current = [];
       document.body.classList.remove('tangram-deck-embedded');
-      delete window.tangramExampleBaseUrl;
-      delete window.tangramExampleViewMode;
-      delete window.tangramDeckExampleDestroy;
+      if (window.tangramDeckExampleMountId === mountId) {
+        delete window.tangramExampleBaseUrl;
+        delete window.tangramExampleViewMode;
+        delete window.tangramDeckExampleMountId;
+        delete window.tangramDeckExampleDestroy;
+      }
     };
   }, [deckExampleBaseUrl, tangramLayersUrl, tangramRendererUrl, viewMode]);
 
@@ -139,7 +146,7 @@ export default function DeckExample({
             <p className="hint">Blue landmarks and the orange path are deck.gl layers.</p>
             <p className="source-link">
               <a
-                href="https://github.com/visgl/tangram-layers/blob/master/examples/deck/app.js"
+                href="https://github.com/visgl/tangram-layers/blob/master/examples/deck/app-runtime.js"
                 target="_blank"
                 rel="noopener noreferrer"
               >

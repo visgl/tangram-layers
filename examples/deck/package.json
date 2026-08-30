@@ -6,6 +6,8 @@
   "type": "module",
   "files": [
     "app.js",
+    "app-loader.js",
+    "app-runtime.js",
     "index.html",
     "main.css",
     "README.md"
