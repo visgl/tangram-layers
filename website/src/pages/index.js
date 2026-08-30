@@ -46,10 +46,7 @@ export default function Home() {
             </div>
             <div className="col col--6">
               <h2>Fully Modernized</h2>
-              <p>
-                Use vector basemaps, the animated TRON style, and deck.gl overlays on both WebGPU
-                and WebGL 2.
-              </p>
+              <p>Tangram basemaps, but now using modern TypeScript, WebGPU and WebGL 2.</p>
             </div>
           </div>
         </section>
