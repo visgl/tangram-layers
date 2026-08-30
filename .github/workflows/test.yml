@@ -110,10 +110,10 @@ jobs:
           --merge-reports=.vitest-reports
           --coverage
           --coverage.reportsDirectory=coverage
-          --coverage.thresholds.statements=30
-          --coverage.thresholds.branches=25
-          --coverage.thresholds.functions=35
-          --coverage.thresholds.lines=30
+          --coverage.thresholds.statements=60
+          --coverage.thresholds.branches=52
+          --coverage.thresholds.functions=64
+          --coverage.thresholds.lines=60
       - name: Validate coverage scope
         run: yarn coverage:scope
       - name: Publish coverage to job summary
