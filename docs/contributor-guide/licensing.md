@@ -34,9 +34,9 @@ subsequently been modified by vis.gl contributors.
 ## Enforcement
 
 Run `yarn lint:licenses` to check all tracked project text formats that support
-comments. Run `yarn lint:licenses:fix` to add missing headers using the
-repository's provenance rules. The normal `yarn lint` and `yarn lint:fix`
-commands include these checks.
+comments. Run `yarn lint:licenses:fix` to add missing headers or repair
+incorrect attribution using the repository's provenance rules. The normal
+`yarn lint` and `yarn lint:fix` commands include these checks.
 
 Generated JavaScript bundles receive the same headers from their Rollup or
 generation configuration so a rebuild does not discard attribution. JSON,
