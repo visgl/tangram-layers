@@ -103,8 +103,7 @@ var version = 'v' + version$1;
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-var WorkerBroker;
-var WorkerBroker$1 = WorkerBroker = {};
+const WorkerBroker = {};
 
 // Global list of all worker messages
 // Uniquely tracks every call made between main thread and a worker
@@ -539,7 +538,7 @@ function log(opts, ...msg) {
   if (LEVELS[level] <= LEVELS[log.level]) {
     if (Thread.is_worker) {
       // Proxy to main thread
-      return WorkerBroker$1.postMessage({
+      return WorkerBroker.postMessage({
         method: '_logProxy',
         stringify: true
       }, opts, ...msg);
@@ -569,7 +568,7 @@ log.workers = null;
 log.setLevel = function (level) {
   log.level = level;
   if (Thread.is_main && Array.isArray(log.workers)) {
-    WorkerBroker$1.postMessage(log.workers, '_logSetLevelProxy', level);
+    WorkerBroker.postMessage(log.workers, '_logSetLevelProxy', level);
   }
 };
 if (Thread.is_main) {
@@ -580,15 +579,15 @@ if (Thread.is_main) {
     logged_once = {};
   };
 }
-WorkerBroker$1.addTarget('_logProxy', log); // proxy log messages from worker to main thread
-WorkerBroker$1.addTarget('_logSetLevelProxy', log.setLevel); // proxy log level setting from main to worker thread
+WorkerBroker.addTarget('_logProxy', log); // proxy log messages from worker to main thread
+WorkerBroker.addTarget('_logSetLevelProxy', log.setLevel); // proxy log level setting from main to worker thread
 
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 const Utils = {};
-WorkerBroker$1.addTarget('Utils', Utils);
+WorkerBroker.addTarget('Utils', Utils);
 
 // Basic Safari detection
 // http://stackoverflow.com/questions/7944460/detect-safari-browser
@@ -613,7 +612,7 @@ Utils.io = function (url, timeout = 60000, responseType = 'text', method = 'GET'
     if (request_key) {
       Utils._proxy_requests[request_key] = true; // mark as proxied
     }
-    return WorkerBroker$1.postMessage('Utils.io', url, timeout, responseType, method, headers, request_key, true);
+    return WorkerBroker.postMessage('Utils.io', url, timeout, responseType, method, headers, request_key, true);
   } else {
     var request = new XMLHttpRequest();
     var promise = new Promise((resolve, reject) => {
@@ -663,7 +662,7 @@ Utils.io = function (url, timeout = 60000, responseType = 'text', method = 'GET'
         delete Utils._requests[request_key];
       }
       if (proxy) {
-        return WorkerBroker$1.withTransferables(response);
+        return WorkerBroker.withTransferables(response);
       }
       return response;
     });
@@ -678,7 +677,7 @@ Utils.io = function (url, timeout = 60000, responseType = 'text', method = 'GET'
 Utils.cancelRequest = function (key) {
   // Check for a request that was proxied to the main thread
   if (Thread.is_worker && Utils._proxy_requests[key]) {
-    return WorkerBroker$1.postMessage('Utils.cancelRequest', key); // forward to main thread
+    return WorkerBroker.postMessage('Utils.cancelRequest', key); // forward to main thread
   }
   let req = Utils._requests[key];
   if (req) {
@@ -816,8 +815,7 @@ Utils.toCSSColor = function (color) {
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-let debugSettings;
-var debugSettings$1 = debugSettings = {
+const debugSettings = {
   // draws a blue rectangle border around the collision box of a label
   draw_label_collision_boxes: false,
   // draws a green rectangle border within the texture box of a label
@@ -1113,13 +1111,13 @@ function subscribeMixin(target) {
   let listeners = [];
   return Object.assign(target, {
     subscribe(listener) {
-      if (listeners.indexOf(listener) === -1) {
+      if (!listeners.includes(listener)) {
         listeners.push(listener);
       }
     },
     unsubscribe(listener) {
-      let index = listeners.indexOf(listener);
-      if (index > -1) {
+      const index = listeners.indexOf(listener);
+      if (index >= 0) {
         listeners.splice(index, 1);
       }
     },
@@ -1127,24 +1125,19 @@ function subscribeMixin(target) {
       listeners = [];
     },
     trigger(event, ...data) {
-      listeners.forEach(listener => {
-        if (typeof listener[event] === 'function') {
+      for (const listener of [...listeners]) {
+        const handler = listener[event];
+        if (typeof handler === 'function') {
           try {
-            listener[event](...data);
-          } catch (e) {
-            log('warn', `Caught exception in listener for event '${event}':`, e);
+            handler.call(listener, ...data);
+          } catch (error) {
+            log('warn', `Caught exception in listener for event '${event}':`, error);
           }
         }
-      });
+      }
     },
     hasSubscribersFor(event) {
-      let has = false;
-      listeners.forEach(listener => {
-        if (typeof listener[event] === 'function') {
-          has = true;
-        }
-      });
-      return has;
+      return listeners.some(listener => typeof listener[event] === 'function');
     }
   });
 }
@@ -1153,9 +1146,11 @@ function subscribeMixin(target) {
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-function sliceObject(obj, keys) {
-  let sliced = {};
-  keys.forEach(k => sliced[k] = obj[k]);
+function sliceObject(object, keys) {
+  const sliced = {};
+  for (const key of keys) {
+    sliced[key] = object[key];
+  }
   return sliced;
 }
 
@@ -1165,8 +1160,7 @@ function sliceObject(obj, keys) {
 
 // WebGL context wrapper
 
-var Context;
-var Context$1 = Context = {};
+const Context = {};
 let context_id = 0;
 const context_scopes = new WeakMap();
 
@@ -1294,7 +1288,7 @@ class Texture {
     if (this.texture_factory) {
       return this.destroyTexture(options);
     }
-    return Context$1.withContext(this.gl, () => this.destroyTexture(options));
+    return Context.withContext(this.gl, () => this.destroyTexture(options));
   }
   destroyTexture({
     force
@@ -1475,8 +1469,8 @@ class Texture {
     if (this.texture_factory) {
       return this.updateTexture(source, options);
     }
-    return Context$1.withContext(this.gl, () => {
-      if (Context$1.hasContextScope(this.gl)) {
+    return Context.withContext(this.gl, () => {
+      if (Context.hasContextScope(this.gl)) {
         Texture.resetBindings();
       }
       return this.updateTexture(source, options);
@@ -1551,8 +1545,8 @@ class Texture {
     if (this.texture_factory) {
       return this.updateFiltering(options);
     }
-    return Context$1.withContext(this.gl, () => {
-      if (Context$1.hasContextScope(this.gl)) {
+    return Context.withContext(this.gl, () => {
+      if (Context.hasContextScope(this.gl)) {
         Texture.resetBindings();
       }
       return this.updateFiltering(options);
@@ -1809,7 +1803,7 @@ Texture.getInfo = function (name) {
 // Called from worker, gets info on one or more textures info from main thread via remote call, then stores it
 // locally in worker. 'textures' can be an array of texture names to sync, or if null, all textures are synced.
 Texture.syncTexturesToWorker = function (names) {
-  return WorkerBroker$1.postMessage('Texture.getInfo', names).then(textures => {
+  return WorkerBroker.postMessage('Texture.getInfo', names).then(textures => {
     if (textures) {
       textures.filter(x => x) // remove nulls
       .forEach(t => Texture.textures[t.name] = t);
@@ -1846,7 +1840,7 @@ Texture.resetBindings = function () {
   Texture.boundTexture = null;
   Texture.activeUnit = null;
 };
-WorkerBroker$1.addTarget('Texture', Texture);
+WorkerBroker.addTarget('Texture', Texture);
 subscribeMixin(Texture);
 
 // Tangram
@@ -2106,17 +2100,10 @@ function getExtension(gl, name) {
 
 // http://werxltd.com/wp/2010/05/13/javascript-implementation-of-javas-string-hashcode-method/
 function hashString(string) {
-  var hash = 0,
-    i,
-    chr,
-    len;
-  if (string.length === 0) {
-    return hash;
-  }
-  for (i = 0, len = string.length; i < len; i++) {
-    chr = string.charCodeAt(i);
-    hash = (hash << 5) - hash + chr;
-    hash |= 0; // Convert to 32bit integer
+  let hash = 0;
+  for (let index = 0; index < string.length; index++) {
+    hash = (hash << 5) - hash + string.charCodeAt(index);
+    hash |= 0;
   }
   return hash;
 }
@@ -3310,8 +3297,7 @@ function mergeObjects(dest, ...sources) {
 
 // Miscellaneous geo functions
 
-var Geo;
-var Geo$1 = Geo = {};
+const Geo = {};
 
 // Projection constants
 Geo.default_source_max_zoom = 18;
@@ -4030,7 +4016,7 @@ StyleParser.getFeatureParseContext = function (feature, tile, global) {
     tile,
     global,
     zoom: tile.style_z,
-    geometry: Geo$1.geometryType(feature.geometry.type),
+    geometry: Geo.geometryType(feature.geometry.type),
     meters_per_pixel: tile.meters_per_pixel,
     meters_per_pixel_sq: tile.meters_per_pixel_sq,
     units_per_meter_overzoom: tile.units_per_meter_overzoom
@@ -4256,7 +4242,7 @@ StyleParser.convertUnits = function (val, context) {
   if (val.value != null) {
     if (val.units === 'px') {
       // convert from pixels
-      return val.value * Geo$1.metersPerPixel(context.zoom);
+      return val.value * Geo.metersPerPixel(context.zoom);
     }
     return val.value;
   }
@@ -4264,7 +4250,7 @@ StyleParser.convertUnits = function (val, context) {
   else if (typeof val === 'string') {
     if (val.trim().slice(-2) === 'px') {
       val = parseNumber(val);
-      val *= Geo$1.metersPerPixel(context.zoom); // convert from pixels
+      val *= Geo.metersPerPixel(context.zoom); // convert from pixels
     } else {
       val = parseNumber(val);
     }
@@ -4700,7 +4686,7 @@ class FeatureSelection {
         if (worker_id !== 255) {
           // 255 indicates an empty selection buffer pixel
           if (this.workers[worker_id] != null) {
-            WorkerBroker$1.postMessage(this.workers[worker_id], 'self.getFeatureSelection', {
+            WorkerBroker.postMessage(this.workers[worker_id], 'self.getFeatureSelection', {
               id: request.id,
               key: feature_key
             }).then(message => {
@@ -4847,8 +4833,7 @@ FeatureSelection.defaultColor = [0, 0, 0, 1];
 
 // WebGL constants - need to import these separately to make them available in the web worker
 
-var gl;
-var gl$1 = gl = {};
+const gl = {};
 
 /* DataType */
 gl.BYTE = 0x1400;
@@ -5445,8 +5430,7 @@ Material.block = 'material';
 
 /*** Vector functions - vectors provided as [x, y] or [x, y, z] arrays ***/
 
-var Vector;
-var Vector$1 = Vector = {};
+const Vector = {};
 Vector.copy = function (v) {
   var V = [];
   var lim = v.length;
@@ -6109,7 +6093,7 @@ class DirectionalLight extends Light {
     return this._direction;
   }
   set direction(v) {
-    this._direction = Vector$1.normalize(Vector$1.copy(v));
+    this._direction = Vector.normalize(Vector.copy(v));
   }
 
   // Inject struct and calculate function
@@ -6164,12 +6148,12 @@ class PointLight extends Light {
       // For world origin, format is: [longitude, latitude, meters (default) or pixels w/px units]
 
       // Move light's world position into camera space
-      const m = Geo$1.latLngToMeters([...this.position]);
+      const m = Geo.latLngToMeters([...this.position]);
       this.position_eye[0] = m[0] - this.view.camera.position_meters[0];
       this.position_eye[1] = m[1] - this.view.camera.position_meters[1];
       this.position_eye[2] = StyleParser.convertUnits(this.position[2], {
         zoom: this.view.zoom,
-        meters_per_pixel: Geo$1.metersPerPixel(this.view.zoom)
+        meters_per_pixel: Geo.metersPerPixel(this.view.zoom)
       });
       this.position_eye[2] = this.position_eye[2] - this.view.camera.position_meters[2];
     } else if (this.origin === 'ground' || this.origin === 'camera') {
@@ -6178,7 +6162,7 @@ class PointLight extends Light {
       // Light is in camera space by default
       this.position_eye = StyleParser.convertUnits(this.position, {
         zoom: this.view.zoom,
-        meters_per_pixel: Geo$1.metersPerPixel(this.view.zoom)
+        meters_per_pixel: Geo.metersPerPixel(this.view.zoom)
       });
       if (this.origin === 'ground') {
         // Leave light's xy in camera space, but z needs to be moved relative to ground plane
@@ -6196,13 +6180,13 @@ class PointLight extends Light {
     if (ShaderProgram.defines['TANGRAM_POINTLIGHT_ATTENUATION_INNER_RADIUS']) {
       _program.uniform('1f', `u_${this.name}.innerRadius`, StyleParser.convertUnits(this.radius[0], {
         zoom: this.view.zoom,
-        meters_per_pixel: Geo$1.metersPerPixel(this.view.zoom)
+        meters_per_pixel: Geo.metersPerPixel(this.view.zoom)
       }));
     }
     if (ShaderProgram.defines['TANGRAM_POINTLIGHT_ATTENUATION_OUTER_RADIUS']) {
       _program.uniform('1f', `u_${this.name}.outerRadius`, StyleParser.convertUnits(this.radius[1], {
         zoom: this.view.zoom,
-        meters_per_pixel: Geo$1.metersPerPixel(this.view.zoom)
+        meters_per_pixel: Geo.metersPerPixel(this.view.zoom)
       }));
     }
   }
@@ -6221,7 +6205,7 @@ class SpotLight extends PointLight {
     return this._direction;
   }
   set direction(v) {
-    this._direction = Vector$1.normalize(Vector$1.copy(v));
+    this._direction = Vector.normalize(Vector.copy(v));
   }
 
   // Inject struct and calculate function
@@ -6352,7 +6336,7 @@ class DataSource {
       var num_features = source.layers[t].features.length;
       for (var f = 0; f < num_features; f++) {
         var feature = source.layers[t].features[f];
-        Geo$1.transformGeometry(feature.geometry, this.projectCoord);
+        Geo.transformGeometry(feature.geometry, this.projectCoord);
       }
     }
     if (source.debug !== undefined) {
@@ -6360,7 +6344,7 @@ class DataSource {
     }
   }
   static projectCoord(coord) {
-    Geo$1.latLngToMeters(coord);
+    Geo.latLngToMeters(coord);
   }
 
   /**
@@ -6372,12 +6356,12 @@ class DataSource {
     },
     min
   }) {
-    let units_per_meter = Geo$1.unitsPerMeter(z);
+    let units_per_meter = Geo.unitsPerMeter(z);
     for (var t in source.layers) {
       var num_features = source.layers[t].features.length;
       for (var f = 0; f < num_features; f++) {
         var feature = source.layers[t].features[f];
-        Geo$1.transformGeometry(feature.geometry, coord => {
+        Geo.transformGeometry(feature.geometry, coord => {
           coord[0] = (coord[0] - min.x) * units_per_meter;
           coord[1] = (coord[1] - min.y) * units_per_meter * -1; // flip coords positive
         });
@@ -6396,14 +6380,14 @@ class DataSource {
         let data = dest.source_data.layers[layer];
         if (data && data.features) {
           data.features.forEach(feature => {
-            Geo$1.transformGeometry(feature.geometry, coord => {
+            Geo.transformGeometry(feature.geometry, coord => {
               // Flip Y coords
               coord[1] = -coord[1];
 
               // Slightly scale up tile to cover seams
               if (this.pad_scale) {
-                coord[0] = Math.round(coord[0] * (1 + this.pad_scale) - Geo$1.tile_scale * this.pad_scale / 2);
-                coord[1] = Math.round(coord[1] * (1 + this.pad_scale) - Geo$1.tile_scale * this.pad_scale / 2);
+                coord[0] = Math.round(coord[0] * (1 + this.pad_scale) - Geo.tile_scale * this.pad_scale / 2);
+                coord[1] = Math.round(coord[1] * (1 + this.pad_scale) - Geo.tile_scale * this.pad_scale / 2);
               }
             });
 
@@ -6442,7 +6426,7 @@ class DataSource {
     zooms
   }) {
     // overzoom will apply for zooms higher than this
-    this.max_zoom = max_zoom != null ? max_zoom : Geo$1.default_source_max_zoom;
+    this.max_zoom = max_zoom != null ? max_zoom : Geo.default_source_max_zoom;
     if (Array.isArray(zooms)) {
       this.zooms = zooms; // TODO: support range parsing, e.g. [0-4, 6-7, 12]?
       this.max_zoom = this.zooms[this.zooms.length - 1]; // overrides `max_zoom` when both are present
@@ -6477,9 +6461,9 @@ class DataSource {
   updateDefaultWinding(geom) {
     if (this.default_winding == null) {
       if (geom.type === 'Polygon') {
-        this.default_winding = Geo$1.ringWinding(geom.coordinates[0]);
+        this.default_winding = Geo.ringWinding(geom.coordinates[0]);
       } else if (geom.type === 'MultiPolygon') {
-        this.default_winding = Geo$1.ringWinding(geom.coordinates[0][0]);
+        this.default_winding = Geo.ringWinding(geom.coordinates[0][0]);
       }
     }
     return this.default_winding;
@@ -6659,8 +6643,8 @@ class NetworkTileSource extends NetworkSource {
       return {
         latlng: [...source.bounds],
         meters: {
-          min: Geo$1.latLngToMeters([w, n]),
-          max: Geo$1.latLngToMeters([e, s])
+          min: Geo.latLngToMeters([w, n]),
+          max: Geo.latLngToMeters([e, s])
         },
         tiles: {
           // max tile bounds per zoom (lazily evaluated)
@@ -6676,14 +6660,14 @@ class NetworkTileSource extends NetworkSource {
     // Check tile bounds
     if (bounds) {
       // get tile and bounds coords at current zoom, wrapping to keep x coords in positive range
-      coords = Geo$1.wrapTile(coords);
+      coords = Geo.wrapTile(coords);
       let min = bounds.tiles.min[coords.z];
       if (!min) {
-        min = bounds.tiles.min[coords.z] = Geo$1.tileForMeters(bounds.meters.min, coords.z);
+        min = bounds.tiles.min[coords.z] = Geo.tileForMeters(bounds.meters.min, coords.z);
       }
       let max = bounds.tiles.max[coords.z];
       if (!max) {
-        max = bounds.tiles.max[coords.z] = Geo$1.tileForMeters(bounds.meters.max, coords.z);
+        max = bounds.tiles.max[coords.z] = Geo.tileForMeters(bounds.meters.max, coords.z);
       }
 
       // check latitude
@@ -6716,7 +6700,7 @@ class NetworkTileSource extends NetworkSource {
     return true;
   }
   formatURL(url_template, tile) {
-    let coords = Geo$1.wrapTile(tile.coords, {
+    let coords = Geo.wrapTile(tile.coords, {
       x: true
     });
     if (this.tms) {
@@ -6952,7 +6936,7 @@ class RasterTileSource extends NetworkTileSource {
     tile.rasters = [...this.rasters]; // copy list of rasters to load for tile
 
     // Generate a single quad that fills the entire tile
-    let scale = Geo$1.tile_scale;
+    let scale = Geo.tile_scale;
     tile.source_data.layers = {
       _default: {
         type: 'FeatureCollection',
@@ -7134,7 +7118,7 @@ class RasterSource extends RasterTileSource {
     const image = await this.load_image[key];
 
     // Meters per pixel for this zoom, adjusted for display density and source tile size (e.g. 512px tiles)
-    const mpp = Geo$1.metersPerPixel(tile.coords.z) / dpr / (this.tile_size / Geo$1.tile_size);
+    const mpp = Geo.metersPerPixel(tile.coords.z) / dpr / (this.tile_size / Geo.tile_size);
 
     // Raster origin relative to tile origin (get delta in meters, then convert to pixels)
     const dx = (bounds.meters.min[0] - tile.min.x) / mpp;
@@ -7382,7 +7366,7 @@ var Style = {
       this.selection_program.destroy();
       this.selection_program = null;
     }
-    WorkerBroker$1.removeTarget(this.main_thread_target);
+    WorkerBroker.removeTarget(this.main_thread_target);
     this.gl = null;
     this.resource_context = null;
     this.uniform_blocks = null;
@@ -7400,7 +7384,7 @@ var Style = {
     // Provide a hook for this object to be called from worker threads
     this.main_thread_target = ['Style', this.name, this.generation].join('_');
     if (Thread.is_main) {
-      WorkerBroker$1.addTarget(this.main_thread_target, this);
+      WorkerBroker.addTarget(this.main_thread_target, this);
     }
   },
   /*** Style parsing and geometry construction ***/
@@ -7496,7 +7480,7 @@ var Style = {
     }
 
     // Optionally collect per-layer stats
-    if (geom_count > 0 && debugSettings$1.layer_stats) {
+    if (geom_count > 0 && debugSettings.layer_stats) {
       let tile = context.tile;
       tile.debug.layers = tile.debug.layers || {
         list: {},
@@ -7693,11 +7677,11 @@ var Style = {
       bufferFactory: this.mesh_buffer_factory
     });
     let vertex_layout = this.vertexLayoutForMeshVariant(options.variant);
-    if (debugSettings$1.wireframe) {
+    if (debugSettings.wireframe) {
       // In wireframe debug mode, transform mesh into lines
       vertex_elements = makeWireframeForTriangleElementData(vertex_elements);
       return new VBOMesh(this.gl, vertex_data, vertex_elements, vertex_layout, _objectSpread$4(_objectSpread$4({}, options), {}, {
-        draw_mode: gl$1.LINES
+        draw_mode: gl.LINES
       }));
     }
     return new VBOMesh(this.gl, vertex_data, vertex_elements, vertex_layout, options);
@@ -7901,7 +7885,7 @@ var Style = {
     // to avoid flickering while loading (texture will render as black)
     let textures;
     try {
-      textures = await WorkerBroker$1.postMessage(`${this.main_thread_target}.loadTextures`, {
+      textures = await WorkerBroker.postMessage(`${this.main_thread_target}.loadTextures`, {
         coords: tile.coords,
         source: tile.source,
         rasters: tile.rasters,
@@ -8026,7 +8010,7 @@ var Style = {
           attribs.push({
             name: `a_${aname}`,
             size: 1,
-            type: gl$1.FLOAT,
+            type: gl.FLOAT,
             normalized: false
           });
         }
@@ -8174,13 +8158,13 @@ function createBuffer(array, overflown) {
 
 // Maps GL types to JS array types
 let array_types = {
-  [gl$1.FLOAT]: Float32Array,
-  [gl$1.BYTE]: Int8Array,
-  [gl$1.UNSIGNED_BYTE]: Uint8Array,
-  [gl$1.INT]: Int32Array,
-  [gl$1.UNSIGNED_INT]: Uint32Array,
-  [gl$1.SHORT]: Int16Array,
-  [gl$1.UNSIGNED_SHORT]: Uint16Array
+  [gl.FLOAT]: Float32Array,
+  [gl.BYTE]: Int8Array,
+  [gl.UNSIGNED_BYTE]: Uint8Array,
+  [gl.INT]: Int32Array,
+  [gl.UNSIGNED_INT]: Uint32Array,
+  [gl.SHORT]: Int16Array,
+  [gl.UNSIGNED_SHORT]: Uint16Array
 };
 
 // An intermediary object that holds vertex data in typed arrays, according to a given vertex layout
@@ -8213,7 +8197,7 @@ class VertexData {
   // (Re-)allocate typed views into the main buffer - only create the types we need for this layout
   setBufferViews() {
     this.views = {};
-    this.views[gl$1.UNSIGNED_BYTE] = this.vertex_buffer;
+    this.views[gl.UNSIGNED_BYTE] = this.vertex_buffer;
     this.vertex_layout.dynamic_attribs.forEach(attrib => {
       // Need view for this type?
       if (this.views[attrib.type] == null) {
@@ -8291,14 +8275,14 @@ class VertexLayout {
         attrib.byte_size = attrib.size;
         let shift = 0;
         switch (attrib.type) {
-          case gl$1.FLOAT:
-          case gl$1.INT:
-          case gl$1.UNSIGNED_INT:
+          case gl.FLOAT:
+          case gl.INT:
+          case gl.UNSIGNED_INT:
             attrib.byte_size *= 4;
             shift = 2;
             break;
-          case gl$1.SHORT:
-          case gl$1.UNSIGNED_SHORT:
+          case gl.SHORT:
+          case gl.UNSIGNED_SHORT:
             attrib.byte_size *= 2;
             shift = 1;
             break;
@@ -8451,25 +8435,25 @@ VertexLayout.add_vertex_funcs = {}; // keyed by unique set of attributes
 function getVertexFormat(attrib) {
   let type;
   switch (attrib.type) {
-    case gl$1.BYTE:
+    case gl.BYTE:
       type = attrib.normalized ? 'snorm8' : 'sint8';
       break;
-    case gl$1.UNSIGNED_BYTE:
+    case gl.UNSIGNED_BYTE:
       type = attrib.normalized ? 'unorm8' : 'uint8';
       break;
-    case gl$1.SHORT:
+    case gl.SHORT:
       type = attrib.normalized ? 'snorm16' : 'sint16';
       break;
-    case gl$1.UNSIGNED_SHORT:
+    case gl.UNSIGNED_SHORT:
       type = attrib.normalized ? 'unorm16' : 'uint16';
       break;
-    case gl$1.INT:
+    case gl.INT:
       type = 'sint32';
       break;
-    case gl$1.UNSIGNED_INT:
+    case gl.UNSIGNED_INT:
       type = 'uint32';
       break;
-    case gl$1.FLOAT:
+    case gl.FLOAT:
       type = 'float32';
       break;
     default:
@@ -8481,7 +8465,7 @@ function getVertexFormat(attrib) {
   if (attrib.size < 2 || attrib.size > 4) {
     throw new Error(`VertexLayout: unsupported attribute size ${attrib.size}`);
   }
-  const webgl_only = attrib.size === 3 && attrib.type !== gl$1.FLOAT && attrib.type !== gl$1.INT && attrib.type !== gl$1.UNSIGNED_INT;
+  const webgl_only = attrib.size === 3 && attrib.type !== gl.FLOAT && attrib.type !== gl.INT && attrib.type !== gl.UNSIGNED_INT;
   return `${type}x${attrib.size}${webgl_only ? '-webgl' : ''}`;
 }
 
@@ -8493,8 +8477,8 @@ const tile_bounds = [{
   x: 0,
   y: 0
 }, {
-  x: Geo$1.tile_scale,
-  y: -Geo$1.tile_scale
+  x: Geo.tile_scale,
+  y: -Geo.tile_scale
 } // TODO: correct for flipped y-axis?
 ];
 const default_uvs = [0, 0, 1, 1];
@@ -9246,7 +9230,7 @@ function buildPolygons(polygons, vertex_data, vertex_template, {
     if (num_indices) {
       // Find polygon extents to calculate UVs, fit them to the axis-aligned bounding box:
       if (texcoord_index) {
-        [min_x, min_y, max_x, max_y] = Geo$1.findBoundingBox(polygon), span_x = max_x - min_x, span_y = max_y - min_y, scale_u = (max_u - min_u) / span_x, scale_v = (max_v - min_v) / span_y;
+        [min_x, min_y, max_x, max_y] = Geo.findBoundingBox(polygon), span_x = max_x - min_x, span_y = max_y - min_y, scale_u = (max_u - min_u) / span_x, scale_v = (max_v - min_v) / span_y;
       }
       for (let ring_index = 0; ring_index < polygon.length; ring_index++) {
         // Add vertex data:
@@ -9327,8 +9311,8 @@ function buildExtrudedPolygons(polygons, z, height, min_height, vertex_data, ver
         var wall_vertices = [[contour[w1][0], contour[w1][1], max_z], [contour[w1][0], contour[w1][1], min_z], [contour[w0][0], contour[w0][1], min_z], [contour[w0][0], contour[w0][1], max_z]];
 
         // Calc the normal of the wall from up vector and one segment of the wall triangles
-        let wall_vec = Vector$1.normalize([contour[w1][0] - contour[w0][0], contour[w1][1] - contour[w0][1], 0]);
-        let normal = Vector$1.cross(up_vec3, wall_vec);
+        let wall_vec = Vector.normalize([contour[w1][0] - contour[w0][0], contour[w1][1] - contour[w0][1], 0]);
+        let normal = Vector.cross(up_vec3, wall_vec);
 
         // Update vertex template with current surface normal
         vertex_template[normal_index + 0] = normal[0] * normal_normalize;
@@ -9725,7 +9709,7 @@ fn vertexMain(attributes: PolygonAttributes) -> PolygonVaryings {
     let local_position = vec4<f32>(
         f32(attributes.a_position.x),
         f32(attributes.a_position.y),
-        f32(attributes.a_position.z) / ${Geo$1.height_scale}.0,
+        f32(attributes.a_position.z) / ${Geo.height_scale}.0,
         1.0
     );
     var clip_position = TangramCamera.u_projection *
@@ -9743,8 +9727,8 @@ fn vertexMain(attributes: PolygonAttributes) -> PolygonVaryings {
     output.position = clip_position;
     output.color = vec4<f32>(attributes.a_color.rgb * light, attributes.a_color.a);
     output.raster_uv = vec2<f32>(
-        f32(attributes.a_position.x) / ${Geo$1.tile_scale}.0,
-        -f32(attributes.a_position.y) / ${Geo$1.tile_scale}.0
+        f32(attributes.a_position.x) / ${Geo.tile_scale}.0,
+        -f32(attributes.a_position.y) / ${Geo.tile_scale}.0
     );
     return output;
 }
@@ -9791,7 +9775,7 @@ Object.assign(Polygons, {
     style.variant = draw.variant; // pre-calculated mesh variant
 
     style.z = StyleParser.evalCachedDistanceProperty(draw.z, context) || StyleParser.defaults.z;
-    style.z *= Geo$1.height_scale; // provide sub-meter precision of height values
+    style.z *= Geo.height_scale; // provide sub-meter precision of height values
 
     style.extrude = StyleParser.evalProperty(draw.extrude, context);
     if (style.extrude) {
@@ -9810,8 +9794,8 @@ Object.assign(Polygons, {
         style.min_height = style.extrude[0];
         style.height = style.extrude[1];
       }
-      style.height *= Geo$1.height_scale; // provide sub-meter precision of height values
-      style.min_height *= Geo$1.height_scale;
+      style.height *= Geo.height_scale; // provide sub-meter precision of height values
+      style.min_height *= Geo.height_scale;
     }
     style.tile_edges = draw.tile_edges; // usually activated for debugging, or rare visualization needs
 
@@ -9854,12 +9838,12 @@ Object.assign(Polygons, {
       const attribs = [{
         name: 'a_position',
         size: 4,
-        type: gl$1.SHORT,
+        type: gl.SHORT,
         normalized: false
       }, {
         name: 'a_normal',
         size: portable_normal ? 4 : 3,
-        type: gl$1.BYTE,
+        type: gl.BYTE,
         normalized: true,
         static: variant.normal || portable_normal ? null : [0, 0, 1]
       },
@@ -9867,18 +9851,18 @@ Object.assign(Polygons, {
       {
         name: 'a_color',
         size: 4,
-        type: gl$1.UNSIGNED_BYTE,
+        type: gl.UNSIGNED_BYTE,
         normalized: true
       }, {
         name: 'a_selection_color',
         size: 4,
-        type: gl$1.UNSIGNED_BYTE,
+        type: gl.UNSIGNED_BYTE,
         normalized: true,
         static: variant.selection ? null : [0, 0, 0, 0]
       }, {
         name: 'a_texcoord',
         size: 2,
-        type: gl$1.UNSIGNED_SHORT,
+        type: gl.UNSIGNED_SHORT,
         normalized: true,
         static: variant.texcoords ? null : [0, 0]
       }];
@@ -9948,7 +9932,7 @@ Object.assign(Polygons, {
       texcoord_normalize: 65535,
       // scale UVs to unsigned shorts
       remove_tile_edges: !style.tile_edges,
-      tile_edge_tolerance: Geo$1.tile_scale * context.tile.pad_scale * 4,
+      tile_edge_tolerance: Geo.tile_scale * context.tile.pad_scale * 4,
       winding: context.winding
     };
 
@@ -9987,7 +9971,7 @@ const MIN_FAN_WIDTH = 5; // Width of line in tile units to place 1 triangle per 
 const TEXCOORD_NORMALIZE = 65535; // Scaling factor for UV attribute values
 
 // Scaling factor to add precision to line texture V coordinate packed as normalized short
-const V_SCALE_ADJUST = Geo$1.tile_scale;
+const V_SCALE_ADJUST = Geo.tile_scale;
 const zero_v = [0, 0],
   one_v = [1, 0],
   mid_v = [0.5, 0]; // reusable instances, updated with V coordinate
@@ -10080,7 +10064,7 @@ function buildPolyline(line, context) {
   // loop through beginning points if duplicates
   coordCurr = line[index_start];
   coordNext = line[index_start + 1];
-  while (Vector$1.isEqual(coordCurr, coordNext)) {
+  while (Vector.isEqual(coordCurr, coordNext)) {
     index_start++;
     coordCurr = coordNext;
     coordNext = line[index_start + 1];
@@ -10091,7 +10075,7 @@ function buildPolyline(line, context) {
   }
 
   // loop through ending points to check for duplicates
-  while (Vector$1.isEqual(line[index_end], line[index_end - 1])) {
+  while (Vector.isEqual(line[index_end], line[index_end - 1])) {
     index_end--;
     ignored_indices_count++;
     if (index_end === 0) {
@@ -10101,7 +10085,7 @@ function buildPolyline(line, context) {
   if (line.length < 2 + ignored_indices_count) {
     return;
   }
-  normNext = Vector$1.normalize(Vector$1.perp(coordCurr, coordNext));
+  normNext = Vector.normalize(Vector.perp(coordCurr, coordNext));
 
   // Skip tile boundary lines and append a new line if needed
   if (remove_tile_edges && outsideTile(coordCurr, coordNext, tile_edge_tolerance)) {
@@ -10114,7 +10098,7 @@ function buildPolyline(line, context) {
   }
   if (closed_polygon) {
     // Begin the polygon with a join (connecting the first and last segments)
-    normPrev = Vector$1.normalize(Vector$1.perp(line[index_end - 1], coordCurr));
+    normPrev = Vector.normalize(Vector.perp(line[index_end - 1], coordCurr));
     startPolygon(coordCurr, normPrev, normNext, join_type, context);
   } else {
     // If line begins at edge, don't add a cap
@@ -10132,7 +10116,7 @@ function buildPolyline(line, context) {
 
   // INTERMEDIARY POINTS
   if (has_texcoord) {
-    v += v_scale * Vector$1.length(Vector$1.sub(coordNext, coordCurr));
+    v += v_scale * Vector.length(Vector.sub(coordNext, coordCurr));
   }
   for (var i = index_start + 1; i < index_end; i++) {
     var currIndex = i;
@@ -10141,7 +10125,7 @@ function buildPolyline(line, context) {
     coordNext = line[nextIndex];
 
     // Skip redundant vertices
-    if (Vector$1.isEqual(coordCurr, coordNext)) {
+    if (Vector.isEqual(coordCurr, coordNext)) {
       continue;
     }
 
@@ -10158,7 +10142,7 @@ function buildPolyline(line, context) {
       return;
     }
     normPrev = normNext;
-    normNext = Vector$1.normalize(Vector$1.perp(coordCurr, coordNext));
+    normNext = Vector.normalize(Vector.perp(coordCurr, coordNext));
 
     // Add join
     if (join_type === JOIN_TYPE.miter) {
@@ -10167,7 +10151,7 @@ function buildPolyline(line, context) {
       addJoin(join_type, v, coordCurr, normPrev, normNext, false, context);
     }
     if (has_texcoord) {
-      v += v_scale * Vector$1.length(Vector$1.sub(coordNext, coordCurr));
+      v += v_scale * Vector.length(Vector.sub(coordNext, coordCurr));
     }
   }
 
@@ -10176,7 +10160,7 @@ function buildPolyline(line, context) {
   normPrev = normNext;
   if (closed_polygon) {
     // Close the polygon with a miter joint or butt cap if on a tile boundary
-    normNext = Vector$1.normalize(Vector$1.perp(coordCurr, line[1]));
+    normNext = Vector.normalize(Vector.perp(coordCurr, line[1]));
     endPolygon(coordCurr, normPrev, normNext, join_type, v, context);
   } else {
     // Finish the line strip
@@ -10241,7 +10225,7 @@ function endPolygon(coordCurr, normPrev, normNext, join_type, v, context) {
   } else {
     // If polygon ends within a tile, add Miter or no joint (join added on startPolygon)
     var miterVec = createMiterVec(normPrev, normNext);
-    if (join_type === JOIN_TYPE.miter && Vector$1.lengthSq(miterVec) > context.miter_len_sq) {
+    if (join_type === JOIN_TYPE.miter && Vector.lengthSq(miterVec) > context.miter_len_sq) {
       join_type = JOIN_TYPE.bevel; // switch to bevel
     }
     if (join_type === JOIN_TYPE.miter) {
@@ -10256,9 +10240,9 @@ function endPolygon(coordCurr, normPrev, normNext, join_type, v, context) {
   }
 }
 function createMiterVec(normPrev, normNext) {
-  var miterVec = Vector$1.normalize(Vector$1.add(normPrev, normNext));
-  var scale = 2 / (1 + Math.abs(Vector$1.dot(normPrev, miterVec)));
-  return Vector$1.mult(miterVec, scale * scale);
+  var miterVec = Vector.normalize(Vector.add(normPrev, normNext));
+  var scale = 2 / (1 + Math.abs(Vector.dot(normPrev, miterVec)));
+  return Vector.mult(miterVec, scale * scale);
 }
 
 // Add a miter vector or a join if the miter is too sharp
@@ -10266,7 +10250,7 @@ function addMiter(v, coordCurr, normPrev, normNext, miter_len_sq, isBeginning, c
   var miterVec = createMiterVec(normPrev, normNext);
 
   //  Miter limit: if miter join is too sharp, convert to bevel instead
-  if (Vector$1.lengthSq(miterVec) > miter_len_sq) {
+  if (Vector.lengthSq(miterVec) > miter_len_sq) {
     addJoin(JOIN_TYPE.bevel, v, coordCurr, normPrev, normNext, isBeginning, context);
   } else {
     addVertex(coordCurr, miterVec, miterVec, 1, v, context, 1);
@@ -10293,11 +10277,11 @@ function addJoin(join_type, v, coordCurr, normPrev, normNext, isBeginning, conte
     }
     addFan(coordCurr,
     // extrusion vector of first vertex
-    Vector$1.neg(normPrev),
+    Vector.neg(normPrev),
     // controls extrude distance of pivot vertex
     miterVec,
     // extrusion vector of last vertex
-    Vector$1.neg(normNext),
+    Vector.neg(normNext),
     // line normal (unused here)
     miterVec,
     // uv coordinates
@@ -10314,7 +10298,7 @@ function addJoin(join_type, v, coordCurr, normPrev, normNext, isBeginning, conte
     // extrusion vector of first vertex
     normPrev,
     // extrusion vector of pivot vertex
-    Vector$1.neg(miterVec),
+    Vector.neg(miterVec),
     // extrusion vector of last vertex
     normNext,
     // line normal for offset
@@ -10382,7 +10366,7 @@ function addFan(coord, eA, eC, eB, normal, uvA, uvC, uvB, isCap, isBevel, contex
   // coord = center point p - vertex connecting two line segments
 
   var cross = eA[0] * eB[1] - eA[1] * eB[0];
-  var dot = Vector$1.dot(eA, eB);
+  var dot = Vector.dot(eA, eB);
   var angle = Math.atan2(cross, dot);
   while (angle >= Math.PI) {
     angle -= 2 * Math.PI;
@@ -10411,10 +10395,10 @@ function addFan(coord, eA, eC, eB, normal, uvA, uvC, uvB, isCap, isBevel, contex
   var has_texcoord = context.texcoord_index != null;
   if (has_texcoord) {
     if (isCap) {
-      var affine_uvCurr = Vector$1.sub(uvA, uvC);
+      var affine_uvCurr = Vector.sub(uvA, uvC);
     } else {
-      uvCurr = Vector$1.copy(uvA);
-      var uv_delta = Vector$1.div(Vector$1.sub(uvB, uvA), numTriangles);
+      uvCurr = Vector.copy(uvA);
+      var uv_delta = Vector.div(Vector.sub(uvB, uvA), numTriangles);
     }
   }
   var angle_step = angle / numTriangles;
@@ -10432,18 +10416,18 @@ function addFan(coord, eA, eC, eB, normal, uvA, uvC, uvB, isCap, isBevel, contex
   for (var i = 0; i < numTriangles; i++) {
     if (i === 0 && angle < 0) {
       // if ccw, flip the extrusion vector so offsets work properly
-      blade = Vector$1.neg(blade);
+      blade = Vector.neg(blade);
     }
-    blade = Vector$1.rot(blade, angle_step);
+    blade = Vector.rot(blade, angle_step);
     if (has_texcoord) {
       if (isCap) {
         // UV textures go "through" the cap
-        affine_uvCurr = Vector$1.rot(affine_uvCurr, angle_step);
+        affine_uvCurr = Vector.rot(affine_uvCurr, angle_step);
         uvCurr[0] = affine_uvCurr[0] + uvC[0];
         uvCurr[1] = affine_uvCurr[1] * context.texcoord_width * context.v_scale + uvC[1]; // scale the v-coordinate
       } else {
         // UV textures go "around" the join
-        uvCurr = Vector$1.add(uvCurr, uv_delta);
+        uvCurr = Vector.add(uvCurr, uv_delta);
       }
     }
     addVertex(coord, blade, normal, uvCurr[0], uvCurr[1], context, flip);
@@ -10456,7 +10440,7 @@ function addFan(coord, eA, eC, eB, normal, uvA, uvC, uvB, isCap, isBevel, contex
 //  Function to add the vertices needed for line caps,
 //  because to re-use the buffers they need to be at the end
 function addCap(coord, v, normal, type, isBeginning, context) {
-  var neg_normal = Vector$1.neg(normal);
+  var neg_normal = Vector.neg(normal);
   var has_texcoord = context.texcoord_index != null;
   switch (type) {
     case CAP_TYPE.square:
@@ -10464,8 +10448,8 @@ function addCap(coord, v, normal, type, isBeginning, context) {
       // first vertex on the lineString
       if (isBeginning) {
         tangent = [normal[1], -normal[0]];
-        addVertex(coord, Vector$1.add(normal, tangent), normal, 1, v, context, 1);
-        addVertex(coord, Vector$1.add(neg_normal, tangent), normal, 0, v, context, 1);
+        addVertex(coord, Vector.add(normal, tangent), normal, 1, v, context, 1);
+        addVertex(coord, Vector.add(neg_normal, tangent), normal, 0, v, context, 1);
         if (has_texcoord) {
           // Add length of square cap to texture coordinate
           v += 0.5 * context.texcoord_width * context.v_scale;
@@ -10482,8 +10466,8 @@ function addCap(coord, v, normal, type, isBeginning, context) {
           // Add length of square cap to texture coordinate
           v += 0.5 * context.texcoord_width * context.v_scale;
         }
-        addVertex(coord, Vector$1.add(normal, tangent), normal, 1, v, context, 1);
-        addVertex(coord, Vector$1.add(neg_normal, tangent), normal, 0, v, context, 1);
+        addVertex(coord, Vector.add(normal, tangent), normal, 1, v, context, 1);
+        addVertex(coord, Vector.add(neg_normal, tangent), normal, 0, v, context, 1);
       }
       indexPairs(1, context);
       break;
@@ -10717,7 +10701,7 @@ fn vertexMain(attributes: LineAttributes) -> LineVaryings {
 
     let local_position = vec4<f32>(
         vec2<f32>(attributes.a_position.xy) + extrusion + offset,
-        f32(attributes.a_z_and_offset_scale.x) / ${Geo$1.height_scale}.0,
+        f32(attributes.a_z_and_offset_scale.x) / ${Geo.height_scale}.0,
         1.0
     );
     var clip_position = TangramCamera.u_projection *
@@ -10965,7 +10949,7 @@ Object.assign(Lines, {
     if (style.extrude && style.height) {
       style.z += style.height;
     }
-    style.z *= Geo$1.height_scale; // provide sub-meter precision of height values
+    style.z *= Geo.height_scale; // provide sub-meter precision of height values
 
     style.cap = draw.cap;
     style.join = draw.join;
@@ -11143,7 +11127,7 @@ Object.assign(Lines, {
       tile_data.uniforms.u_has_line_texture = false;
       tile_data.uniforms.u_texture = Texture.default;
       tile_data.uniforms.u_texture_ratio = 1;
-      tile_data.uniforms.u_v_scale_adjust = Geo$1.tile_scale;
+      tile_data.uniforms.u_v_scale_adjust = Geo.tile_scale;
       tile_data.uniforms.u_has_dash = 0;
       tile_data.uniforms.u_dash_background_color = [0, 0, 0, 0];
       let pending = [];
@@ -11155,14 +11139,14 @@ Object.assign(Lines, {
           uniforms.u_texture = variant.texture;
           uniforms.u_texture_ratio = 1;
           if (variant.dash) {
-            uniforms.u_v_scale_adjust = Geo$1.tile_scale * DASH_SCALE;
+            uniforms.u_v_scale_adjust = Geo.tile_scale * DASH_SCALE;
             uniforms.u_has_dash = variant.dash_background_color != null ? 1 : 0;
             uniforms.u_dash_background_color = variant.dash_background_color || [0, 0, 0, 0];
           }
           if (variant.dash_key && this.dash_textures[variant.dash_key] == null) {
             this.dash_textures[variant.dash_key] = true;
             try {
-              await WorkerBroker$1.postMessage(this.main_thread_target + '.getDashTexture', variant.dash);
+              await WorkerBroker.postMessage(this.main_thread_target + '.getDashTexture', variant.dash);
             } catch (e) {
               log('trace', `${this.name}: line dash texture create failed because style no longer on main thread`);
             }
@@ -11239,40 +11223,40 @@ Object.assign(Lines, {
       const attribs = [{
         name: 'a_position',
         size: 4,
-        type: gl$1.SHORT,
+        type: gl.SHORT,
         normalized: false
       }, {
         name: 'a_extrude',
         size: 2,
-        type: gl$1.SHORT,
+        type: gl.SHORT,
         normalized: false
       }, {
         name: 'a_offset',
         size: 2,
-        type: gl$1.SHORT,
+        type: gl.SHORT,
         normalized: false,
         static: portable || variant.offset ? null : [0, 0]
       }, {
         name: 'a_z_and_offset_scale',
         size: 2,
-        type: gl$1.SHORT,
+        type: gl.SHORT,
         normalized: false,
         static: portable || variant.z_or_offset ? null : [0, 0]
       }, {
         name: 'a_texcoord',
         size: 2,
-        type: this.shader_language === 'wgsl' ? gl$1.FLOAT : gl$1.UNSIGNED_SHORT,
+        type: this.shader_language === 'wgsl' ? gl.FLOAT : gl.UNSIGNED_SHORT,
         normalized: this.shader_language !== 'wgsl',
         static: portable || variant.texcoords ? null : [0, 0]
       }, {
         name: 'a_color',
         size: 4,
-        type: gl$1.UNSIGNED_BYTE,
+        type: gl.UNSIGNED_BYTE,
         normalized: true
       }, {
         name: 'a_selection_color',
         size: 4,
-        type: gl$1.UNSIGNED_BYTE,
+        type: gl.UNSIGNED_BYTE,
         normalized: true,
         static: variant.selection ? null : [0, 0, 0, 0]
       }];
@@ -11363,7 +11347,7 @@ Object.assign(Lines, {
     // closed_polygon
     !style.tile_edges && options && options.remove_tile_edges,
     // remove_tile_edges
-    Geo$1.tile_scale * context.tile.pad_scale * 2 // tile_edge_tolerance
+    Geo.tile_scale * context.tile.pad_scale * 2 // tile_edge_tolerance
     );
   },
   buildPolygons(polygons, style, context) {
@@ -11619,10 +11603,10 @@ class OBB {
   }
   updateAxes() {
     // upper-left to upper-right
-    this.axis_0 = Vector$1.normalize([this.quad[4] - this.quad[6], this.quad[5] - this.quad[7]]);
+    this.axis_0 = Vector.normalize([this.quad[4] - this.quad[6], this.quad[5] - this.quad[7]]);
 
     // lower-right to upper-right
-    this.axis_1 = Vector$1.normalize([this.quad[4] - this.quad[2], this.quad[5] - this.quad[3]]);
+    this.axis_1 = Vector.normalize([this.quad[4] - this.quad[2], this.quad[5] - this.quad[3]]);
   }
   update() {
     const c = this.centroid;
@@ -11771,7 +11755,7 @@ class Label {
 
   // checks whether the label is within the tile boundaries
   inTileBounds() {
-    if (this.aabb[0] >= 0 && this.aabb[1] > -Geo$1.tile_scale && this.aabb[0] < Geo$1.tile_scale && this.aabb[1] <= 0 || this.aabb[2] >= 0 && this.aabb[3] > -Geo$1.tile_scale && this.aabb[2] < Geo$1.tile_scale && this.aabb[3] <= 0) {
+    if (this.aabb[0] >= 0 && this.aabb[1] > -Geo.tile_scale && this.aabb[0] < Geo.tile_scale && this.aabb[1] <= 0 || this.aabb[2] >= 0 && this.aabb[3] > -Geo.tile_scale && this.aabb[2] < Geo.tile_scale && this.aabb[3] <= 0) {
       return true;
     }
     return false;
@@ -11787,7 +11771,7 @@ class Label {
     if (dist === 0) {
       return false;
     }
-    return Math.abs(this.position[0]) < dist || Math.abs(this.position[0] - Geo$1.tile_scale) < dist || Math.abs(this.position[1]) < dist || Math.abs(-(this.position[1] - Geo$1.tile_scale)) < dist;
+    return Math.abs(this.position[0]) < dist || Math.abs(this.position[0] - Geo.tile_scale) < dist || Math.abs(this.position[1]) < dist || Math.abs(-(this.position[1] - Geo.tile_scale)) < dist;
   }
 
   // Whether the label should be discarded
@@ -13424,7 +13408,7 @@ class TextCanvas {
       collision_size
     } = size;
     const line_width = 2;
-    if (debugSettings$1.draw_label_collision_boxes) {
+    if (debugSettings.draw_label_collision_boxes) {
       this.context.save();
       this.context.strokeStyle = 'blue';
       this.context.lineWidth = line_width;
@@ -13434,7 +13418,7 @@ class TextCanvas {
       }
       this.context.restore();
     }
-    if (debugSettings$1.draw_label_texture_boxes) {
+    if (debugSettings.draw_label_texture_boxes) {
       this.context.save();
       this.context.strokeStyle = 'green';
       this.context.lineWidth = line_width;
@@ -13932,7 +13916,7 @@ const TextLabels = {
 
     // first call to main thread, ask for text pixel sizes
     try {
-      const texts = await WorkerBroker$1.postMessage(this.main_thread_target + '.calcTextSizes', tile.id, this.texts[tile.id]);
+      const texts = await WorkerBroker.postMessage(this.main_thread_target + '.calcTextSizes', tile.id, this.texts[tile.id]);
       if (tile.canceled) {
         log('trace', `Style ${this.name}: stop tile build because tile was canceled: ${tile.key}, post-calcTextSizes()`);
         return [];
@@ -13986,7 +13970,7 @@ const TextLabels = {
 
     // second call to main thread, for rasterizing the set of texts
     try {
-      const rasterized = await WorkerBroker$1.postMessage(this.main_thread_target + '.rasterizeTexts', tile.id, tile.key, texts);
+      const rasterized = await WorkerBroker.postMessage(this.main_thread_target + '.rasterizeTexts', tile.id, tile.key, texts);
       if (tile.canceled) {
         log('trace', `stop tile build because tile was canceled: ${tile.key}, post-rasterizeTexts()`);
         return {};
@@ -14101,7 +14085,7 @@ const TextLabels = {
     // if draw group didn't specify repeat distance, override with text label-specific logic
     if (draw.repeat_distance == null) {
       // defaults: no limit on labels for point geometries,  tile size (256px) limit for other geometries
-      layout.repeat_distance = context.geometry === 'point' ? 0 : Geo$1.tile_size;
+      layout.repeat_distance = context.geometry === 'point' ? 0 : Geo.tile_size;
       if (layout.repeat_distance) {
         layout.repeat_distance *= layout.units_per_pixel;
         layout.repeat_scale = 1; // initial repeat pass in tile with full scale
@@ -15288,7 +15272,7 @@ class View {
     if (!this.ready()) {
       return;
     }
-    this.meters_per_pixel = Geo$1.metersPerPixel(this.zoom);
+    this.meters_per_pixel = Geo.metersPerPixel(this.zoom);
 
     // Size of the half-viewport in meters at current zoom
     this.size.meters = {
@@ -15297,12 +15281,12 @@ class View {
     };
 
     // Center of viewport in meters, and tile
-    const m = Geo$1.latLngToMeters([this.center.lng, this.center.lat]);
+    const m = Geo.latLngToMeters([this.center.lng, this.center.lat]);
     this.center.meters = {
       x: m[0],
       y: m[1]
     };
-    this.center.tile = Geo$1.tileForMeters([this.center.meters.x, this.center.meters.y], this.tile_zoom);
+    this.center.tile = Geo.tileForMeters([this.center.meters.x, this.center.meters.y], this.tile_zoom);
 
     // Bounds in meters
     this.bounds = {
@@ -15324,8 +15308,8 @@ class View {
       return [];
     }
     let z = this.tile_zoom;
-    let sw = Geo$1.tileForMeters([this.bounds.sw.x, this.bounds.sw.y], z);
-    let ne = Geo$1.tileForMeters([this.bounds.ne.x, this.bounds.ne.y], z);
+    let sw = Geo.tileForMeters([this.bounds.sw.x, this.bounds.sw.y], z);
+    let ne = Geo.tileForMeters([this.bounds.ne.x, this.bounds.ne.y], z);
     let range = [sw.x - this.buffer, ne.x + this.buffer,
     // x
     ne.y - this.buffer, sw.y + this.buffer // y
@@ -15374,9 +15358,9 @@ class View {
 
       // Discard tiles outside an area surrounding the viewport, handling tiles at different zooms
       // Get min and max tiles for the viewport, at the scale of the tile currently being evaluated
-      const view_buffer = this.meters_per_pixel * Geo$1.tile_size; // buffer area to keep tiles surrounding viewport
-      const view_tile_min = TileID.coordAtZoom(Geo$1.tileForMeters([this.center.meters.x - this.size.meters.x / 2 - view_buffer, this.center.meters.y + this.size.meters.y / 2 + view_buffer], this.tile_zoom), tile.coords.z);
-      const view_tile_max = TileID.coordAtZoom(Geo$1.tileForMeters([this.center.meters.x + this.size.meters.x / 2 + view_buffer, this.center.meters.y - this.size.meters.y / 2 - view_buffer], this.tile_zoom), tile.coords.z);
+      const view_buffer = this.meters_per_pixel * Geo.tile_size; // buffer area to keep tiles surrounding viewport
+      const view_tile_min = TileID.coordAtZoom(Geo.tileForMeters([this.center.meters.x - this.size.meters.x / 2 - view_buffer, this.center.meters.y + this.size.meters.y / 2 + view_buffer], this.tile_zoom), tile.coords.z);
+      const view_tile_max = TileID.coordAtZoom(Geo.tileForMeters([this.center.meters.x + this.size.meters.x / 2 + view_buffer, this.center.meters.y - this.size.meters.y / 2 - view_buffer], this.tile_zoom), tile.coords.z);
       if (tile.coords.x < view_tile_min.x || tile.coords.x > view_tile_max.x || tile.coords.y < view_tile_min.y || tile.coords.y > view_tile_max.y) {
         log('trace', `View: remove tile ${tile.key} (as ${tile.coords.key}) ` + `for being too far out of visible area (${view_tile_min.key}, ${view_tile_max.key})`);
         return true;
@@ -16011,7 +15995,7 @@ Object.assign(Points, {
     }
 
     // Fade in labels
-    if (debugSettings$1.suppress_label_fade_in === true) {
+    if (debugSettings.suppress_label_fade_in === true) {
       this.fade_in_time = 0;
       this.defines.TANGRAM_FADE_IN_RATE = null;
     } else {
@@ -16020,17 +16004,17 @@ Object.assign(Points, {
     }
 
     // Snap points to pixel grid after panning stop
-    if (debugSettings$1.suppress_label_snap_animation !== true) {
+    if (debugSettings.suppress_label_snap_animation !== true) {
       this.defines.TANGRAM_VIEW_PAN_SNAP_RATE = 1 / VIEW_PAN_SNAP_TIME; // inverse time in seconds
     }
 
     // Show hidden labels for debugging
-    if (debugSettings$1.show_hidden_labels === true) {
+    if (debugSettings.show_hidden_labels === true) {
       this.defines.TANGRAM_SHOW_HIDDEN_LABELS = true;
     }
 
     // Enable wireframe for debugging
-    if (debugSettings$1.wireframe === true) {
+    if (debugSettings.wireframe === true) {
       this.defines.TANGRAM_WIREFRAME = true;
     }
   },
@@ -16464,7 +16448,7 @@ Object.assign(Points, {
     } else if (geometry.type === 'Polygon') {
       // Point at polygon centroid (of outer ring)
       if (layout.placement === PLACEMENT.CENTROID) {
-        let centroid = Geo$1.centroid(geometry.coordinates);
+        let centroid = Geo.centroid(geometry.coordinates);
         if (centroid) {
           // skip degenerate polygons
           labels.push(new LabelPoint(centroid, size, layout, layout.angle));
@@ -16482,7 +16466,7 @@ Object.assign(Points, {
       }
     } else if (geometry.type === 'MultiPolygon') {
       if (layout.placement === PLACEMENT.CENTROID) {
-        let centroid = Geo$1.multiCentroid(geometry.coordinates);
+        let centroid = Geo.multiCentroid(geometry.coordinates);
         if (centroid) {
           // skip degenerate polygons
           labels.push(new LabelPoint(centroid, size, layout, layout.angle));
@@ -16790,47 +16774,47 @@ Object.assign(Points, {
         this.vertex_layouts.portable = new VertexLayout([{
           name: 'a_position',
           size: 4,
-          type: gl$1.SHORT,
+          type: gl.SHORT,
           normalized: false
         }, {
           name: 'a_shape',
           size: 4,
-          type: gl$1.SHORT,
+          type: gl.SHORT,
           normalized: false
         }, {
           name: 'a_texcoord',
           size: 2,
-          type: gl$1.UNSIGNED_SHORT,
+          type: gl.UNSIGNED_SHORT,
           normalized: true
         }, {
           name: 'a_offset',
           size: 2,
-          type: gl$1.SHORT,
+          type: gl.SHORT,
           normalized: false
         }, {
           name: 'a_color',
           size: 4,
-          type: gl$1.UNSIGNED_BYTE,
+          type: gl.UNSIGNED_BYTE,
           normalized: true
         }, {
           name: 'a_selection_color',
           size: 4,
-          type: gl$1.UNSIGNED_BYTE,
+          type: gl.UNSIGNED_BYTE,
           normalized: true
         }, {
           name: 'a_outline_color',
           size: 4,
-          type: gl$1.UNSIGNED_BYTE,
+          type: gl.UNSIGNED_BYTE,
           normalized: true
         }, {
           name: 'a_outline_edge',
           size: 1,
-          type: gl$1.FLOAT,
+          type: gl.FLOAT,
           normalized: false
         }, {
           name: 'a_point_type',
           size: 1,
-          type: gl$1.FLOAT,
+          type: gl.FLOAT,
           normalized: false
         }]);
       }
@@ -16846,45 +16830,45 @@ Object.assign(Points, {
       const attribs = [{
         name: 'a_position',
         size: 4,
-        type: gl$1.SHORT,
+        type: gl.SHORT,
         normalized: false
       }, {
         name: 'a_shape',
         size: 4,
-        type: gl$1.SHORT,
+        type: gl.SHORT,
         normalized: false
       }, {
         name: 'a_texcoord',
         size: 2,
-        type: gl$1.UNSIGNED_SHORT,
+        type: gl.UNSIGNED_SHORT,
         normalized: true,
         static: variant.shader_point ? [0, 0] : null
       }, {
         name: 'a_offset',
         size: 2,
-        type: gl$1.SHORT,
+        type: gl.SHORT,
         normalized: false
       }, {
         name: 'a_color',
         size: 4,
-        type: gl$1.UNSIGNED_BYTE,
+        type: gl.UNSIGNED_BYTE,
         normalized: true
       }, {
         name: 'a_selection_color',
         size: 4,
-        type: gl$1.UNSIGNED_BYTE,
+        type: gl.UNSIGNED_BYTE,
         normalized: true,
         static: variant.selection ? null : [0, 0, 0, 0]
       }, {
         name: 'a_outline_color',
         size: 4,
-        type: gl$1.UNSIGNED_BYTE,
+        type: gl.UNSIGNED_BYTE,
         normalized: true,
         static: variant.shader_point ? null : [0, 0, 0, 0]
       }, {
         name: 'a_outline_edge',
         size: 1,
-        type: gl$1.FLOAT,
+        type: gl.FLOAT,
         normalized: false,
         static: variant.shader_point ? null : 0
       }];
@@ -17012,7 +16996,7 @@ class LabelLineBase {
     for (let i = 1; i < line.length; i++) {
       let pt = line[i];
       let prev_pt = line[i - 1];
-      let length = Vector$1.length(Vector$1.sub(pt, prev_pt));
+      let length = Vector.length(Vector.sub(pt, prev_pt));
       if (pt[0] > prev_pt[0]) {
         // positive orientation
         if (orientation === 1) {
@@ -17117,7 +17101,7 @@ class LabelLineBase {
 
     // apply offset, x positive, y pointing down
     if (offset && (offset[0] !== 0 || offset[1] !== 0)) {
-      offset = Vector$1.rot(offset, angle_offset);
+      offset = Vector.rot(offset, angle_offset);
       p0 += offset[0] * upp;
       p1 -= offset[1] * upp;
     }
@@ -17187,7 +17171,7 @@ class LabelLineStraight extends LabelLineBase {
 
         // check if label fits geometry
         if (calcFitness(length, label_length) < tolerance) {
-          let curr_midpt = Vector$1.mult(Vector$1.add(curr, ahead_next), 0.5);
+          let curr_midpt = Vector.mult(Vector.add(curr, ahead_next), 0.5);
 
           // TODO: modify angle if line chosen within curve_angle_tolerance
           // Currently line angle is the same as the starting angle, perhaps it should average across segments?
@@ -17389,9 +17373,9 @@ class LabelLineCurved extends LabelLineBase {
       var prev = line[i - 1];
       var curr = line[i];
       var next = line[i + 1];
-      var norm_1 = Vector$1.perp(curr, prev);
-      var norm_2 = Vector$1.perp(next, curr);
-      var curvature = Vector$1.angleBetween(norm_1, norm_2);
+      var norm_1 = Vector.perp(curr, prev);
+      var norm_2 = Vector.perp(next, curr);
+      var curvature = Vector.angleBetween(norm_1, norm_2);
 
       // If curvature at a vertex is greater than the tolerance, remove it from consideration
       // by giving it an infinite penalty
@@ -17466,10 +17450,10 @@ class LabelLineCurved extends LabelLineBase {
       if (i === line.length - 1) {
         return;
       }
-      var v = Vector$1.sub(line[i + 1], line[i]);
-      var delta = Vector$1.mult(v, 1 + scale);
-      new_line.push(Vector$1.add(new_line[i], delta));
-      line_lengths.push(Vector$1.length(delta));
+      var v = Vector.sub(line[i + 1], line[i]);
+      var delta = Vector.mult(v, 1 + scale);
+      new_line.push(Vector.add(new_line[i], delta));
+      line_lengths.push(Vector.length(delta));
     });
     return [new_line, line_lengths];
   }
@@ -17538,8 +17522,8 @@ class LabelLineCurved extends LabelLineBase {
       let index = indices[i];
       let offset = offsets[i];
       let angle = getAngleForSegment(line[index], line[index + 1]);
-      let offset2d = Vector$1.rot([offset, 0], angle);
-      let position = Vector$1.add(line[index], offset2d);
+      let offset2d = Vector.rot([offset, 0], angle);
+      let position = Vector.add(line[index], offset2d);
       positions.push(position);
     }
     return positions;
@@ -17553,8 +17537,8 @@ class LabelLineCurved extends LabelLineBase {
     for (let i = 0; i < positions.length; i++) {
       let position = positions[i];
       let index = indices[i];
-      let offset = Vector$1.sub(position, anchor);
-      let offset_angle = -Vector$1.angle(offset);
+      let offset = Vector.sub(position, anchor);
+      let offset_angle = -Vector.angle(offset);
       let angle = getTextAngleForSegment(line[index], line[index + 1]);
       let pre_angle = angle - offset_angle;
       if (i > 0) {
@@ -17580,8 +17564,8 @@ function calcFitness(line_length, label_length) {
   return label_length / line_length;
 }
 function getAngleForSegment(p, q) {
-  let pq = Vector$1.sub(q, p);
-  return Vector$1.angle(pq);
+  let pq = Vector.sub(q, p);
+  return Vector.angle(pq);
 }
 function getTextAngleForSegment(pt1, pt2) {
   return -getAngleForSegment(pt1, pt2);
@@ -17941,13 +17925,13 @@ Object.assign(TextStyle, {
         labels.push(new LabelPoint(points[i], size, layout));
       }
     } else if (geometry.type === 'Polygon') {
-      let centroid = Geo$1.centroid(geometry.coordinates);
+      let centroid = Geo.centroid(geometry.coordinates);
       if (centroid) {
         // skip degenerate polygons
         labels.push(new LabelPoint(centroid, size, layout));
       }
     } else if (geometry.type === 'MultiPolygon') {
-      let centroid = Geo$1.multiCentroid(geometry.coordinates);
+      let centroid = Geo.multiCentroid(geometry.coordinates);
       if (centroid) {
         // skip degenerate polygons
         labels.push(new LabelPoint(centroid, size, layout));
@@ -17995,48 +17979,48 @@ Object.assign(TextStyle, {
       const attribs = [{
         name: 'a_position',
         size: 4,
-        type: gl$1.SHORT,
+        type: gl.SHORT,
         normalized: false
       }, {
         name: 'a_shape',
         size: 4,
-        type: gl$1.SHORT,
+        type: gl.SHORT,
         normalized: false
       }, {
         name: 'a_texcoord',
         size: 2,
-        type: gl$1.UNSIGNED_SHORT,
+        type: gl.UNSIGNED_SHORT,
         normalized: true
       }, {
         name: 'a_offset',
         size: 2,
-        type: gl$1.SHORT,
+        type: gl.SHORT,
         normalized: false
       }, {
         name: 'a_color',
         size: 4,
-        type: gl$1.UNSIGNED_BYTE,
+        type: gl.UNSIGNED_BYTE,
         normalized: true
       }, {
         name: 'a_selection_color',
         size: 4,
-        type: gl$1.UNSIGNED_BYTE,
+        type: gl.UNSIGNED_BYTE,
         normalized: true,
         static: variant.selection ? null : [0, 0, 0, 0]
       }, {
         name: 'a_pre_angles',
         size: 4,
-        type: gl$1.BYTE,
+        type: gl.BYTE,
         normalized: false
       }, {
         name: 'a_angles',
         size: 4,
-        type: gl$1.SHORT,
+        type: gl.SHORT,
         normalized: false
       }, {
         name: 'a_offsets',
         size: 4,
-        type: gl$1.UNSIGNED_SHORT,
+        type: gl.UNSIGNED_SHORT,
         normalized: false
       }];
       this.addCustomAttributesToAttributeList(attribs);
@@ -18208,10 +18192,10 @@ class StyleManager {
     ShaderProgram.defines.TANGRAM_LAYER_DELTA = 1 / (1 << 14);
 
     // Internal tile scale
-    ShaderProgram.defines.TANGRAM_TILE_SCALE = `vec3(${Geo$1.tile_scale}., ${Geo$1.tile_scale}., u_meters_per_pixel * ${Geo$1.tile_size}.)`;
+    ShaderProgram.defines.TANGRAM_TILE_SCALE = `vec3(${Geo.tile_scale}., ${Geo.tile_scale}., u_meters_per_pixel * ${Geo.tile_size}.)`;
 
     // Increases precision for height values
-    ShaderProgram.defines.TANGRAM_HEIGHT_SCALE = Geo$1.height_scale;
+    ShaderProgram.defines.TANGRAM_HEIGHT_SCALE = Geo.height_scale;
 
     // Alpha discard threshold (substitute for alpha blending)
     ShaderProgram.defines.TANGRAM_ALPHA_TEST = 0.5;
@@ -18480,7 +18464,7 @@ class StyleManager {
 
     // Un-register existing styles from cross-thread communication
     if (this.styles) {
-      Object.values(this.styles).forEach(s => WorkerBroker$1.removeTarget(s.main_thread_target));
+      Object.values(this.styles).forEach(s => WorkerBroker.removeTarget(s.main_thread_target));
     }
 
     // Add default blend/base style pairs as needed
@@ -18893,7 +18877,7 @@ class Layer {
         }
       } else if (ztype === 'object' && (zoom.min != null || zoom.max != null)) {
         let zmin = zoom.min || 0;
-        let zmax = zoom.max || Geo$1.max_style_zoom;
+        let zmax = zoom.max || Geo.max_style_zoom;
         for (let z = zmin; z < zmax; z++) {
           this.zooms[z] = true;
         }
@@ -19250,8 +19234,8 @@ class Tile {
     this.key = TileID.key(this.coords, this.source, this.style_z);
     this.overzoom = Math.max(this.style_z - this.coords.z, 0); // number of levels of overzooming
     this.overzoom2 = Math.pow(2, this.overzoom);
-    this.min = Geo$1.metersForTile(this.coords);
-    this.max = Geo$1.metersForTile({
+    this.min = Geo.metersForTile(this.coords);
+    this.max = Geo.metersForTile({
       x: this.coords.x + 1,
       y: this.coords.y + 1,
       z: this.coords.z
@@ -19269,10 +19253,10 @@ class Tile {
         y: this.min.y
       }
     };
-    this.meters_per_pixel = Geo$1.metersPerPixel(this.style_z);
+    this.meters_per_pixel = Geo.metersPerPixel(this.style_z);
     this.meters_per_pixel_sq = this.meters_per_pixel * this.meters_per_pixel;
-    this.units_per_pixel = Geo$1.units_per_pixel / this.overzoom2; // adjusted for overzoom
-    this.units_per_meter_overzoom = Geo$1.unitsPerMeter(this.coords.z) * this.overzoom2; // adjusted for overzoom
+    this.units_per_pixel = Geo.units_per_pixel / this.overzoom2; // adjusted for overzoom
+    this.units_per_meter_overzoom = Geo.unitsPerMeter(this.coords.z) * this.overzoom2; // adjusted for overzoom
     this.preserve_tiles_within_zoom = this.source.preserve_tiles_within_zoom; // source-specific tile retention policy
 
     this.meshes = {}; // renderable VBO meshes keyed by style
@@ -19335,7 +19319,7 @@ class Tile {
     this.worker = workers[this.worker_id];
   }
   workerMessage(...message) {
-    return WorkerBroker$1.postMessage(this.worker, ...message);
+    return WorkerBroker.postMessage(this.worker, ...message);
   }
   build(generation, {
     fade_in = true
@@ -19479,7 +19463,7 @@ class Tile {
 
     // If nothing to build, return empty tile to main thread
     if (Object.keys(groups).length === 0) {
-      WorkerBroker$1.postMessage(`TileManager_${scene_id}.buildTileStylesCompleted`, WorkerBroker$1.withTransferables({
+      WorkerBroker.postMessage(`TileManager_${scene_id}.buildTileStylesCompleted`, WorkerBroker.withTransferables({
         tile: Tile.slice(tile),
         progress: {
           start: true,
@@ -19530,7 +19514,7 @@ class Tile {
       }
 
       // Send meshes to main thread
-      WorkerBroker$1.postMessage(`TileManager_${scene_id}.buildTileStylesCompleted`, WorkerBroker$1.withTransferables({
+      WorkerBroker.postMessage(`TileManager_${scene_id}.buildTileStylesCompleted`, WorkerBroker.withTransferables({
         tile: _objectSpread(_objectSpread({}, Tile.slice(tile)), {}, {
           mesh_data
         }),
@@ -19777,7 +19761,7 @@ class Tile {
     // Model - transform tile space into world space (meters, absolute mercator position)
     mat4.identity(model);
     mat4.translate(model, model, vec3.fromValues(this.min.x, this.min.y, 0));
-    mat4.scale(model, model, vec3.fromValues(this.span.x / Geo$1.tile_scale, this.span.y / Geo$1.tile_scale, 1)); // scale tile local coords to meters
+    mat4.scale(model, model, vec3.fromValues(this.span.x / Geo.tile_scale, this.span.y / Geo.tile_scale, 1)); // scale tile local coords to meters
     mat4.copy(model32, model);
     const tile_fade_in = this.fade_in && this.proxied_as !== 'child';
     if (uniform_buffer) {
@@ -21197,7 +21181,7 @@ class MVTSource extends NetworkTileSource {
     var layers = {};
     for (var l in tile.layers) {
       var layer = tile.layers[l];
-      var scale = Geo$1.tile_scale / layer.extent;
+      var scale = Geo.tile_scale / layer.extent;
       var layer_geojson = {
         type: 'FeatureCollection',
         features: []
@@ -21286,7 +21270,7 @@ function decodeMultiPolygon(geom) {
   let outer_winding;
   for (let r = 0; r < geom.coordinates.length; r++) {
     let ring = geom.coordinates[r];
-    let winding = Geo$1.ringWinding(ring);
+    let winding = Geo.ringWinding(ring);
     if (winding == null) {
       continue; // skip zero-area rings
     }
@@ -22119,7 +22103,7 @@ class GeoJSONSource extends NetworkSource {
             // max zoom to preserve detail on
             tolerance: 1.5,
             // simplification tolerance (higher means simpler) NB: half the default to accomodate 512px tiles
-            extent: Geo$1.tile_scale,
+            extent: Geo.tile_scale,
             // tile extent (both width and height)
             buffer: 0.0001 // tile buffer on each side
           });
@@ -22136,7 +22120,7 @@ class GeoJSONSource extends NetworkSource {
     });
   }
   getTileFeatures(tile, layer_name) {
-    let coords = Geo$1.wrapTile(tile.coords, {
+    let coords = Geo.wrapTile(tile.coords, {
       x: true
     });
 
@@ -22236,7 +22220,7 @@ class GeoJSONSource extends NetworkSource {
           let max_area = -Infinity;
           let max_area_index = 0;
           for (let index = 0; index < coordinates.length; index++) {
-            let area = Geo$1.polygonArea(coordinates[index]);
+            let area = Geo.polygonArea(coordinates[index]);
             if (area > max_area) {
               max_area = area;
               max_area_index = index;
@@ -22300,7 +22284,7 @@ class GeoJSONTileSource extends NetworkTileSource {
     // A "synthetic" tile that adjusts the tile min anchor to account for tile longitude wrapping
     let anchor = {
       coords: tile.coords,
-      min: Geo$1.metersForTile(Geo$1.wrapTile(tile.coords, {
+      min: Geo.metersForTile(Geo.wrapTile(tile.coords, {
         x: true
       }))
     };
@@ -22316,7 +22300,7 @@ DataSource.register('GeoJSON', source => {
 
 // Helper function to create centroid point feature from polygon coordinates and provided feature meta-data
 function getCentroidFeatureForPolygon(coordinates, id, properties, newProperties) {
-  let centroid = Geo$1.centroid(coordinates);
+  let centroid = Geo.centroid(coordinates);
   if (!centroid) {
     return;
   }
@@ -22527,13 +22511,13 @@ DataSource.register('TopoJSON', source => {
 });
 
 exports.Collision = Collision;
-exports.Context = Context$1;
+exports.Context = Context;
 exports.DataSource = DataSource;
 exports.FeatureSelection = FeatureSelection;
 exports.FilterOptions = FilterOptions;
 exports.FontManager = FontManager;
 exports.GLSL = GLSL;
-exports.Geo = Geo$1;
+exports.Geo = Geo;
 exports.Label = Label;
 exports.LabelLineStraight = LabelLineStraight;
 exports.LabelPoint = LabelPoint;
@@ -22551,12 +22535,12 @@ exports.Thread = Thread;
 exports.Tile = Tile;
 exports.TileID = TileID;
 exports.Utils = Utils;
-exports.Vector = Vector$1;
+exports.Vector = Vector;
 exports.VertexArrayObject = VertexArrayObject;
 exports.VertexData = VertexData;
 exports.VertexElements = VertexElements;
 exports.View = View;
-exports.WorkerBroker = WorkerBroker$1;
+exports.WorkerBroker = WorkerBroker;
 exports._defineProperty = _defineProperty;
 exports.addBaseURL = addBaseURL;
 exports.buildFilter = buildFilter;
@@ -22564,7 +22548,7 @@ exports.cache = cache;
 exports.clearFunctionStringCache = clearFunctionStringCache;
 exports.compileFunctionStrings = compileFunctionStrings;
 exports.createObjectURL = createObjectURL;
-exports.debugSettings = debugSettings$1;
+exports.debugSettings = debugSettings;
 exports.debugSumLayerStats = debugSumLayerStats;
 exports.extensionForURL = extensionForURL;
 exports.flattenRelativeURL = flattenRelativeURL;
@@ -34473,16 +34457,10 @@ Scene.generation = 0; // id that is incremented each time a scene config is re-p
 // Debounce a function
 // https://davidwalsh.name/javascript-debounce-function
 function debounce(func, wait) {
-  var timeout;
-  return function () {
-    var context = this,
-      args = arguments;
-    var later = function later() {
-      timeout = null;
-      func.apply(context, args);
-    };
+  let timeout;
+  return function debounced(...arguments_) {
     clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
+    timeout = setTimeout(() => func.apply(this, arguments_), wait);
   };
 }
 
@@ -38175,7 +38153,7 @@ return Tangram$1;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = '88af7e9258146a778d80b774d674db303be1a08b';
+	Tangram.debug.SHA = 'abf89269feef707066b377225d2779b518face2a';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

@@ -4,8 +4,8 @@
 
 // WebGL constants - need to import these separately to make them available in the web worker
 
-var gl;
-export default gl = {};
+export const gl = {};
+export default gl;
 
 /* DataType */
 gl.BYTE                           = 0x1400;

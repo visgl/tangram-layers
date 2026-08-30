@@ -2,27 +2,42 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-(function(){
-    var scene = window.scene;
-    var scene_key = 'Simple';
+export function initializeClassicGui({
+    scene,
+    map,
+    layer,
+    Leaflet = window.L,
+    Dat = window.dat,
+    saveFile = window.saveAs
+}) {
+    var sceneKey = 'Simple';
+    var sceneListener;
 
-    window.addEventListener('load', function () {
+    function initializeGui() {
         // Add search control
-        L.control.geocoder('ge-3d066b6b1c398181', {
+        Leaflet.control.geocoder('ge-3d066b6b1c398181', {
             url: 'https://api.geocode.earth/v1',
             layers: 'coarse',
             expanded: true,
             markers: false,
             attribution: 'Geocoding by <a href="https://geocode.earth/" target="_blank">geocode.earth</a>'
-        }).addTo(window.map);
+        }).addTo(map);
 
         // Add GUI on scene load
-        layer.scene.subscribe({
+        sceneListener = {
             load: function (msg) {
                 addGUI();
             }
-        });
-    });
+        };
+        layer.scene.subscribe(sceneListener);
+    }
+
+    if (document.readyState === 'loading') {
+        window.addEventListener('load', initializeGui, {once: true});
+    }
+    else {
+        initializeGui();
+    }
 
     var gui;
     function addGUI () {
@@ -32,7 +47,7 @@
         }
 
         // Create GUI
-        gui = new dat.GUI({ autoPlace: true });
+        gui = new Dat.GUI({ autoPlace: true });
         gui.domElement.parentNode.style.zIndex = 10000;
         window.gui = gui;
 
@@ -80,16 +95,16 @@
 
         Object.keys(scenes).forEach(function (s) { scenes[s] = JSON.stringify(scenes[s]); }); // need to stringify JSON for dat.gui :(
 
-        scene_key = Object.keys(scenes).filter(function (s) { return scenes[s] === JSON.stringify(scene.config_source); })[0]; // find scene from sample list
-        if (scene_key) {
-            gui.scene = scenes[scene_key];
+        sceneKey = Object.keys(scenes).filter(function (s) { return scenes[s] === JSON.stringify(scene.config_source); })[0]; // find scene from sample list
+        if (sceneKey) {
+            gui.scene = scenes[sceneKey];
         }
         else {
             gui.scene = {};
         }
 
         gui.add(gui, 'scene', scenes).onChange(function(value) {
-            scene_key = Object.keys(scenes).filter(function(s){ return scenes[s] === value })[0]; // find scene from sample list
+            sceneKey = Object.keys(scenes).filter(function(s){ return scenes[s] === value })[0]; // find scene from sample list
             value = JSON.parse(value); // need to stringify JSON for dat.gui :(
             scene.load(value);
         });
@@ -143,7 +158,7 @@
         gui.screenshot = function () {
             return scene.screenshot().then(function(screenshot) {
                 // uses FileSaver.js: https://github.com/eligrey/FileSaver.js/
-                saveAs(screenshot.blob, 'tangram-' + (+new Date()) + '.png');
+                saveFile(screenshot.blob, 'tangram-' + (+new Date()) + '.png');
             });
         };
         gui.add(gui, 'screenshot');
@@ -163,7 +178,7 @@
                     return scene.stopVideoCapture().then(function(video) {
                         gui.video_capture = false;
                         gui.video_button.name('capture video');
-                        saveAs(video.blob, 'tangram-video-' + (+new Date()) + '.webm');
+                        saveFile(video.blob, 'tangram-video-' + (+new Date()) + '.webm');
                     });
                 }
             };
@@ -203,4 +218,16 @@
             scene.setIntrospection(value);
         });
     }
-})();
+
+    return function destroyClassicGui() {
+        window.removeEventListener('load', initializeGui);
+        if (sceneListener) {
+            layer.scene.unsubscribe(sceneListener);
+        }
+        if (gui) {
+            gui.destroy();
+            gui = null;
+        }
+        window.gui = null;
+    };
+}

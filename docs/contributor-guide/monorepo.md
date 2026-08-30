@@ -37,8 +37,9 @@ yarn website:start
 ```
 
 The full compatibility suite remains available as `yarn test`, which includes
-the legacy Karma run and the network-dependent browser fixtures. Use
-`yarn playwright:install` once on a new machine before running headless tests.
+the Node and Chromium-backed Vitest projects and the renderer browser
+fixtures. Use `yarn playwright:install` once on a new machine before running
+headless tests.
 
 ## Adding a package
 

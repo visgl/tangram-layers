@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-import chai from 'chai';
-let assert = chai.assert;
+import {beforeEach, describe, expect, it} from 'vitest';
 
 import mergeObjects from '../src/utils/merge';
 
@@ -32,7 +31,7 @@ describe('mergeObjects', () => {
 
         it('overwrites previous destination property', () => {
             mergeObjects(dest, source);
-            assert.equal(dest.a, 7);
+            expect(dest.a).toBe(7);
         });
 
     });
@@ -43,7 +42,7 @@ describe('mergeObjects', () => {
 
         it('overwrites previous destination property', () => {
             mergeObjects(dest, source);
-            assert.isNull(dest.a);
+            expect(dest.a).toBeNull();
         });
 
     });
@@ -54,7 +53,7 @@ describe('mergeObjects', () => {
 
         it('does NOT overwrite previous destination property', () => {
             mergeObjects(dest, source);
-            assert.equal(dest.a, 5);
+            expect(dest.a).toBe(5);
         });
 
     });
@@ -65,7 +64,7 @@ describe('mergeObjects', () => {
 
         it('overwrites previous destination property', () => {
             mergeObjects(dest, source);
-            assert.deepEqual(dest.b, [1, 2, 3]);
+            expect(dest.b).toEqual([1, 2, 3]);
         });
 
     });
@@ -78,7 +77,7 @@ describe('mergeObjects', () => {
 
         it('merge with previous destination property', () => {
             mergeObjects(dest, source);
-            assert.deepEqual(dest.c, { x: 1, y: 2, z: 3, w: 4});
+            expect(dest.c).toEqual({ x: 1, y: 2, z: 3, w: 4});
         });
 
     });
@@ -94,7 +93,7 @@ describe('mergeObjects', () => {
 
         it('deep merges with previous destination property', () => {
             mergeObjects(dest, source);
-            assert.deepEqual(dest.d, {
+            expect(dest.d).toEqual({
                 e: { x: 4, y: 5, z: 6, w: 7 },
                 f: 'x'
             });
@@ -109,9 +108,9 @@ describe('mergeObjects', () => {
 
         it('last source takes precedence', () => {
             mergeObjects(dest, source1, source2);
-            assert.equal(dest.a, 10);   // from source2
-            assert.equal(dest.b, 3);    // from source1
-            assert.deepEqual(dest.c, { x: 1, y: 2, z: 3 }); // unmodified
+            expect(dest.a).toBe(10);   // from source2
+            expect(dest.b).toBe(3);    // from source1
+            expect(dest.c).toEqual({ x: 1, y: 2, z: 3 }); // unmodified
         });
 
     });

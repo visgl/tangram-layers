@@ -2,46 +2,41 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-(function(){
-    var api_key = '';
-    if ('URLSearchParams' in window) {
-        api_key = new URLSearchParams(window.location.search).get('api_key') || '';
+export function injectApiKey(config, apiKey) {
+  if (!apiKey || !config) {
+    return;
+  }
+
+  config.global ||= {};
+  if ('sdk_api_key' in config.global) {
+    config.global.sdk_api_key = apiKey;
+  }
+  if ('api_key' in config.global) {
+    config.global.api_key = apiKey;
+  }
+
+  for (const source of Object.values(config.sources || {})) {
+    if (typeof source.url === 'string' && source.url.includes('nextzen.org')) {
+      source.url_params ||= {};
+      source.url_params.api_key = apiKey;
     }
+  }
+}
 
-    function initializeApiKey() {
-        // Inject a caller-provided API key on load or update. Never bundle a
-        // shared key in the published playground.
-        layer.scene.subscribe({
-            load: function (msg) {
-                injectAPIKey(msg.config);
-            },
-            update: function (msg) {
-                injectAPIKey(msg.config);
-            }
-        });
-    }
+export function initializeApiKey({scene, apiKey = getApiKeyFromUrl()}) {
+  const listener = {
+    load: message => injectApiKey(message.config, apiKey),
+    update: message => injectApiKey(message.config, apiKey)
+  };
+  scene.subscribe(listener);
 
-    initializeApiKey();
+  return function destroyApiKey() {
+    scene.unsubscribe(listener);
+  };
+}
 
-    function injectAPIKey(config) {
-        if (!api_key || !config) {
-            return;
-        }
-
-        config.global = config.global || {};
-        if ('sdk_api_key' in config.global) {
-            config.global.sdk_api_key = api_key;
-        }
-        if ('api_key' in config.global) {
-            config.global.api_key = api_key;
-        }
-
-        for (var name in config.sources || {}) {
-            var source = config.sources[name];
-            if (typeof source.url === 'string' && source.url.indexOf('nextzen.org') > -1) {
-                source.url_params = source.url_params || {};
-                source.url_params.api_key = api_key;
-            }
-        }
-    }
-})();
+function getApiKeyFromUrl() {
+  return typeof URLSearchParams === 'function'
+    ? new URLSearchParams(window.location.search).get('api_key') || ''
+    : '';
+}

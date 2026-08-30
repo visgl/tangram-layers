@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import { assert } from 'chai';
+import {describe, expect, it} from 'vitest';
 import HostFrame from '../src/scene/host_frame';
 
 const IDENTITY_MATRIX = [
@@ -31,17 +31,17 @@ describe('HostFrame', function () {
             tileBuffer: 2
         });
 
-        assert.instanceOf(frame, HostFrame);
-        assert.deepEqual(frame.viewport, { x: 0, y: 0, width: 800, height: 600 });
-        assert.deepEqual(frame.geographicAnchor, {
+        expect(frame).toBeInstanceOf(HostFrame);
+        expect(frame.viewport).toEqual({ x: 0, y: 0, width: 800, height: 600 });
+        expect(frame.geographicAnchor).toEqual({
             longitude: -74,
             latitude: 40.7,
             altitude: 0,
             zoom: 16
         });
-        assert.strictEqual(frame.activeRenderViewId, 'default');
-        assert.strictEqual(frame.getRenderView().id, 'default');
-        assert.strictEqual(frame.tileBuffer, 2);
+        expect(frame.activeRenderViewId).toBe('default');
+        expect(frame.getRenderView().id).toBe('default');
+        expect(frame.tileBuffer).toBe(2);
     });
 
     it('stores multiple camera views over shared geographic state', function () {
@@ -63,26 +63,26 @@ describe('HostFrame', function () {
             activeRenderViewId: 'left-eye'
         });
 
-        assert.lengthOf(frame.renderViews, 2);
-        assert.strictEqual(frame.getRenderView('right-eye').viewport.x, 800);
-        assert.closeTo(frame.getRenderView('left-eye').camera.position[0], -0.03, 1e-10);
-        assert.closeTo(frame.getRenderView('right-eye').camera.position[0], 0.03, 1e-10);
+        expect(frame.renderViews).toHaveLength(2);
+        expect(frame.getRenderView('right-eye').viewport.x).toBe(800);
+        expect(frame.getRenderView('left-eye').camera.position[0]).toBeCloseTo(-0.03, 10);
+        expect(frame.getRenderView('right-eye').camera.position[0]).toBeCloseTo(0.03, 10);
     });
 
     it('rejects incomplete and ambiguous frame state', function () {
-        assert.throws(() => new HostFrame(), /viewport/);
-        assert.throws(() => new HostFrame({
+        expect(() => new HostFrame()).toThrow(/viewport/);
+        expect(() => new HostFrame({
             viewport: { width: 800, height: 600 },
             geographicAnchor: { longitude: -74, latitude: 40.7, zoom: 16 },
             renderViews: []
-        }), /at least one render view/);
-        assert.throws(() => new HostFrame({
+        })).toThrow(/at least one render view/);
+        expect(() => new HostFrame({
             viewport: { width: 800, height: 600 },
             geographicAnchor: { longitude: -74, latitude: 40.7, zoom: 16 },
             renderViews: [
                 { id: 'eye', camera: createCamera() },
                 { id: 'eye', camera: createCamera() }
             ]
-        }), /duplicated/);
+        })).toThrow(/duplicated/);
     });
 });

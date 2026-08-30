@@ -92,8 +92,8 @@
 import Thread from './thread';
 import log from './log';
 
-var WorkerBroker;
-export default WorkerBroker = {};
+export const WorkerBroker = {};
+export default WorkerBroker;
 
 // Global list of all worker messages
 // Uniquely tracks every call made between main thread and a worker

@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-import chai from 'chai';
-let assert = chai.assert;
+import {describe, expect, it} from 'vitest';
 import { TileID } from '../src/tile/tile_id';
 
 describe('Tile', function() {
@@ -15,17 +14,17 @@ describe('Tile', function() {
         it('does NOT overzoom a coordinate at the max zoom', () => {
             let coords2 = TileID.coordForTileZooms(coords, [0, 12, 17]);
 
-            assert.deepEqual(coords2.x, coords.x);
-            assert.deepEqual(coords2.y, coords.y);
-            assert.deepEqual(coords2.z, coords.z);
+            expect(coords2.x).toBe(coords.x);
+            expect(coords2.y).toBe(coords.y);
+            expect(coords2.z).toBe(coords.z);
         });
 
         it('does NOT overzoom a coordinate below the max zoom', () => {
             let coords2 = TileID.coordForTileZooms(coords, [0, 12, 16, 17, 18]);
 
-            assert.deepEqual(coords2.x, coords.x);
-            assert.deepEqual(coords2.y, coords.y);
-            assert.deepEqual(coords2.z, coords.z);
+            expect(coords2.x).toBe(coords.x);
+            expect(coords2.y).toBe(coords.y);
+            expect(coords2.z).toBe(coords.z);
         });
 
         it('does overzoom a coordinate above the max zoom', () => {
@@ -34,9 +33,9 @@ describe('Tile', function() {
 
             let coords2 = TileID.coordForTileZooms(unzoomed, [0, 12, 15]);
 
-            assert.deepEqual(coords2.x, overzoomed.x);
-            assert.deepEqual(coords2.y, overzoomed.y);
-            assert.deepEqual(coords2.z, overzoomed.z);
+            expect(coords2.x).toBe(overzoomed.x);
+            expect(coords2.y).toBe(overzoomed.y);
+            expect(coords2.z).toBe(overzoomed.z);
         });
 
     });

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import { assert } from 'chai';
+import {describe, expect, it} from 'vitest';
 import ShaderProgram from '../src/gl/shader_program';
 
 describe('ShaderProgram portable compilation', function () {
@@ -35,9 +35,9 @@ describe('ShaderProgram portable compilation', function () {
 
         program.compile();
 
-        assert.isTrue(program.compiled);
-        assert.isNull(program.program);
-        assert.deepEqual(shader_options.map(options => ({
+        expect(program.compiled).toBe(true);
+        expect(program.program).toBeNull();
+        expect(shader_options.map(options => ({
             stage: options.stage,
             language: options.language,
             entryPoint: options.entryPoint,
@@ -48,7 +48,7 @@ describe('ShaderProgram portable compilation', function () {
         ]);
 
         program.destroy();
-        assert.isTrue(shader_resources[0].destroyed);
-        assert.isTrue(shader_resources[1].destroyed);
+        expect(shader_resources[0].destroyed).toBe(true);
+        expect(shader_resources[1].destroyed).toBe(true);
     });
 });

@@ -38,6 +38,23 @@ The host supplies the frame and owns scheduling. `LumaDeviceRenderer` provides
 resource factories for luma.gl devices, including the WebGPU backend. The
 renderer does not depend on deck.gl and does not create a second host device.
 
+## TypeScript contracts
+
+The package root exports the runtime classes together with `RendererOptions`,
+`HostFrameOptions`, `HostRenderView`, `HostCamera`, `SceneDefinition`,
+`SceneLoadOptions`, and the worker-message contracts. Use `satisfies` to check a
+frame without widening its render-view identifiers:
+
+```ts
+import type {HostFrameOptions} from '@vis.gl/tangram-renderer';
+
+const frameOptions = {
+  viewport: {width, height},
+  geographicAnchor: {longitude, latitude, zoom},
+  renderViews: [{id: 'main', camera}]
+} satisfies HostFrameOptions;
+```
+
 ## HostFrame
 
 `HostFrame` separates shared geographic state from per-view camera state:

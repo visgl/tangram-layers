@@ -4,11 +4,13 @@
 
 import Layout from '@theme/Layout';
 import Link from '@docusaurus/Link';
+import TronHeroBackground from '../components/TronHeroBackground';
 
 export default function Home() {
   return (
     <Layout title="Tangram layers" description="Tangram rendering and deck.gl basemap integration">
       <header className="hero hero--primary">
+        <TronHeroBackground />
         <div className="container">
           <h1 className="hero__title">Tangram layers</h1>
           <p className="hero__subtitle">
