@@ -66,6 +66,16 @@
   letter-spacing: -0.02em;
 }
 
+.hero__subtitle a {
+  color: inherit;
+  text-decoration-color: rgba(255, 255, 255, 0.65);
+}
+
+.homepage-introduction {
+  margin-bottom: 2rem;
+  font-size: 1.35rem;
+}
+
 .example-frame {
   display: block;
   width: 100%;

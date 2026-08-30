@@ -8,26 +8,30 @@ import TronHeroBackground from '../components/TronHeroBackground';
 
 export default function Home() {
   return (
-    <Layout title="Tangram layers" description="Tangram rendering and deck.gl basemap integration">
+    <Layout title="tangram.gl" description="Tangram rendering and deck.gl basemap integration">
       <header className="hero hero--primary">
         <TronHeroBackground />
         <div className="container">
-          <h1 className="hero__title">Tangram layers</h1>
+          <h1 className="hero__title">tangram.gl</h1>
           <p className="hero__subtitle">
-            A luma.gl-backed Tangram renderer and an experimental deck.gl basemap layer.
+            <a href="https://github.com/tangrams/tangram">Tangram</a> basemaps, reincarnated in the{' '}
+            <a href="https://www.openvisualization.org/projects">vis.gl</a> pantheon
           </p>
           <div>
-            <Link className="button button--secondary button--lg" to="/docs">
-              Read the docs
-            </Link>{' '}
-            <a className="button button--outline button--lg" href="/tangram.gl/examples/deck">
-              Open the live example
-            </a>
+            <Link
+              className="button button--secondary button--lg"
+              to="/docs/get-started/getting-started"
+            >
+              Get Started
+            </Link>
           </div>
         </div>
       </header>
       <main>
         <section className="container margin-vert--lg">
+          <p className="homepage-introduction">
+            A luma.gl-backed Tangram renderer and an experimental deck.gl basemap layer.
+          </p>
           <div className="row">
             <div className="col col--6">
               <h2>Two focused packages</h2>
@@ -41,10 +45,10 @@ export default function Home() {
               </p>
             </div>
             <div className="col col--6">
-              <h2>One runnable integration</h2>
+              <h2>Fully Modernized</h2>
               <p>
-                Explore vector basemaps, the animated TRON style, and deck.gl overlays on WebGL or
-                WebGPU.
+                Use vector basemaps, the animated TRON style, and deck.gl overlays on both WebGPU
+                and WebGL 2.
               </p>
             </div>
           </div>
