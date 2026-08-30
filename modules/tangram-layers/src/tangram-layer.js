@@ -108,7 +108,7 @@ export function getFirstPersonViewFrame(viewport, options = {}) {
     [width, 0],
     [0, height],
     [width, height]
-  ].map((pixel) => viewport.unproject(pixel, {targetZ: 0}));
+  ].map((pixel) => getForwardGroundIntersection(viewport, pixel));
   if (groundCorners.some((corner) => !isFiniteCoordinate(corner))) {
     throw new Error('FirstPersonViewport must intersect the ground plane');
   }
@@ -126,24 +126,10 @@ export function getFirstPersonViewFrame(viewport, options = {}) {
   const south = Math.max(...yValues);
   const footprintWidth = east - west;
   const footprintHeight = south - north;
-  const distanceScales =
-    typeof viewport.getDistanceScales === 'function'
-      ? viewport.getDistanceScales()
-      : viewport.distanceScales;
-  const unitsPerMeter = distanceScales && distanceScales.unitsPerMeter;
-  if (
-    !unitsPerMeter ||
-    !Number.isFinite(unitsPerMeter[0]) ||
-    unitsPerMeter[0] <= 0 ||
-    !Number.isFinite(unitsPerMeter[1]) ||
-    unitsPerMeter[1] <= 0
-  ) {
-    throw new Error('FirstPersonViewport distance scales are required');
-  }
-
+  const commonUnitsPerProjectedMeter = DECK_WORLD_SIZE / (TANGRAM_HALF_WORLD_METERS * 2);
   const metersPerPixel = Math.max(
-    footprintWidth / unitsPerMeter[0] / width,
-    footprintHeight / unitsPerMeter[1] / height
+    footprintWidth / commonUnitsPerProjectedMeter / width,
+    footprintHeight / commonUnitsPerProjectedMeter / height
   );
   if (!Number.isFinite(metersPerPixel) || metersPerPixel <= 0) {
     throw new Error('FirstPersonViewport ground footprint is empty');
@@ -581,6 +567,25 @@ function isFirstPersonViewport(viewport) {
 
 function isFiniteCoordinate(coordinate) {
   return coordinate && Number.isFinite(coordinate[0]) && Number.isFinite(coordinate[1]);
+}
+
+function getForwardGroundIntersection(viewport, pixel) {
+  const near = viewport.unproject([pixel[0], pixel[1], 0]);
+  const far = viewport.unproject([pixel[0], pixel[1], 1]);
+  if (
+    !isFiniteCoordinate(near) ||
+    !Number.isFinite(near[2]) ||
+    !isFiniteCoordinate(far) ||
+    !Number.isFinite(far[2])
+  ) {
+    return null;
+  }
+
+  const rayParameter = -near[2] / (far[2] - near[2]);
+  if (!Number.isFinite(rayParameter) || rayParameter <= 0) {
+    return null;
+  }
+  return viewport.unproject(pixel, {targetZ: 0});
 }
 
 function multiplyMatrices(left, right) {
