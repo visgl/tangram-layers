@@ -1,6 +1,6 @@
-// Tangram
+// tangram-layers
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) vis.gl contributors
 
 import {afterEach, beforeAll, beforeEach, describe, expect, test, vi} from 'vitest';
 import Utils from '../src/utils/utils';

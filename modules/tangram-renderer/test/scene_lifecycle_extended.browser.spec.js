@@ -1,6 +1,6 @@
-// Tangram
+// tangram-layers
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) vis.gl contributors
 
 import {afterEach, describe, expect, test, vi} from 'vitest';
 import Scene from '../src/scene/scene';
