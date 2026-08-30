@@ -4,6 +4,7 @@
 
 import {describe, expect, it, vi} from 'vitest';
 import subscribeMixin from '../modules/tangram-renderer/src/utils/subscribe.js';
+import Thread from '../modules/tangram-renderer/src/utils/thread.js';
 
 describe('migrated subscription utility', () => {
   it('adds typed subscription methods', () => {
@@ -52,5 +53,9 @@ describe('migrated subscription utility', () => {
 
     target.trigger('update');
     expect(lateHandler).toHaveBeenCalledOnce();
+  });
+
+  it('identifies the browser main thread', () => {
+    expect(Thread).toEqual({is_worker: false, is_main: true});
   });
 });

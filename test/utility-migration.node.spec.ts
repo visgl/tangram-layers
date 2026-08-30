@@ -4,8 +4,12 @@
 
 import {describe, expect, it, vi} from 'vitest';
 import debounce from '../modules/tangram-renderer/src/utils/debounce.js';
+import debugSettings, {
+  mergeDebugSettings
+} from '../modules/tangram-renderer/src/utils/debug_settings.js';
 import hashString from '../modules/tangram-renderer/src/utils/hash.js';
 import sliceObject from '../modules/tangram-renderer/src/utils/slice.js';
+import version from '../modules/tangram-renderer/src/utils/version.js';
 
 describe('migrated utility modules', () => {
   it('hashes strings deterministically', () => {
@@ -31,5 +35,16 @@ describe('migrated utility modules', () => {
     expect(receiver.callback).toHaveBeenCalledOnce();
     expect(receiver.callback).toHaveBeenCalledWith(5);
     vi.useRealTimers();
+  });
+
+  it('reports the renderer package version', () => {
+    expect(version).toMatch(/^v\d+\.\d+\.\d+/);
+  });
+
+  it('merges typed debug settings into the shared state', () => {
+    const originalWireframe = debugSettings.wireframe;
+    mergeDebugSettings({wireframe: !originalWireframe});
+    expect(debugSettings.wireframe).toBe(!originalWireframe);
+    mergeDebugSettings({wireframe: originalWireframe});
   });
 });

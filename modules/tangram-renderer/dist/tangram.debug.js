@@ -162,33 +162,33 @@ var version$1 = "1.0.0-alpha.0";
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 var version = 'v' + version$1;
 
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
-
-/*jshint worker: true*/
+// Copyright (c) 2026 vis.gl contributors
 
 // Mark thread as main or worker
 var Thread = {};
 try {
   if (window instanceof Window && window.document instanceof HTMLDocument) {
-    // jshint ignore:line
     Thread.is_worker = false;
     Thread.is_main = true;
   }
-} catch (e) {
+} catch (_unused) {
   Thread.is_worker = true;
   Thread.is_main = false;
 
-  // Patch for 3rd party libs that require these globals to be present. Specifically, FontFaceObserver.
-  // Brittle solution but allows that library to load on worker threads.
-  self.window = {
+  // Patch for third-party libraries that require these globals to be present, specifically
+  // FontFaceObserver. This allows that library to load on worker threads.
+  var workerGlobal = self;
+  workerGlobal.window = {
     document: {}
   };
-  self.document = self.window.document;
+  workerGlobal.document = workerGlobal.window.document;
 }
 
 function _isNativeReflectConstruct$b() {
@@ -968,15 +968,16 @@ Utils.toCSSColor = function (color) {
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 var debugSettings = {
   // draws a blue rectangle border around the collision box of a label
   draw_label_collision_boxes: false,
   // draws a green rectangle border within the texture box of a label
   draw_label_texture_boxes: false,
-  // suppreses fade-in of labels
+  // suppresses fade-in of labels
   suppress_label_fade_in: false,
-  // suppress animaton of label snap to pixel grid
+  // suppresses animation of label snap to pixel grid
   suppress_label_snap_animation: false,
   // show hidden labels for debugging
   show_hidden_labels: false,
@@ -3621,6 +3622,7 @@ var VertexArrayObject = {
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 // Deep/recursive merge of one or more source objects into a destination object
 
@@ -6794,6 +6796,7 @@ function _isNativeReflectConstruct$9() { try { var t = !Boolean.prototype.valueO
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 var MethodNotImplemented = /*#__PURE__*/function (_Error) {
   function MethodNotImplemented(methodName) {
@@ -24416,6 +24419,7 @@ function align(value, alignment) {
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 // Get a value for a nested property with path provided as an array (`a.b.c` => ['a', 'b', 'c'])
 
@@ -39913,7 +39917,7 @@ return Tangram$1;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = false; // mark build as ES module
-	Tangram.debug.SHA = 'd410f75b2175d206e120d6a9346a1c910e89a486';
+	Tangram.debug.SHA = 'd3fb685a56a4715cfe15f9c51c9ce44dff89ea2d';
 	if (false === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}
