@@ -92,9 +92,8 @@ describe('renderer pure logic', () => {
 
     const transformed = buildFilter({zoom: {min: 3}}, {rangeTransform: value => value + 8});
     expect(transformed({feature: {properties: {zoom: 12}}})).toBe(true);
-    // Function filters are compiled as expressions and return the evaluated
-    // function value for compatibility with legacy stylesheet predicates.
-    expect(buildFilter(value => value.feature.properties.kind === 'road')(context)).toEqual(expect.any(Function));
+    expect(buildFilter(value => value.feature.properties.kind === 'road')(context)).toBe(true);
+    expect(buildFilter(value => value.feature.properties.kind === 'building')(context)).toBe(false);
   });
 
   test('handles point anchors and collision boxes', () => {
@@ -150,5 +149,16 @@ describe('renderer pure logic', () => {
     expect(result.success).toBe(true);
     expect(result.data.custom_extension).toEqual({enabled: true});
     expect(TangramStyleSheetSchema.safeParse({sources: {map: {tile_size: -1}}}).success).toBe(false);
+    expect(TangramStyleSheetSchema.safeParse({
+      import: ['base.yaml', {layers: {roads: {draw: {lines: {color: '#fff'}}}}}],
+      styles: {
+        roads: {base: 'lines', lighting: 'vertex', raster: 'color'},
+        terrain: {base: 'polygons', lighting: 'fragment', raster: 'normal'},
+        custom: {base: 'polygons', raster: 'custom'}
+      }
+    }).success).toBe(true);
+    expect(TangramStyleSheetSchema.safeParse({
+      styles: {roads: {lighting: 'pixel', raster: 'height'}}
+    }).success).toBe(false);
   });
 });

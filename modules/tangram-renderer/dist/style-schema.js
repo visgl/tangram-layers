@@ -42,9 +42,9 @@ const TangramStyleSchema = z.object({
     base: z.string().optional(),
     mix: z.union([z.string(), z.array(z.string())]).optional(),
     animated: z.boolean().optional(),
-    lighting: z.boolean().optional(),
+    lighting: z.union([z.boolean(), z.enum(['vertex', 'fragment'])]).optional(),
     blend: z.string().optional(),
-    raster: z.boolean().optional(),
+    raster: z.union([z.boolean(), z.enum(['color', 'normal', 'custom'])]).optional(),
     texture: TangramStyleValueSchema.optional(),
     draw: z.record(z.string(), TangramStyleValueSchema).optional(),
     shaders: z.record(z.string(), TangramStyleValueSchema).optional()
@@ -70,7 +70,10 @@ const TangramLayerSchema = z.object({
 const TangramStyleSheetSchema = z.object({
     import: z.union([
         z.string(),
-        z.array(z.string()),
+        z.array(z.union([
+            z.string(),
+            z.record(z.string(), TangramStyleValueSchema)
+        ])),
         z.record(z.string(), TangramStyleValueSchema)
     ]).optional(),
     global: z.record(z.string(), TangramStyleValueSchema).optional(),

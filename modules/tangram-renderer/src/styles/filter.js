@@ -1,6 +1,7 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 function notNull(x)  { return x != null; }
 function wrap(x)     { return '(' + x + ')';}
@@ -117,7 +118,7 @@ function parseFilter(filter, options) {
 
     // Function filter
     if (typeof filter === 'function') {
-        return [wrap(filter.toString() + '(context)')];
+        return [wrap(wrap(filter.toString()) + '(context)')];
     }
     // Array filter, implicit 'any'
     else if (Array.isArray(filter)) {
