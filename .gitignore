@@ -10,6 +10,7 @@
 # build & test artifacts
 node_modules
 build
+coverage
 
 # Yarn and Docusaurus generated state
 .yarn/*

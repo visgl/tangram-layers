@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-// Create a standalone worker bundle, to allow the Karma suite to load the web worker
-// (regular two-pass code-splitting build process is not easily adaptable to Karma)
+// Create a standalone worker bundle for browser-backed Vitest integration tests.
+// The regular two-pass code-splitting build does not produce this test fixture.
 
 import babel from '@rollup/plugin-babel';
 import resolve from '@rollup/plugin-node-resolve';

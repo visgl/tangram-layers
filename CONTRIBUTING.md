@@ -34,8 +34,10 @@ yarn test
 configuration. The renderer's Rollup build remains the package-specific build
 step invoked by the root `yarn build` command.
 
-The renderer worker bundle is built automatically before Karma starts. For an
-interactive Karma session, use `yarn karma-start` and then `yarn karma-run`.
+The renderer worker bundle is built automatically before the headless Vitest
+project starts. Use `yarn test-node` for Node-only tests, `yarn test-browser`
+for the browser project, and `yarn test-headless` for the Chromium-backed
+integration suite. Coverage is collected with `yarn test-coverage`.
 
 ## Pull requests
 

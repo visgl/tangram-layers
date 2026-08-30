@@ -23,7 +23,7 @@ yarn lint:fix      # apply safe Biome fixes
 yarn test-fast     # lint and Node tests
 yarn test-browser  # Chromium-backed Vitest project
 yarn test-coverage # headless Vitest coverage run (renderer source)
-yarn test          # lint, worker bundle, and Karma browser tests
+yarn test          # lint, Node tests, worker bundle, and Vitest browser tests
 ```
 
 The root TypeScript configuration accepts both JavaScript and TypeScript, uses
@@ -52,6 +52,11 @@ specifications are executed by the headless project with a compatibility setup
 so they can be migrated to native Vitest syntax incrementally without losing
 coverage. New tests should use native Vitest APIs and should be placed in
 `*.node.spec.*` or `*.browser.spec.*` files according to their runtime.
+
+The existing Chai assertions and Sinon spies/stubs remain as compatibility
+helpers for the inherited suite. New tests should prefer Vitest’s `expect`,
+`vi.fn`, `vi.spyOn`, and `vi.stubGlobal`; the remaining helper usage can be
+removed incrementally without bringing back a second test runner.
 
 The coverage command scopes instrumentation to
 `modules/tangram-renderer/src/**/*.{js,ts}`. It includes the existing renderer

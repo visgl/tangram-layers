@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {execFileSync} from 'node:child_process';
-import {readFileSync, writeFileSync} from 'node:fs';
+import {existsSync, readFileSync, writeFileSync} from 'node:fs';
 import {extname} from 'node:path';
 import {pathToFileURL} from 'node:url';
 
@@ -130,23 +130,23 @@ const TANGRAM_RENDERER_FILES = new Set([
   'modules/tangram-renderer/src/utils/vector.js',
   'modules/tangram-renderer/src/utils/version.js',
   'modules/tangram-renderer/src/utils/worker_broker.js',
-  'modules/tangram-renderer/test/data_source_spec.js',
+  'modules/tangram-renderer/test/data_source.browser.spec.js',
   'modules/tangram-renderer/test/fixtures/sample-scene.yaml',
-  'modules/tangram-renderer/test/geo_spec.js',
+  'modules/tangram-renderer/test/geo.browser.spec.js',
   'modules/tangram-renderer/test/helpers.js',
-  'modules/tangram-renderer/test/layer_spec.js',
-  'modules/tangram-renderer/test/leaflet_layer_spec.js',
-  'modules/tangram-renderer/test/merge_spec.js',
-  'modules/tangram-renderer/test/obb_spec.js',
+  'modules/tangram-renderer/test/layer.browser.spec.js',
+  'modules/tangram-renderer/test/leaflet_layer.browser.spec.js',
+  'modules/tangram-renderer/test/merge.browser.spec.js',
+  'modules/tangram-renderer/test/obb.browser.spec.js',
   'modules/tangram-renderer/test/rollup.config.worker.js',
-  'modules/tangram-renderer/test/scene_spec.js',
-  'modules/tangram-renderer/test/style_spec.js',
-  'modules/tangram-renderer/test/subscribe_spec.js',
-  'modules/tangram-renderer/test/tile_manager_spec.js',
-  'modules/tangram-renderer/test/tile_pyramid.js',
-  'modules/tangram-renderer/test/tile_spec.js',
-  'modules/tangram-renderer/test/vertex_data_spec.js',
-  'modules/tangram-renderer/test/vertex_layout_spec.js'
+  'modules/tangram-renderer/test/scene.browser.spec.js',
+  'modules/tangram-renderer/test/style.browser.spec.js',
+  'modules/tangram-renderer/test/subscribe.browser.spec.js',
+  'modules/tangram-renderer/test/tile_manager.browser.spec.js',
+  'modules/tangram-renderer/test/tile_pyramid.browser.spec.js',
+  'modules/tangram-renderer/test/tile.browser.spec.js',
+  'modules/tangram-renderer/test/vertex_data.browser.spec.js',
+  'modules/tangram-renderer/test/vertex_layout.browser.spec.js'
 ]);
 
 const TANGRAM_ROOT_FILES = new Set([
@@ -159,7 +159,6 @@ const TANGRAM_ROOT_FILES = new Set([
   'README.md',
   'babel.config.js',
   'circle.yml',
-  'karma.conf.js',
   'modules/tangram-renderer/README.md',
   'modules/tangram-renderer/build/bundle.mjs',
   'modules/tangram-renderer/build/intro.js',
@@ -186,7 +185,7 @@ const TANGRAM_CLASSIC_FILES = new Set([
 function getTrackedFiles() {
   return execFileSync('git', ['ls-files', '-z'], {encoding: 'utf8'})
     .split('\0')
-    .filter(Boolean);
+    .filter(filePath => filePath && existsSync(filePath));
 }
 
 function getCommentStyle(filePath) {
