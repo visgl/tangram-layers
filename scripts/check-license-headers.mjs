@@ -111,7 +111,7 @@ const TANGRAM_RENDERER_FILES = new Set([
   'modules/tangram-renderer/src/tile/tile_manager.js',
   'modules/tangram-renderer/src/tile/tile_pyramid.js',
   'modules/tangram-renderer/src/utils/debounce.ts',
-  'modules/tangram-renderer/src/utils/debug_settings.js',
+  'modules/tangram-renderer/src/utils/debug_settings.ts',
   'modules/tangram-renderer/src/utils/errors.ts',
   'modules/tangram-renderer/src/utils/functions.ts',
   'modules/tangram-renderer/src/utils/geo.js',
@@ -125,11 +125,11 @@ const TANGRAM_RENDERER_FILES = new Set([
   'modules/tangram-renderer/src/utils/slice.ts',
   'modules/tangram-renderer/src/utils/subscribe.ts',
   'modules/tangram-renderer/src/utils/task.js',
-  'modules/tangram-renderer/src/utils/thread.js',
+  'modules/tangram-renderer/src/utils/thread.ts',
   'modules/tangram-renderer/src/utils/urls.js',
   'modules/tangram-renderer/src/utils/utils.js',
   'modules/tangram-renderer/src/utils/vector.js',
-  'modules/tangram-renderer/src/utils/version.js',
+  'modules/tangram-renderer/src/utils/version.ts',
   'modules/tangram-renderer/src/utils/worker_broker.js',
   'modules/tangram-renderer/test/data_source.browser.spec.js',
   'modules/tangram-renderer/test/fixtures/sample-scene.yaml',
@@ -155,7 +155,10 @@ const VISGL_MODIFIED_TANGRAM_FILES = new Set([
   'modules/tangram-renderer/src/utils/errors.ts',
   'modules/tangram-renderer/src/utils/functions.ts',
   'modules/tangram-renderer/src/utils/merge.ts',
-  'modules/tangram-renderer/src/utils/props.ts'
+  'modules/tangram-renderer/src/utils/props.ts',
+  'modules/tangram-renderer/src/utils/debug_settings.ts',
+  'modules/tangram-renderer/src/utils/thread.ts',
+  'modules/tangram-renderer/src/utils/version.ts'
 ]);
 
 const TANGRAM_ROOT_FILES = new Set([

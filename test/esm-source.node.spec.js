@@ -12,7 +12,7 @@ describe('renderer ESM sources', () => {
     const files = [
       'modules/tangram-renderer/src/gl/constants.js',
       'modules/tangram-renderer/src/gl/context.js',
-      'modules/tangram-renderer/src/utils/debug_settings.js',
+      'modules/tangram-renderer/src/utils/debug_settings.ts',
       'modules/tangram-renderer/src/utils/geo.js',
       'modules/tangram-renderer/src/utils/vector.js',
       'modules/tangram-renderer/src/utils/worker_broker.js'
