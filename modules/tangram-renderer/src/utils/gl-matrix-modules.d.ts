@@ -1,6 +1,6 @@
-// Tangram
+// tangram-layers
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 vis.gl contributors
+// Copyright (c) vis.gl contributors
 
 declare module 'gl-mat3/normal-from-mat4' {
   const normalFromMat4: (...arguments_: unknown[]) => unknown;

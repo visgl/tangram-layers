@@ -1,22 +1,63 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 import Utils from '../utils/utils';
 import ShaderProgram from '../gl/shader_program';
 import {mat4, mat3, vec3} from '../utils/gl-matrix';
 
+type Matrix = Float32Array | Float64Array;
+type Vector = number[] | Float32Array | Float64Array;
+type CameraType = 'external' | 'isometric' | 'flat' | 'perspective';
+type CameraConfiguration = {
+    type?: CameraType;
+    position?: number[];
+    zoom?: number;
+    focal_length?: number | number[][];
+    fov?: number | number[][];
+    vanishing_point?: number[];
+    axis?: {x: number; y: number} | number[];
+};
+type CameraView = {
+    setView(view: {lng?: number; lat?: number; zoom?: number}): void;
+    scene: {requestRedraw(): void};
+    size: {
+        css: {width: number; height: number};
+        meters: {x: number; y: number};
+    };
+    aspect: number;
+    meters_per_pixel: number;
+    zoom: number;
+    center: {meters: {x: number; y: number}};
+};
+type Program = {uniform(type: string, name: string, value: Vector | Matrix): void};
+type UniformBuffer = {setUniforms(uniforms: Record<string, Vector | Matrix>): void};
+type MatrixSet = {
+    model_view32: Matrix;
+    model: Matrix;
+    normal32: Matrix;
+    inverse_normal32: Matrix;
+};
+
 // Abstract base class
 export default class Camera {
+    readonly view: CameraView;
+    readonly position?: number[];
+    readonly zoom?: number;
+    type?: CameraType;
+    view_matrix: Matrix = new Float64Array(16);
+    projection_matrix: Matrix = new Float32Array(16);
+    position_meters: Vector = [0, 0, 0];
 
-    constructor(name, view, options = {}) {
+    constructor(name: string, view: CameraView, options: CameraConfiguration = {}) {
         this.view = view;
         this.position = options.position;
         this.zoom = options.zoom;
     }
 
     // Create a camera by type name, factory-style
-    static create(name, view, config) {
+    static create(name: string, view: CameraView, config: CameraConfiguration): Camera {
         switch (config.type) {
         case 'external':
             return new ExternalCamera(name, view, config);
@@ -32,17 +73,17 @@ export default class Camera {
     }
 
     // Update method called once per frame
-    update() {
+    update(): void {
     }
 
     // Called once per frame per program (e.g. for main render pass, then for each additional pass for feature selection, etc.)
-    setupProgram(/*program*/) {
+    setupProgram(/*program*/ _program?: Program, _uniformBuffer?: UniformBuffer): void {
     }
 
     // Sync camera position/zoom to scene view
-    updateView () {
+    updateView (): void {
         if (this.position || this.zoom) {
-            var view = {};
+            let view: {lng?: number; lat?: number; zoom?: number} = {};
             if (this.position) {
                 view = { lng: this.position[0], lat: this.position[1], zoom: this.position[2] };
             }
@@ -54,7 +95,7 @@ export default class Camera {
     }
 
     // Set model-view and normal matrices
-    setupMatrices (matrices, program, uniform_buffer) {
+    setupMatrices (matrices: MatrixSet, program: Program, uniform_buffer?: UniformBuffer): void {
         // Model view matrix - transform tile space into view space (meters, relative to camera)
         mat4.multiply(matrices.model_view32, this.view_matrix, matrices.model);
 
@@ -83,9 +124,10 @@ export default class Camera {
     This lets hosts such as deck.gl remain authoritative for camera projection while
     Tangram continues to manage scene loading, tile selection, and drawing.
 */
-class ExternalCamera extends Camera {
+export class ExternalCamera extends Camera {
+    readonly vanishing_point: number[];
 
-    constructor(name, view, options = {}) {
+    constructor(name: string, view: CameraView, options: CameraConfiguration = {}) {
         super(name, view, options);
         this.type = 'external';
         this.position_meters = [0, 0, 0];
@@ -106,7 +148,7 @@ class ExternalCamera extends Camera {
         );
     }
 
-    setMatrices({ view, projection, position = [0, 0, 0] }) {
+    setMatrices({view, projection, position = [0, 0, 0]}: {view: Matrix; projection: Matrix; position?: Vector}): boolean {
         if (!view || view.length !== 16 || !projection || projection.length !== 16) {
             throw new Error('ExternalCamera requires 4x4 view and projection matrices');
         }
@@ -123,7 +165,7 @@ class ExternalCamera extends Camera {
         return true;
     }
 
-    setupProgram(program, uniform_buffer) {
+    setupProgram(program: Program, uniform_buffer?: UniformBuffer): void {
         if (uniform_buffer) {
             uniform_buffer.setUniforms({
                 u_projection: this.projection_matrix,
@@ -138,7 +180,7 @@ class ExternalCamera extends Camera {
         }
     }
 
-    transformVector(vector) {
+    transformVector(vector: Vector): number[] {
         const matrix = this.view_matrix;
         const transformed = [
             matrix[0] * vector[0] + matrix[4] * vector[1] + matrix[8] * vector[2],
@@ -151,7 +193,7 @@ class ExternalCamera extends Camera {
 
 }
 
-function matrixEquals(left, right) {
+function matrixEquals(left: Matrix, right: Matrix): boolean {
     for (let index = 0; index < 16; index++) {
         if (left[index] !== right[index]) {
             return false;
@@ -160,7 +202,7 @@ function matrixEquals(left, right) {
     return true;
 }
 
-function vectorEquals(left, right) {
+function vectorEquals(left: Vector, right: Vector): boolean {
     return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
@@ -179,9 +221,13 @@ function vectorEquals(left, right) {
     [-250, -250] = looking 250 pixels from the viewport center to the lower-left corner
     [400, 0] = looking 400 pixels to the right of the viewport center
 */
-class PerspectiveCamera extends Camera {
+export class PerspectiveCamera extends Camera {
+    focal_length: number | number[][] | undefined;
+    fov: number | number[][] | undefined;
+    vanishing_point: number[];
+    vanishing_point_skew: number[];
 
-    constructor(name, view, options = {}) {
+    constructor(name: string, view: CameraView, options: CameraConfiguration = {}) {
         super(name, view, options);
         this.type = 'perspective';
 
@@ -194,10 +240,10 @@ class PerspectiveCamera extends Camera {
         }
 
         this.vanishing_point = options.vanishing_point || [0, 0]; // [x, y]
-        this.vanishing_point = this.vanishing_point.map(parseFloat); // we implicitly only support px units here
+        this.vanishing_point = this.vanishing_point.map(value => parseFloat(String(value))); // we implicitly only support px units here
         this.vanishing_point_skew = [];
 
-        this.position_meters = null;
+        this.position_meters = [];
         this.view_matrix = new Float64Array(16);
         this.projection_matrix = new Float32Array(16);
 
@@ -216,7 +262,12 @@ class PerspectiveCamera extends Camera {
     // Constrains the camera so that the viewable area matches given the viewport height
     // (in world space, e.g. meters), given either a camera focal length or field-of-view
     // (focal length is used if both are passed).
-    constrainCamera({ view_height, height, focal_length, fov }) {
+    constrainCamera({view_height, height, focal_length, fov}: {
+        view_height: number;
+        height?: number;
+        focal_length?: number;
+        fov?: number;
+    }): {view_height: number; height: number; focal_length: number; fov: number} {
         // Solve for camera height
         if (!height) {
             // We have focal length, calculate FOV
@@ -231,7 +282,7 @@ class PerspectiveCamera extends Camera {
 
             // Distance that camera should be from ground such that it fits the field of view expected
             // for a conventional web mercator map at the current zoom level and camera focal length
-            height = view_height / 2 * focal_length;
+            height = view_height / 2 * (focal_length ?? 0);
         }
         // Solve for camera focal length / field-of-view
         else {
@@ -239,10 +290,15 @@ class PerspectiveCamera extends Camera {
             fov = Math.atan(1 / focal_length) * 2;
         }
 
-        return { view_height, height, focal_length, fov };
+        return {
+            view_height,
+            height: height as number,
+            focal_length: focal_length as number,
+            fov: fov as number
+        };
     }
 
-    updateMatrices() {
+    updateMatrices(): void {
         // TODO: only re-calculate these vars when necessary
 
         // Height of the viewport in meters at current zoom
@@ -295,12 +351,12 @@ class PerspectiveCamera extends Camera {
         mat4.translate(this.projection_matrix, this.projection_matrix, vec3.fromValues(0, 0, -height));
     }
 
-    update() {
+    update(): void {
         super.update();
         this.updateMatrices();
     }
 
-    setupProgram(program, uniform_buffer) {
+    setupProgram(program: Program, uniform_buffer?: UniformBuffer): void {
         if (uniform_buffer) {
             uniform_buffer.setUniforms({
                 u_projection: this.projection_matrix,
@@ -322,17 +378,19 @@ class PerspectiveCamera extends Camera {
 // An isometric projection is a specific subset of axonometric projections.
 // 'axis' determines the xy skew applied to a vertex based on its z coordinate, e.g. [0, 1] axis causes buildings to be drawn
 // straight upwards on screen at their true height, [0, .5] would draw them up at half-height, [1, 0] would be sideways, etc.
-class IsometricCamera extends Camera {
+export class IsometricCamera extends Camera {
+    axis: {x: number; y: number};
+    viewport_height: number | null;
 
-    constructor(name, view, options = {}) {
+    constructor(name: string, view: CameraView, options: CameraConfiguration = {}) {
         super(name, view, options);
         this.type = 'isometric';
-        this.axis = options.axis || { x: 0, y: 1 };
-        if (this.axis.length === 2) {
-            this.axis = { x: this.axis[0], y: this.axis[1] }; // allow axis to also be passed as 2-elem array
-        }
+        const axis = options.axis;
+        this.axis = Array.isArray(axis)
+            ? {x: axis[0], y: axis[1]}
+            : axis || {x: 0, y: 1};
 
-        this.position_meters = null;
+        this.position_meters = [];
         this.viewport_height = null;
 
         this.view_matrix = new Float64Array(16);
@@ -356,7 +414,7 @@ class IsometricCamera extends Camera {
         );
     }
 
-    update() {
+    update(): void {
         super.update();
 
         this.viewport_height = this.view.size.css.height * this.view.meters_per_pixel;
@@ -384,17 +442,17 @@ class IsometricCamera extends Camera {
         );
     }
 
-    setupProgram(program, uniform_buffer) {
+    setupProgram(program: Program, uniform_buffer?: UniformBuffer): void {
         if (uniform_buffer) {
             uniform_buffer.setUniforms({
                 u_projection: this.projection_matrix,
-                u_eye: [0, 0, this.viewport_height],
+                u_eye: [0, 0, this.viewport_height ?? 0],
                 u_vanishing_point: [0, 0]
             });
         }
         else {
             program.uniform('Matrix4fv', 'u_projection', this.projection_matrix);
-            program.uniform('3fv', 'u_eye', [0, 0, this.viewport_height]);
+            program.uniform('3fv', 'u_eye', [0, 0, this.viewport_height ?? 0]);
             // program.uniform('3f', 'u_eye', this.viewport_height * this.axis.x, this.viewport_height * this.axis.y, this.viewport_height);
             program.uniform('2fv', 'u_vanishing_point', [0, 0]);
         }
@@ -403,14 +461,14 @@ class IsometricCamera extends Camera {
 }
 
 // Flat projection (e.g. just top-down, no perspective) - a degenerate isometric camera
-class FlatCamera extends IsometricCamera {
+export class FlatCamera extends IsometricCamera {
 
-    constructor(name, view, options = {}) {
+    constructor(name: string, view: CameraView, options: CameraConfiguration = {}) {
         super(name, view, options);
         this.type = 'flat';
     }
 
-    update() {
+    update(): void {
         // Axis is fixed to (0, 0) for flat camera
         this.axis.x = 0;
         this.axis.y = 0;
