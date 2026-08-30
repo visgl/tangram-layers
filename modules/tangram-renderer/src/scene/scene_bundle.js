@@ -1,13 +1,14 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 import Utils from '../utils/utils';
 import * as URLs from '../utils/urls';
 import { isGlobalReference } from './globals';
 
 import JSZip from 'jszip';
-import yaml from 'js-yaml';
+import {parseSceneYamlLegacy} from '../procedures/scene-yaml-legacy';
 
 export class SceneBundle {
 
@@ -202,11 +203,7 @@ export function createSceneBundle(url, path, parent, type = null) {
 }
 
 function parseResource (body) {
-    // jsyaml 'json' option allows duplicate keys
-    // Keeping this for backwards compatibility, but should consider migrating to requiring
-    // unique keys, as this is YAML spec. But Tangram ES currently accepts dupe keys as well,
-    // so should consider how best to unify.
-    return yaml.safeLoad(body, { json: true });
+    return parseSceneYamlLegacy(body);
 }
 
 function loadResource (source) {

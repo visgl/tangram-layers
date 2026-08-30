@@ -6,7 +6,17 @@ import {afterEach, describe, expect, test, vi} from 'vitest';
 import makeWireframeForTriangleElementData from '../src/builders/wireframe';
 import debounce from '../src/utils/debounce';
 import {MethodNotImplemented} from '../src/utils/errors';
+import {vec3} from '../src/utils/gl-matrix';
 import sliceObject from '../src/utils/slice';
+import {
+  addBaseURL,
+  addParamsToURL,
+  extensionForURL,
+  flattenRelativeURL,
+  isLocalURL,
+  isRelativeURL,
+  pathForURL
+} from '../src/utils/urls';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -37,10 +47,32 @@ describe('small renderer utilities', () => {
       .toEqual({alpha: 1, gamma: 3});
   });
 
+  test('keeps renderer vectors at double precision', () => {
+    const vector = vec3.fromValues(1, 2, 3);
+    expect(vector).toBeInstanceOf(Float64Array);
+    expect(Array.from(vector)).toEqual([1, 2, 3]);
+  });
+
   test('describes unimplemented subclass methods', () => {
     const error = new MethodNotImplemented('load');
     expect(error).toBeInstanceOf(Error);
     expect(error.name).toBe('MethodNotImplemented');
     expect(error.message).toBe('Method load must be implemented in subclass');
+  });
+
+  test('resolves and classifies URLs', () => {
+    expect(addBaseURL('../style.yaml', 'https://example.com/scenes/main.yaml'))
+      .toBe('https://example.com/scenes/../style.yaml');
+    expect(pathForURL('https://example.com/scenes/main.yaml?version=1#map')).toBe('https://example.com/scenes/');
+    expect(extensionForURL('https://example.com/scenes/main.yaml?version=1')).toBe('yaml?version=1');
+    expect(flattenRelativeURL('scenes/styles/../main.yaml')).toBe('scenes/main.yaml');
+    expect(isRelativeURL('./main.yaml')).toBe(true);
+    expect(isRelativeURL('https://example.com/main.yaml')).toBe(false);
+    expect(isLocalURL('blob:https://example.com/id')).toBe(true);
+  });
+
+  test('adds URL parameters without duplicating existing values', () => {
+    expect(addParamsToURL('https://example.com/tiles?api_key=existing#map', {api_key: 'new', lang: 'en'}))
+      .toEqual(['https://example.com/tiles?lang=en&api_key=existing#map', [['api_key', 'new']]]);
   });
 });

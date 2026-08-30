@@ -1,6 +1,7 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 // Partial import of gl-matrix via modularized stack-gl forks
 // https://github.com/toji/gl-matrix
@@ -11,8 +12,9 @@
 // Substitute 64-bit version
 // We need the extra precision when multiplying matrices w/mercator projected values
 const vec3 = {
-    fromValues (x, y, z) {
-        var out = new Float64Array(3);
+    /** Creates a high-precision three-component vector. */
+    fromValues(x: number, y: number, z: number): Float64Array {
+        const out = new Float64Array(3);
         out[0] = x;
         out[1] = y;
         out[2] = z;
@@ -53,4 +55,5 @@ const mat4 = {
 };
 
 
+/** High-precision vector operations used by the renderer. */
 export {vec3, mat3, mat4};

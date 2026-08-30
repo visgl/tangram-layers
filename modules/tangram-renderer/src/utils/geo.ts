@@ -5,6 +5,11 @@
 
 // Miscellaneous geo functions
 
+import {
+    projectLngLatToMetersLegacy,
+    unprojectMetersToLngLatLegacy
+} from '../procedures/web-mercator-legacy';
+
 export type Coordinate = number[];
 export type Meters = {x: number; y: number};
 export type Tile = {x: number; y: number; z: number};
@@ -117,14 +122,9 @@ Geo.wrapTile = function({ x, y, z }: Tile, mask = { x: true, y: false }): Tile {
    Convert mercator meters to lat-lng, in-place
 */
 Geo.metersToLatLng = function (c: Coordinate): Coordinate {
-    c[0] /= Geo.half_circumference_meters;
-    c[1] /= Geo.half_circumference_meters;
-
-    c[1] = (2 * Math.atan(Math.exp(c[1] * Math.PI)) - (Math.PI / 2)) / Math.PI;
-
-    c[0] *= 180;
-    c[1] *= 180;
-
+    const converted = unprojectMetersToLngLatLegacy([c[0], c[1]]);
+    c[0] = converted[0];
+    c[1] = converted[1];
     return c;
 };
 
@@ -132,13 +132,9 @@ Geo.metersToLatLng = function (c: Coordinate): Coordinate {
   Convert lat-lng to mercator meters, in-place
 */
 Geo.latLngToMeters = function (c: Coordinate): Coordinate {
-    // Latitude
-    c[1] = Math.log(Math.tan(c[1] * Math.PI / 360 + Math.PI / 4)) / Math.PI;
-    c[1] *= Geo.half_circumference_meters;
-
-    // Longitude
-    c[0] *= Geo.half_circumference_meters / 180;
-
+    const converted = projectLngLatToMetersLegacy([c[0], c[1]]);
+    c[0] = converted[0];
+    c[1] = converted[1];
     return c;
 };
 
