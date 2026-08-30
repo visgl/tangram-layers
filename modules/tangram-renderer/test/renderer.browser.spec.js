@@ -88,6 +88,34 @@ describe('Renderer', function () {
         assert.isTrue(coordinates.every(coordinate => coordinate.z === 3));
     });
 
+    it('invalidates tile visibility only when host projection metadata changes', function () {
+        const renderer = Renderer.create({});
+        const scene = renderer.scene;
+        const createFrame = visibleBounds => new HostFrame({
+            viewport: { width: 800, height: 600 },
+            geographicAnchor: { longitude: -74, latitude: 40.7, zoom: 3 },
+            projection: { type: 'globe', visibleBounds },
+            renderViews: [{
+                id: 'main',
+                camera: {
+                    view: IDENTITY_MATRIX,
+                    projection: IDENTITY_MATRIX,
+                    position: [0, 0, 1]
+                }
+            }]
+        });
+        const updateBounds = sinon.spy(scene.view, 'updateBounds');
+
+        renderer.setFrame(createFrame([-100, 20, -50, 60]));
+        updateBounds.resetHistory();
+        renderer.setFrame(createFrame([-100, 20, -50, 60]));
+
+        assert.isTrue(updateBounds.notCalled);
+
+        renderer.setFrame(createFrame([-101, 20, -50, 60]));
+        assert.isTrue(updateBounds.calledOnce);
+    });
+
     it('selects multiple render views over shared geographic state', function () {
         const renderer = Renderer.create({});
         const scene = renderer.scene;

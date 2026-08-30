@@ -137,8 +137,12 @@ export default class View {
 
     // Set the host projection and its geographic visibility metadata.
     setProjection (projection = { type: 'web-mercator' }) {
+        if (projectionsEqual(this.projection, projection)) {
+            return false;
+        }
         this.projection = projection;
         this.updateBounds();
+        return true;
     }
 
     // Set the map view, can be passed an object with lat/lng and/or zoom
@@ -429,6 +433,23 @@ export default class View {
         return (this.pan_snap_timer <= VIEW_PAN_SNAP_TIME);
     }
 
+}
+
+function projectionsEqual(previous, next) {
+    if (previous === next) {
+        return true;
+    }
+    if (!previous || !next || previous.type !== next.type) {
+        return false;
+    }
+    if (next.type !== 'globe') {
+        return true;
+    }
+    const previousBounds = previous.visibleBounds;
+    const nextBounds = next.visibleBounds;
+    return Array.isArray(previousBounds) && Array.isArray(nextBounds) &&
+        previousBounds.length === nextBounds.length &&
+        previousBounds.every((value, index) => value === nextBounds[index]);
 }
 
 function splitLongitudeRange(west, east) {
