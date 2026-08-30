@@ -18558,6 +18558,7 @@ class StyleManager {
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 function notNull(x) {
   return x != null;
@@ -18662,7 +18663,7 @@ function parseFilter(filter, options) {
 
   // Function filter
   if (typeof filter === 'function') {
-    return [wrap$1(filter.toString() + '(context)')];
+    return [wrap$1(wrap$1(filter.toString()) + '(context)')];
   }
   // Array filter, implicit 'any'
   else if (Array.isArray(filter)) {
@@ -32487,6 +32488,7 @@ class RenderStateManager {
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 class MediaCapture {
   constructor() {
@@ -32600,7 +32602,7 @@ class MediaCapture {
 
   // Starts capturing a video stream from the canvas
   startVideoCapture() {
-    if (typeof window.MediaRecorder !== 'function' || !this.canvas || typeof this.canvas.captureStream !== 'function') {
+    if (typeof window === 'undefined' || typeof window.MediaRecorder !== 'function' || !this.canvas || typeof this.canvas.captureStream !== 'function') {
       topojson.log('warn', 'Video capture (Canvas.captureStream and/or MediaRecorder APIs) not supported by browser');
       return false;
     } else if (this.video_capture) {
@@ -37621,7 +37623,7 @@ return Tangram$1;
 // Script modules can't expose exports
 try {
 	Tangram.debug.ESM = true; // mark build as ES module
-	Tangram.debug.SHA = 'd3fb685a56a4715cfe15f9c51c9ce44dff89ea2d';
+	Tangram.debug.SHA = 'dc2777ff1c531d96f58e5c48e555e702e05ed9bd';
 	if (true === true && typeof window === 'object') {
 	    window.Tangram = Tangram;
 	}

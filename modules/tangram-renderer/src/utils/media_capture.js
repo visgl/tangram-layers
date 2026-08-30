@@ -1,6 +1,7 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 import log from './log';
 import {createObjectURL} from './urls';
@@ -113,7 +114,7 @@ export default class MediaCapture {
 
     // Starts capturing a video stream from the canvas
     startVideoCapture () {
-        if (typeof window.MediaRecorder !== 'function' || !this.canvas || typeof this.canvas.captureStream !== 'function') {
+        if (typeof window === 'undefined' || typeof window.MediaRecorder !== 'function' || !this.canvas || typeof this.canvas.captureStream !== 'function') {
             log('warn', 'Video capture (Canvas.captureStream and/or MediaRecorder APIs) not supported by browser');
             return false;
         }
