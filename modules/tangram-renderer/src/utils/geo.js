@@ -1,8 +1,14 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 // Miscellaneous geo functions
+
+import {
+    projectLngLatToMetersLegacy,
+    unprojectMetersToLngLatLegacy
+} from '../procedures/web-mercator-legacy';
 
 export const Geo = {};
 export default Geo;
@@ -75,14 +81,9 @@ Geo.wrapTile = function({ x, y, z }, mask = { x: true, y: false }) {
    Convert mercator meters to lat-lng, in-place
 */
 Geo.metersToLatLng = function (c) {
-    c[0] /= Geo.half_circumference_meters;
-    c[1] /= Geo.half_circumference_meters;
-
-    c[1] = (2 * Math.atan(Math.exp(c[1] * Math.PI)) - (Math.PI / 2)) / Math.PI;
-
-    c[0] *= 180;
-    c[1] *= 180;
-
+    const converted = unprojectMetersToLngLatLegacy(c);
+    c[0] = converted[0];
+    c[1] = converted[1];
     return c;
 };
 
@@ -90,13 +91,9 @@ Geo.metersToLatLng = function (c) {
   Convert lat-lng to mercator meters, in-place
 */
 Geo.latLngToMeters = function (c) {
-    // Latitude
-    c[1] = Math.log(Math.tan(c[1] * Math.PI / 360 + Math.PI / 4)) / Math.PI;
-    c[1] *= Geo.half_circumference_meters;
-
-    // Longitude
-    c[0] *= Geo.half_circumference_meters / 180;
-
+    const converted = projectLngLatToMetersLegacy(c);
+    c[0] = converted[0];
+    c[1] = converted[1];
     return c;
 };
 

@@ -20,6 +20,7 @@ module.exports = {
         'get-started/getting-started',
         'developer-guide/architecture',
         'developer-guide/view-integration',
+        'developer-guide/visgl-conformance',
         'developer-guide/bundling',
         {type: 'doc', id: 'developer-guide/legacy-concepts', label: 'Tangram concepts'}
       ]

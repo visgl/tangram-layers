@@ -58,6 +58,10 @@ const TANGRAM_RENDERER_FILES = new Set([
   'modules/tangram-renderer/src/labels/point_anchor.js',
   'modules/tangram-renderer/src/labels/point_placement.js',
   'modules/tangram-renderer/src/labels/repeat_group.js',
+  'modules/tangram-renderer/src/procedures/mvt-legacy.js',
+  'modules/tangram-renderer/src/procedures/mvt-properties.ts',
+  'modules/tangram-renderer/src/procedures/scene-yaml-legacy.js',
+  'modules/tangram-renderer/src/procedures/web-mercator-legacy.ts',
   'modules/tangram-renderer/src/lights/ambient_light.glsl',
   'modules/tangram-renderer/src/lights/directional_light.glsl',
   'modules/tangram-renderer/src/lights/light.js',
@@ -152,7 +156,14 @@ const TANGRAM_RENDERER_FILES = new Set([
 // Tangram-derived files that have received substantive vis.gl modifications.
 // Keep the original Tangram notice and append the vis.gl modification notice.
 const VISGL_MODIFIED_TANGRAM_FILES = new Set([
+  'modules/tangram-renderer/src/procedures/mvt-legacy.js',
+  'modules/tangram-renderer/src/procedures/mvt-properties.ts',
+  'modules/tangram-renderer/src/procedures/scene-yaml-legacy.js',
+  'modules/tangram-renderer/src/procedures/web-mercator-legacy.ts',
+  'modules/tangram-renderer/src/scene/scene_bundle.js',
+  'modules/tangram-renderer/src/sources/mvt.js',
   'modules/tangram-renderer/src/styles/filter.js',
+  'modules/tangram-renderer/src/utils/geo.js',
   'modules/tangram-renderer/src/utils/media_capture.js',
   'modules/tangram-renderer/src/utils/errors.ts',
   'modules/tangram-renderer/src/utils/functions.ts',
