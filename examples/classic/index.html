@@ -34,17 +34,10 @@ http://mapzen.com/tangram
     <script defer src="lib/FileSaver.js"></script> <!-- used in the demo to save screenshots -->
     <script defer src="lib/keymaster.js"></script> <!-- Keymaster handles keyboard input -->
 
-    <!-- Tangram library -->
-    <!-- modern browsers load the optimized .mjs file, older browsers (IE11) load the transpiled .js file -->
-    <script type="module" src="../../modules/tangram-renderer/dist/tangram.debug.mjs"></script>
-    <script nomodule src="../../modules/tangram-renderer/dist/tangram.debug.js"></script>
-
-    <!-- Tangram demo code -->
-    <script defer src="main.js"></script>
+    <!-- Tangram demo code and renderer -->
+    <script type="module" src="main.js"></script>
 
     <!-- Tangram demo extras -->
-    <script defer src="app/url.js"></script> <!-- URL parsing -->
-    <script defer src="app/key.js"></script> <!-- demo key setup -->
     <script type="module" src="app/settings-panel.js"></script> <!-- deck.gl-community settings UI -->
 
     <!-- Uncomment to enable WebGL stats for debugging -->

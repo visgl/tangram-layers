@@ -4,8 +4,6 @@
 
 import {getVitestConfig} from '@vis.gl/dev-tools';
 
-const runLegacyBrowserTests = process.env.TANGRAM_VITEST_LEGACY === '1';
-
 export default getVitestConfig({
   overrides: {
     optimizeDeps: {include: ['sinon']},
@@ -24,26 +22,32 @@ export default getVitestConfig({
       }
     ]
   },
+  coverage: {
+    provider: 'v8',
+    reporter: ['text', 'lcov', 'json-summary'],
+    include: ['modules/tangram-renderer/src/**/*.{js,ts}'],
+    exclude: ['**/*.d.ts']
+  },
   projects: {
     node: {
       test: {
-        include: ['test/**/*.node.spec.js']
+        include: ['test/**/*.node.spec.{js,ts}']
       }
     },
     browser: {
       test: {
-        include: ['test/**/*.browser.spec.js']
+        include: ['test/**/*.browser.spec.{js,ts}']
       }
     },
     headless: {
       test: {
         include: [
-          'test/**/*.browser.spec.js',
-          ...(runLegacyBrowserTests ? ['modules/**/test/**/*_spec.js'] : [])
+          'test/**/*.browser.spec.{js,ts}',
+          'modules/**/test/**/*.browser.spec.{js,ts}'
         ],
-        exclude: ['modules/tangram-renderer/test/leaflet_layer_spec.js'],
-        globals: runLegacyBrowserTests,
-        setupFiles: runLegacyBrowserTests ? ['./test/vitest-browser-setup.js'] : []
+        exclude: ['modules/tangram-renderer/test/leaflet_layer.browser.spec.js'],
+        globals: true,
+        setupFiles: ['./test/vitest-browser-setup.js']
       }
     }
   }

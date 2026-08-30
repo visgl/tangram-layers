@@ -45,6 +45,7 @@ const config = [{
         resolve({
             browser: true,
             preferBuiltins: false,
+            extensions: ['.mjs', '.js', '.json', '.node', '.ts'],
         }),
         commonjs({
             // Avoids Webpack minification errors
@@ -57,6 +58,7 @@ const config = [{
 
         babel({
             exclude: 'node_modules/**',
+            extensions: ['.js', '.mjs', '.ts'],
             babelHelpers: 'runtime',
             configFile: '../../babel.config.js'
         }),
