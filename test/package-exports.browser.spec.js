@@ -18,6 +18,10 @@ import Tangram, {
 } from '@vis.gl/tangram-renderer';
 import {TangramStyleSheetSchema} from '@vis.gl/tangram-renderer/style-schema';
 import tangramStyleJsonSchema from '@vis.gl/tangram-renderer/tangram-style.schema.json';
+import {
+  WebXRMapView,
+  WebXRPresentation
+} from '@vis.gl/tangram-layers/experimental/webxr';
 
 describe('published package entrypoints', () => {
   it('exports the renderer compatibility surface', () => {
@@ -34,6 +38,11 @@ describe('published package entrypoints', () => {
     expect(createTangramLayerClass).toBeTypeOf('function');
     expect(getExternalCameraFrame).toBeTypeOf('function');
     expect(getFirstPersonViewFrame).toBeTypeOf('function');
+  });
+
+  it('exports WebXR only from the experimental subpath', () => {
+    expect(WebXRMapView).toBeTypeOf('function');
+    expect(WebXRPresentation).toBeTypeOf('function');
   });
 
   it('exports the Zod style schema and generated JSON Schema', () => {

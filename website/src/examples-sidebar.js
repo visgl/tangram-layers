@@ -27,7 +27,8 @@ const sidebars = {
       items: [
         {type: 'doc', id: 'webxr', label: 'GlobeView'},
         {type: 'doc', id: 'webxr-map-view', label: 'MapView'},
-        {type: 'doc', id: 'webxr-first-person', label: 'FirstPersonView'}
+        {type: 'doc', id: 'webxr-first-person', label: 'FirstPersonView'},
+        {type: 'doc', id: 'webxr-thor', label: 'Thor gestures'}
       ]
     },
     {

@@ -24,13 +24,16 @@ Copyright (c) vis.gl contributors
         <h1 id="webxr-title">Tangram WebXR GlobeView</h1>
         <p id="webxr-status" role="status">Preparing the renderer…</p>
         <div class="webxr-actions">
+          <button id="webxr-mono" type="button">Mono</button>
+          <button id="webxr-stereo" type="button">Stereo Preview</button>
           <button id="webxr-enter" type="button">Enter VR</button>
           <button id="webxr-exit" type="button" hidden>Exit VR</button>
+          <button id="webxr-thor-enable" type="button" hidden>Enable webcam gestures</button>
         </div>
         <p class="webxr-hint">
           This experimental example renders one Tangram scene into the per-eye framebuffers and
-          camera matrices supplied by luma.gl. Without an immersive runtime, Enter VR opens a
-          side-by-side stereo preview. Drag and scroll to explore; FirstPersonView also supports
+          camera matrices supplied by luma.gl. Stereo Preview is always available without an
+          immersive runtime. Drag and scroll to explore; FirstPersonView also supports
           the deck.gl controller's arrow-key navigation.
         </p>
       </aside>
@@ -48,7 +51,10 @@ Copyright (c) vis.gl contributors
           "@luma.gl/webgl": "https://esm.sh/@luma.gl/webgl@9.4.0-beta.3?bundle&external=@luma.gl/core",
           "@luma.gl/webgpu": "https://esm.sh/@luma.gl/webgpu@9.4.0-beta.3?bundle&external=@luma.gl/core",
           "@math.gl/core": "https://esm.sh/@math.gl/core@4.1.0?bundle",
+          "@mediapipe/tasks-vision": "https://esm.sh/@mediapipe/tasks-vision@0.10.22-rc.20250304?bundle",
+          "react": "https://esm.sh/react@19.1.1?bundle",
           "@vis.gl/tangram-layers": "../../modules/tangram-layers/dist/index.js?webxr=1",
+          "@vis.gl/tangram-layers/experimental/webxr": "../../modules/tangram-layers/dist/experimental/webxr.js?webxr=1",
           "@vis.gl/tangram-renderer": "../../modules/tangram-renderer/dist/index.js?webxr=1",
           "mjolnir.js": "https://esm.sh/mjolnir.js@3.1.0?bundle"
         }

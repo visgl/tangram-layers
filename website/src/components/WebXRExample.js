@@ -27,7 +27,8 @@ function appendScript(url, type = 'text/javascript') {
 const VIEW_LABELS = {
   globe: 'GlobeView',
   map: 'MapView',
-  firstPerson: 'FirstPersonView'
+  firstPerson: 'FirstPersonView',
+  thor: 'Thor gestures'
 };
 
 let webXRExampleMountId = 0;
@@ -35,6 +36,7 @@ let webXRExampleMountId = 0;
 export default function WebXRExample({viewMode = 'globe'}) {
   const exampleBaseUrl = useBaseUrl('/examples/webxr/');
   const layersUrl = useBaseUrl('/modules/tangram-layers/dist/index.js');
+  const webXRUrl = useBaseUrl('/modules/tangram-layers/dist/experimental/webxr.js');
   const rendererUrl = useBaseUrl('/modules/tangram-renderer/dist/index.js');
   const [errorMessage, setErrorMessage] = useState(null);
   const appendedElements = useRef([]);
@@ -64,7 +66,11 @@ export default function WebXRExample({viewMode = 'globe'}) {
         '@luma.gl/webgpu':
           'https://esm.sh/@luma.gl/webgpu@9.4.0-beta.3?bundle&external=@luma.gl/core',
         '@math.gl/core': 'https://esm.sh/@math.gl/core@4.1.0?bundle',
+        '@mediapipe/tasks-vision':
+          'https://esm.sh/@mediapipe/tasks-vision@0.10.22-rc.20250304?bundle',
+        react: 'https://esm.sh/react@19.1.1?bundle',
         '@vis.gl/tangram-layers': `${layersUrl}?embedded=webxr`,
+        '@vis.gl/tangram-layers/experimental/webxr': `${webXRUrl}?embedded=webxr`,
         '@vis.gl/tangram-renderer': `${rendererUrl}?embedded=webxr`,
         'mjolnir.js': 'https://esm.sh/mjolnir.js@3.1.0?bundle'
       }
@@ -99,7 +105,7 @@ export default function WebXRExample({viewMode = 'globe'}) {
       delete window.tangramWebXRExampleDestroy;
       delete window.tangramWebXRViewMode;
     };
-  }, [exampleBaseUrl, layersUrl, rendererUrl, viewMode]);
+  }, [exampleBaseUrl, layersUrl, rendererUrl, viewMode, webXRUrl]);
 
   return (
     <div className="webxr-example-embed">
@@ -120,20 +126,37 @@ export default function WebXRExample({viewMode = 'globe'}) {
             Preparing the renderer…
           </p>
           <div className="webxr-actions">
+            <button id="webxr-mono" type="button">
+              Mono
+            </button>
+            <button id="webxr-stereo" type="button">
+              Stereo Preview
+            </button>
             <button id="webxr-enter" type="button">
               Enter VR
             </button>
             <button id="webxr-exit" type="button" hidden>
               Exit VR
             </button>
+            {viewMode === 'thor' ? (
+              <button id="webxr-thor-enable" type="button">
+                Enable webcam gestures
+              </button>
+            ) : null}
           </div>
           <p className="webxr-hint">
             luma.gl supplies the XR session, per-eye framebuffers and camera matrices. Tangram keeps
             one shared scene and tile cache. Drag and scroll to explore; FirstPersonView also
             supports the deck.gl controller&apos;s arrow-key navigation.
           </p>
+          {viewMode === 'thor' ? (
+            <p className="webxr-hint">
+              Thor uses webcam and MediaPipe gestures as desktop controls. It does not represent
+              native headset hand tracking or WebXR controllers.
+            </p>
+          ) : null}
           <p className="webxr-hint">
-            Without a headset, Enter VR opens a side-by-side stereo preview. Install the{' '}
+            Stereo Preview is always available without platform XR support. Install the{' '}
             <a href="https://chromewebstore.google.com/detail/immersive-web-emulator/cgffilbpcibhmcfbgggfhfolhkfbhmik">
               Immersive Web Emulator
             </a>{' '}

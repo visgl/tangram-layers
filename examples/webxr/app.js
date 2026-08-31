@@ -7,17 +7,17 @@ import {AnimationLoop, Timeline} from '@luma.gl/engine';
 import {WebXRAnimationFrameProvider, WebXRManager} from '@luma.gl/experimental';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
-import {Matrix4} from '@math.gl/core';
 import {ClassicWebGLRenderer} from '@vis.gl/tangram-renderer';
 import {
   WebXRFirstPersonView,
   WebXRGlobeView,
   WebXRMapView,
-  WebXRViewManager
+  WebXRInputAdapter,
+  WebXRViewManager,
+  createXRPlacementMatrix,
+  setWebXRSessionWithFallback
 } from './webxr-views.js';
 
-const GLOBE_RADIUS = 256;
-const TANGRAM_HALF_WORLD_METERS = 20037508.342789244;
 const PREVIEW_RADIUS_METERS = 0.72;
 const NEW_YORK_LONGITUDE = -74.009764;
 const NEW_YORK_LATITUDE = 40.705319;
@@ -43,6 +43,13 @@ const VIEW_MODES = {
     zoom: 16,
     projection: {type: 'web-mercator'},
     tileBuffer: 2
+  },
+  thor: {
+    id: 'thor',
+    label: 'Thor gestures',
+    zoom: 16,
+    projection: {type: 'web-mercator'},
+    tileBuffer: 2
   }
 };
 const canvas = document.getElementById('webxr-canvas');
@@ -51,6 +58,9 @@ const stereoContext = stereoCanvas.getContext('2d');
 const container = document.getElementById('webxr-container');
 const enterButton = document.getElementById('webxr-enter');
 const exitButton = document.getElementById('webxr-exit');
+const monoButton = document.getElementById('webxr-mono');
+const stereoButton = document.getElementById('webxr-stereo');
+const thorButton = document.getElementById('webxr-thor-enable');
 const statusElement = document.getElementById('webxr-status');
 const titleElement = document.getElementById('webxr-title');
 const deviceButtons = document.querySelectorAll('[data-webxr-device]');
@@ -59,9 +69,14 @@ const requestedDeviceType = query.get('device') === 'webgpu' ? 'webgpu' : 'webgl
 const requestedViewMode = window.tangramWebXRViewMode || query.get('view');
 const viewMode = VIEW_MODES[requestedViewMode] || VIEW_MODES.globe;
 const viewManager = createWebXRViewManager(viewMode.id);
+const webXRInputAdapter = new WebXRInputAdapter();
+
+if (thorButton && viewMode.id === 'thor') {
+  thorButton.hidden = false;
+}
 
 function createWebXRViewManager(mode) {
-  if (mode === 'map') {
+  if (mode === 'map' || mode === 'thor') {
     return new WebXRViewManager({
       view: new WebXRMapView({
         id: 'map',
@@ -116,6 +131,8 @@ let stereoPreview = false;
 let immersiveVRSupported = false;
 let xrReferenceSpaceType = 'local-floor';
 let destroyed = false;
+let thorController = null;
+let lastXRFrameTime = null;
 
 const scene = createTronScene({portable: requestedDeviceType === 'webgpu'});
 
@@ -141,6 +158,15 @@ function setStatus(message, type = '') {
   statusElement.dataset.type = type;
 }
 
+function updatePresentationButtons(mode) {
+  monoButton.classList.toggle('is-active', mode === 'mono');
+  stereoButton.classList.toggle('is-active', mode === 'stereo-preview');
+  enterButton.classList.toggle('is-active', mode === 'immersive-vr');
+  monoButton.setAttribute('aria-pressed', String(mode === 'mono'));
+  stereoButton.setAttribute('aria-pressed', String(mode === 'stereo-preview'));
+  enterButton.setAttribute('aria-pressed', String(mode === 'immersive-vr'));
+}
+
 function resizePreviewCanvas() {
   const canvasContext = device.getDefaultCanvasContext();
   const width = Math.max(1, Math.round(canvas.clientWidth * window.devicePixelRatio));
@@ -155,28 +181,33 @@ function resizePreviewCanvas() {
 function createPlacementMatrix({immersive, time}) {
   const viewState = viewManager.getViewState();
   if (viewMode.id === 'globe') {
-    const scale =
-      (PREVIEW_RADIUS_METERS / GLOBE_RADIUS) * 2 ** clamp(viewState.zoom - 2, -1, 1.5);
-    const placement = new Matrix4();
-    if (immersive) {
-      placement.translate([0, 1.35, -2.35]);
-    } else {
-      placement.translate([0.5, 0, -2.6]);
-    }
-    return placement
-      .rotateX((-viewState.latitude * Math.PI) / 180)
-      .rotateY(time * 0.00004 - (viewState.longitude * Math.PI) / 180)
-      .scale([scale, scale, scale]);
+    return createXRPlacementMatrix(
+      {
+        type: 'globe',
+        anchor: [viewState.longitude, viewState.latitude, 0],
+        pose: {position: immersive ? [0, 1.35, -2.35] : [0.5, 0, -2.6]},
+        radius: PREVIEW_RADIUS_METERS * 2 ** clamp(viewState.zoom - 2, -1, 1.5),
+        rotation: (-time * 0.00004 * 180) / Math.PI
+      },
+      viewState
+    );
   }
 
-  const centerMeters = longitudeLatitudeToMeters(viewState.longitude, viewState.latitude);
-  if (viewMode.id === 'map') {
-    const scale = 1 / 2500;
-    return new Matrix4()
-      .translate(immersive ? [0, 0.72, -1.8] : [0.25, -0.48, -2.4])
-      .rotateX(immersive ? -Math.PI / 2 : -Math.PI * 0.36)
-      .scale([scale, scale, scale])
-      .translate([-centerMeters[0], -centerMeters[1], 0]);
+  if (viewMode.id === 'map' || viewMode.id === 'thor') {
+    const extraAngle = immersive ? 0 : Math.PI * 0.14;
+    return createXRPlacementMatrix(
+      {
+        type: 'map',
+        anchor: [viewState.longitude, viewState.latitude, 0],
+        pose: {
+          position: immersive ? [0, 0.72, -1.8] : [0.25, -0.48, -2.4],
+          orientation: [Math.sin(extraAngle / 2), 0, 0, Math.cos(extraAngle / 2)]
+        },
+        metersPerXRUnit: 2500,
+        surface: {type: 'unbounded'}
+      },
+      viewState
+    );
   }
 
   const groundY = immersive
@@ -184,10 +215,16 @@ function createPlacementMatrix({immersive, time}) {
       ? 0
       : -1.6
     : 0;
-  return new Matrix4()
-    .translate([0, groundY, 0])
-    .rotateX(-Math.PI / 2)
-    .translate([-centerMeters[0], -centerMeters[1], 0]);
+  return createXRPlacementMatrix(
+    {
+      type: 'first-person',
+      origin: [viewState.longitude, viewState.latitude, 0],
+      pose: {position: [0, groundY, 0]},
+      position: viewManager.placement.position || [0, 0, 0],
+      bearing: viewState.bearing || 0
+    },
+    viewState
+  );
 }
 
 function createHostFrame({viewport, renderViews, activeRenderViewId}) {
@@ -291,6 +328,15 @@ function renderXRFrame(time, xrFrame) {
   if (!frameState || frameState.views.length === 0) {
     return;
   }
+  const elapsedSeconds =
+    lastXRFrameTime === null ? 0 : clamp((time - lastXRFrameTime) / 1000, 0, 0.1);
+  lastXRFrameTime = time;
+  for (const intent of webXRInputAdapter.update(
+    webXRManager.getInputState(xrFrame) || [],
+    elapsedSeconds
+  )) {
+    viewManager.dispatchInteractionIntent(intent);
+  }
   const placementMatrix = createPlacementMatrix({immersive: true, time});
   const clearedFramebuffers = new Set();
   const renderViews = viewManager.makeXRRenderViews({frameState, placementMatrix});
@@ -332,16 +378,7 @@ function renderXRFrame(time, xrFrame) {
 }
 
 async function setXRSession(session) {
-  try {
-    await webXRManager.setSession(session, {referenceSpaceType: 'local-floor'});
-    xrReferenceSpaceType = 'local-floor';
-  } catch (error) {
-    if (error?.name !== 'NotSupportedError') {
-      throw error;
-    }
-    await webXRManager.setSession(session, {referenceSpaceType: 'local'});
-    xrReferenceSpaceType = 'local';
-  }
+  xrReferenceSpaceType = await setWebXRSessionWithFallback(webXRManager, session);
 }
 
 async function enterVR() {
@@ -375,12 +412,14 @@ async function enterVR() {
   try {
     await setXRSession(session);
     xrSession = session;
+    lastXRFrameTime = null;
     session.addEventListener('end', clearXRSession, {once: true});
     animationLoop.setProps({
       animationFrameProvider: new WebXRAnimationFrameProvider(session)
     });
     enterButton.hidden = true;
     exitButton.hidden = false;
+    updatePresentationButtons('immersive-vr');
     setStatus(`Rendering stereoscopic Tangram ${viewMode.label} through ${device.type}.`, 'success');
   } catch (error) {
     await session.end().catch(() => {});
@@ -399,9 +438,8 @@ function enterStereoPreview() {
   }
   stereoPreview = true;
   container.classList.add('is-stereo');
-  enterButton.hidden = true;
   enterButton.disabled = false;
-  exitButton.hidden = false;
+  updatePresentationButtons('stereo-preview');
   setStatus(
     `Rendering split-screen Tangram ${viewMode.label} with distinct left- and right-eye cameras.`,
     'success'
@@ -417,15 +455,18 @@ async function exitVR() {
 
 function clearXRSession() {
   xrSession = null;
+  lastXRFrameTime = null;
   stereoPreview = false;
   xrReferenceSpaceType = 'local-floor';
   container.classList.remove('is-stereo');
   webXRManager?.clearSession();
+  webXRInputAdapter.reset();
   if (!destroyed) {
     animationLoop.setProps({animationFrameProvider: undefined});
     enterButton.hidden = false;
     enterButton.disabled = false;
     exitButton.hidden = true;
+    updatePresentationButtons('mono');
     setStatus(`VR session ended. The desktop ${viewMode.label} preview remains active.`, 'success');
   }
 }
@@ -491,6 +532,7 @@ async function initialize() {
     onViewStateChange: () => animationLoop.setNeedsRedraw('deck.gl controller update')
   });
   await animationLoop.start();
+  updatePresentationButtons('mono');
 
   if (query.get('stereo') === '1') {
     enterStereoPreview();
@@ -520,6 +562,32 @@ async function initialize() {
   );
 }
 
+async function enableThorGestures() {
+  if (!thorButton || thorController) return;
+  thorButton.disabled = true;
+  setStatus('Loading Thor and requesting webcam access…');
+  try {
+    const {startThorGestures} = await import('./thor-adapter.js');
+    thorController = await startThorGestures({
+      presentation: viewManager,
+      canvas,
+      onIntent: (intent) => {
+        if (intent.type === 'signal') {
+          setStatus(`Thor signal: ${intent.action}`, 'success');
+        }
+      }
+    });
+    thorButton.textContent = 'Thor gestures enabled';
+    setStatus(
+      'Webcam gestures control the shared logical view in mono and stereo preview.',
+      'success'
+    );
+  } catch (error) {
+    thorButton.disabled = false;
+    setStatus(error.message, 'error');
+  }
+}
+
 function destroy() {
   if (destroyed) {
     return;
@@ -527,6 +595,7 @@ function destroy() {
   destroyed = true;
   void exitVR();
   animationLoop?.stop();
+  thorController?.stop();
   viewManager.finalize();
   renderer?.destroy();
   webXRManager?.destroy();
@@ -539,6 +608,24 @@ enterButton.addEventListener('click', () => {
     setStatus(error.message, 'error');
   });
 });
+monoButton.addEventListener('click', () => {
+  if (xrSession) {
+    void exitVR();
+  } else {
+    stereoPreview = false;
+    container.classList.remove('is-stereo');
+    updatePresentationButtons('mono');
+    setStatus(`Interactive mono ${viewMode.label} preview.`, 'success');
+  }
+});
+stereoButton.addEventListener('click', () => {
+  if (xrSession) {
+    void xrSession.end().then(enterStereoPreview);
+  } else {
+    enterStereoPreview();
+  }
+});
+thorButton?.addEventListener('click', () => void enableThorGestures());
 exitButton.addEventListener('click', () => void exitVR());
 canvas.addEventListener('pointerdown', () => canvas.focus());
 canvas.addEventListener('contextmenu', (event) => event.preventDefault());
@@ -649,13 +736,4 @@ function createTronScene({portable}) {
       }
     }
   };
-}
-
-function longitudeLatitudeToMeters(longitude, latitude) {
-  const clampedLatitude = Math.max(-85.05112878, Math.min(85.05112878, latitude));
-  return [
-    (longitude / 180) * TANGRAM_HALF_WORLD_METERS,
-    (Math.log(Math.tan(((90 + clampedLatitude) * Math.PI) / 360)) / Math.PI) *
-      TANGRAM_HALF_WORLD_METERS
-  ];
 }

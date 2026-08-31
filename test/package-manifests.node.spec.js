@@ -15,15 +15,18 @@ async function readPackageManifest(packageDirectory) {
 }
 
 describe('workspace package manifests', () => {
-  it('publishes the renderer and layer entrypoints', async () => {
+  it('defines private renderer and layer entrypoints', async () => {
     const renderer = await readPackageManifest('modules/tangram-renderer');
     const layers = await readPackageManifest('modules/tangram-layers');
 
     expect(renderer.name).toBe('@vis.gl/tangram-renderer');
+    expect(renderer.private).toBe(true);
     expect(renderer.types).toBe('src/index.d.ts');
     expect(renderer.exports['.'].types).toBe('./src/index.d.ts');
     expect(renderer.exports['.'].import).toBe('./dist/index.js');
     expect(layers.name).toBe('@vis.gl/tangram-layers');
+    expect(layers.private).toBe(true);
     expect(layers.exports['.'].import).toBe('./dist/index.js');
+    expect(layers.exports['./experimental/webxr'].import).toBe('./dist/experimental/webxr.js');
   });
 });

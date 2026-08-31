@@ -15,6 +15,9 @@ await rm(resolve(staticDirectory, 'modules'), {recursive: true, force: true});
 await mkdir(resolve(staticDirectory, 'examples'), {recursive: true});
 await mkdir(resolve(staticDirectory, 'modules/tangram-renderer/dist'), {recursive: true});
 await mkdir(resolve(staticDirectory, 'modules/tangram-layers/dist'), {recursive: true});
+await mkdir(resolve(staticDirectory, 'modules/tangram-layers/dist/experimental'), {
+  recursive: true
+});
 
 await cp(
   resolve(repositoryDirectory, 'examples/classic/dist'),
@@ -85,5 +88,9 @@ await cp(
 await cp(
   resolve(repositoryDirectory, 'modules/tangram-layers/dist/index.js'),
   resolve(staticDirectory, 'modules/tangram-layers/dist/index.js')
+);
+await cp(
+  resolve(repositoryDirectory, 'modules/tangram-layers/dist/experimental/webxr.js'),
+  resolve(staticDirectory, 'modules/tangram-layers/dist/experimental/webxr.js')
 );
 await cp(resolve(repositoryDirectory, 'robots.txt'), resolve(staticDirectory, 'robots.txt'));
