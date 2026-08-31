@@ -131,6 +131,10 @@
   height: 680px;
 }
 
+.webxr-example-embed #webxr-canvas {
+  touch-action: none;
+}
+
 .classic-playground-embed #classic-playground-frame {
   position: relative;
   height: 680px;

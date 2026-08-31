@@ -2254,7 +2254,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@deck.gl/core@npm:^9.4.0-alpha.2":
+"@deck.gl/core@npm:9.4.0-alpha.2, @deck.gl/core@npm:^9.4.0-alpha.2":
   version: 9.4.0-alpha.2
   resolution: "@deck.gl/core@npm:9.4.0-alpha.2"
   dependencies:
@@ -6432,7 +6432,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@vis.gl/tangram-layers@workspace:modules/tangram-layers":
+"@vis.gl/tangram-layers@workspace:^, @vis.gl/tangram-layers@workspace:modules/tangram-layers":
   version: 0.0.0-use.local
   resolution: "@vis.gl/tangram-layers@workspace:modules/tangram-layers"
   dependencies:
@@ -6498,6 +6498,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@vis.gl/tangram-webxr-example@workspace:examples/webxr"
   dependencies:
+    "@deck.gl/core": "npm:9.4.0-alpha.2"
     "@luma.gl/core": "npm:9.4.0-beta.3"
     "@luma.gl/engine": "npm:9.4.0-beta.3"
     "@luma.gl/experimental": "npm:9.4.0-beta.3"
@@ -6505,7 +6506,9 @@ __metadata:
     "@luma.gl/webgl": "npm:9.4.0-beta.3"
     "@luma.gl/webgpu": "npm:9.4.0-beta.3"
     "@math.gl/core": "npm:^4.1.0"
+    "@vis.gl/tangram-layers": "workspace:^"
     "@vis.gl/tangram-renderer": "workspace:^"
+    mjolnir.js: "npm:^3.1.0"
   languageName: unknown
   linkType: soft
 
@@ -14366,7 +14369,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mjolnir.js@npm:^3.1.0-beta.3":
+"mjolnir.js@npm:^3.1.0, mjolnir.js@npm:^3.1.0-beta.3":
   version: 3.1.0
   resolution: "mjolnir.js@npm:3.1.0"
   checksum: 10c0/f042757190671a4072e13dd81dd075d92390643323e972080779b9521e3e296e9c4702fc1b42150ebd67d137f7a01b124b9548ce90aa934e21f2ba4fc240f1f8

@@ -3,25 +3,24 @@
 // Copyright (c) vis.gl contributors
 
 import {luma} from '@luma.gl/core';
-import {FirstPersonViewport, WebMercatorViewport} from '@deck.gl/core';
-import {AnimationLoop} from '@luma.gl/engine';
+import {AnimationLoop, Timeline} from '@luma.gl/engine';
 import {WebXRAnimationFrameProvider, WebXRManager} from '@luma.gl/experimental';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
 import {ClassicWebGLRenderer} from '@vis.gl/tangram-renderer';
+import {
+  WebXRFirstPersonView,
+  WebXRGlobeView,
+  WebXRMapView,
+  WebXRViewManager
+} from './webxr-views.js';
 
 const GLOBE_RADIUS = 256;
 const PREVIEW_RADIUS_METERS = 0.72;
 const NEW_YORK_LONGITUDE = -74.009764;
 const NEW_YORK_LATITUDE = 40.705319;
 const FULL_GLOBE_BOUNDS = [-180, -85, 180, 85];
-const TANGRAM_HALF_WORLD_METERS = 20037508.342789244;
-const DECK_WORLD_SIZE = 512;
-const NEW_YORK_METERS = longitudeLatitudeToMeters(
-  NEW_YORK_LONGITUDE,
-  NEW_YORK_LATITUDE
-);
 const VIEW_MODES = {
   globe: {
     id: 'globe',
@@ -45,7 +44,6 @@ const VIEW_MODES = {
     tileBuffer: 2
   }
 };
-
 const canvas = document.getElementById('webxr-canvas');
 const stereoCanvas = document.getElementById('webxr-stereo-canvas');
 const stereoContext = stereoCanvas.getContext('2d');
@@ -59,6 +57,54 @@ const query = new URLSearchParams(window.location.search);
 const requestedDeviceType = query.get('device') === 'webgpu' ? 'webgpu' : 'webgl';
 const requestedViewMode = window.tangramWebXRViewMode || query.get('view');
 const viewMode = VIEW_MODES[requestedViewMode] || VIEW_MODES.globe;
+const viewManager = createWebXRViewManager(viewMode.id);
+
+function createWebXRViewManager(mode) {
+  if (mode === 'map') {
+    return new WebXRViewManager({
+      view: new WebXRMapView({
+        id: 'map',
+        controller: {
+          dragPan: true,
+          dragRotate: true,
+          doubleClickZoom: true,
+          scrollZoom: true,
+          touchZoom: true,
+          touchRotate: true,
+          keyboard: true,
+          maxPitch: 60
+        }
+      }),
+      viewState: {
+        longitude: NEW_YORK_LONGITUDE,
+        latitude: NEW_YORK_LATITUDE,
+        zoom: 15,
+        bearing: -20,
+        pitch: 45
+      }
+    });
+  }
+  if (mode === 'firstPerson') {
+    return new WebXRViewManager({
+      view: new WebXRFirstPersonView({id: 'first-person', controller: true, far: 20000}),
+      viewState: {
+        longitude: NEW_YORK_LONGITUDE,
+        latitude: NEW_YORK_LATITUDE,
+        position: [0, 0, 200],
+        bearing: 0,
+        pitch: 45
+      }
+    });
+  }
+  return new WebXRViewManager({
+    view: new WebXRGlobeView({id: 'globe', controller: true}),
+    viewState: {
+      longitude: NEW_YORK_LONGITUDE,
+      latitude: NEW_YORK_LATITUDE,
+      zoom: 2
+    }
+  });
+}
 
 let device;
 let renderer;
@@ -70,7 +116,7 @@ let immersiveVRSupported = false;
 let xrReferenceSpaceType = 'local-floor';
 let destroyed = false;
 
-const scene = createVectorScene();
+const scene = createTronScene({portable: requestedDeviceType === 'webgpu'});
 
 if (titleElement) {
   titleElement.textContent = `WebXR ${viewMode.label}`;
@@ -106,24 +152,30 @@ function resizePreviewCanvas() {
 }
 
 function createPlacementMatrix({immersive, time}) {
+  const viewState = viewManager.getViewState();
   if (viewMode.id === 'globe') {
-    const scale = PREVIEW_RADIUS_METERS / GLOBE_RADIUS;
+    const scale =
+      (PREVIEW_RADIUS_METERS / GLOBE_RADIUS) * 2 ** clamp(viewState.zoom - 2, -1, 1.5);
     const placement = new Matrix4();
     if (immersive) {
       placement.translate([0, 1.35, -2.35]);
     } else {
       placement.translate([0.5, 0, -2.6]);
     }
-    return placement.rotateY(time * 0.00004).scale([scale, scale, scale]);
+    return placement
+      .rotateX((-viewState.latitude * Math.PI) / 180)
+      .rotateY(time * 0.00004 - (viewState.longitude * Math.PI) / 180)
+      .scale([scale, scale, scale]);
   }
 
+  const centerMeters = longitudeLatitudeToMeters(viewState.longitude, viewState.latitude);
   if (viewMode.id === 'map') {
     const scale = 1 / 2500;
     return new Matrix4()
       .translate(immersive ? [0, 0.72, -1.8] : [0.25, -0.48, -2.4])
       .rotateX(immersive ? -Math.PI / 2 : -Math.PI * 0.36)
       .scale([scale, scale, scale])
-      .translate([-NEW_YORK_METERS[0], -NEW_YORK_METERS[1], 0]);
+      .translate([-centerMeters[0], -centerMeters[1], 0]);
   }
 
   const groundY = immersive
@@ -134,108 +186,25 @@ function createPlacementMatrix({immersive, time}) {
   return new Matrix4()
     .translate([0, groundY, 0])
     .rotateX(-Math.PI / 2)
-    .translate([-NEW_YORK_METERS[0], -NEW_YORK_METERS[1], 0]);
-}
-
-function createPreviewViewMatrix() {
-  if (viewMode.id === 'firstPerson') {
-    return new Matrix4().lookAt({
-      eye: [0, 1.65, 1.2],
-      center: [0, 0, -12],
-      up: [0, 1, 0]
-    });
-  }
-  return new Matrix4();
-}
-
-function createStereoPreviewViewMatrix(eyeOffset) {
-  const target =
-    viewMode.id === 'globe'
-      ? [0, 1.35, -2.35]
-      : viewMode.id === 'map'
-        ? [0, 0.72, -1.8]
-        : [0, 1.25, -10];
-  return new Matrix4().lookAt({
-    eye: [eyeOffset, 1.62, 0],
-    center: target,
-    up: [0, 1, 0]
-  });
-}
-
-function createRenderView({id, viewport, projectionMatrix, viewMatrix, placementMatrix}) {
-  const placedViewMatrix = new Matrix4(viewMatrix).multiplyRight(placementMatrix);
-  const viewProjectionMatrix = new Matrix4(projectionMatrix).multiplyRight(placedViewMatrix);
-  return {
-    id,
-    viewport,
-    camera: {
-      view: placedViewMatrix,
-      projection: viewMode.id === 'globe' ? viewProjectionMatrix : projectionMatrix,
-      position: [0, 0, 0]
-    }
-  };
-}
-
-function createDeckRenderView({id, width, height, eyeOffset = 0}) {
-  const longitudeOffset =
-    eyeOffset / (111320 * Math.cos((NEW_YORK_LATITUDE * Math.PI) / 180));
-  const viewport =
-    viewMode.id === 'map'
-      ? new WebMercatorViewport({
-          width,
-          height,
-          longitude: NEW_YORK_LONGITUDE + longitudeOffset,
-          latitude: NEW_YORK_LATITUDE,
-          zoom: 15,
-          bearing: -20,
-          pitch: 45
-        })
-      : new FirstPersonViewport({
-          width,
-          height,
-          longitude: NEW_YORK_LONGITUDE,
-          latitude: NEW_YORK_LATITUDE,
-          position: [eyeOffset, 0, 200],
-          bearing: 0,
-          pitch: 45,
-          far: 20000
-        });
-  return {
-    id,
-    viewport: {x: 0, y: 0, width, height},
-    camera: getDeckExternalCamera(viewport)
-  };
-}
-
-function getDeckExternalCamera(viewport) {
-  const distanceScales = viewport.getDistanceScales();
-  const unitsPerMeter = distanceScales.unitsPerMeter;
-  const xyScale = DECK_WORLD_SIZE / (TANGRAM_HALF_WORLD_METERS * 2);
-  const metersToCommon = new Matrix4();
-  metersToCommon[0] = xyScale;
-  metersToCommon[5] = xyScale;
-  metersToCommon[10] = unitsPerMeter[2];
-  metersToCommon[12] = DECK_WORLD_SIZE / 2;
-  metersToCommon[13] = DECK_WORLD_SIZE / 2;
-  return {
-    view: new Matrix4(viewport.viewMatrix).multiplyRight(metersToCommon),
-    projection: new Matrix4(viewport.projectionMatrix),
-    position: [0, 0, 0]
-  };
+    .translate([-centerMeters[0], -centerMeters[1], 0]);
 }
 
 function createHostFrame({viewport, renderViews, activeRenderViewId}) {
+  const viewState = viewManager.getViewState();
+  const hostFrame = renderViews.find((renderView) => renderView.hostFrame)?.hostFrame;
   return {
     viewport,
-    geographicAnchor: {
-      longitude: NEW_YORK_LONGITUDE,
-      latitude: NEW_YORK_LATITUDE,
-      zoom: viewMode.zoom
-    },
-    projection: viewMode.projection,
+    geographicAnchor:
+      hostFrame?.view ||
+      {
+        longitude: viewState.longitude,
+        latitude: viewState.latitude,
+        zoom: viewMode.zoom
+      },
+    projection: hostFrame?.projection || viewMode.projection,
     renderViews,
     activeRenderViewId,
-    tileBuffer: viewMode.tileBuffer
+    tileBuffer: hostFrame?.tileBuffer ?? viewMode.tileBuffer
   };
 }
 
@@ -248,39 +217,11 @@ function renderTangram({frame, renderPass, renderViewId}) {
   }
 }
 
-function renderPreview(time) {
+function renderPreview() {
   const {width, height} = resizePreviewCanvas();
-  if (viewMode.id !== 'globe') {
-    const viewport = {x: 0, y: 0, width, height};
-    const renderView = createDeckRenderView({id: 'preview', width, height});
-    const renderPass = device.beginRenderPass({
-      clearColor: [0.006, 0.014, 0.04, 1],
-      clearDepth: 1,
-      clearStencil: 0
-    });
-    renderPass.setParameters({viewport: [0, 0, width, height]});
-    renderTangram({
-      frame: createHostFrame({
-        viewport,
-        renderViews: [renderView],
-        activeRenderViewId: renderView.id
-      }),
-      renderPass,
-      renderViewId: renderView.id
-    });
-    renderPass.end();
-    return;
-  }
-  const aspect = width / height;
-  const placementMatrix = createPlacementMatrix({immersive: false, time});
-  const viewMatrix = createPreviewViewMatrix();
-  const projectionMatrix = new Matrix4().perspective({
-    fovy: Math.PI / 3,
-    aspect,
-    near: 0.05,
-    far: 20
-  });
+  viewManager.updateController({width, height});
   const viewport = {x: 0, y: 0, width, height};
+  const renderView = viewManager.makeRenderView({id: 'preview', width, height});
   const renderPass = device.beginRenderPass({
     clearColor: [0.006, 0.014, 0.04, 1],
     clearDepth: 1,
@@ -290,58 +231,30 @@ function renderPreview(time) {
   renderTangram({
     frame: createHostFrame({
       viewport,
-      renderViews: [
-        createRenderView({
-          id: 'preview',
-          viewport,
-          projectionMatrix,
-          viewMatrix,
-          placementMatrix
-        })
-      ],
-      activeRenderViewId: 'preview'
+      renderViews: [renderView],
+      activeRenderViewId: renderView.id
     }),
     renderPass,
-    renderViewId: 'preview'
+    renderViewId: renderView.id
   });
   renderPass.end();
 }
 
-function renderStereoPreview(time) {
+function renderStereoPreview() {
   const {width, height} = resizePreviewCanvas();
+  viewManager.updateController({width, height});
   const eyeWidth = Math.floor(width / 2);
   if (stereoCanvas.width !== width || stereoCanvas.height !== height) {
     stereoCanvas.width = width;
     stereoCanvas.height = height;
   }
-  const projectionMatrix = new Matrix4().perspective({
-    fovy: Math.PI / 3,
-    aspect: eyeWidth / height,
-    near: 0.05,
-    far: 2000
-  });
-  const placementMatrix = createPlacementMatrix({immersive: true, time});
   const eyes = [
-    {id: 'left-eye', x: 0, offset: -0.032},
-    {id: 'right-eye', x: eyeWidth, offset: 0.032}
+    {id: 'left-eye', x: 0},
+    {id: 'right-eye', x: eyeWidth}
   ];
-  const renderViews = eyes.map(({id, x, offset}) => {
-    if (viewMode.id !== 'globe') {
-      return createDeckRenderView({id, width, height, eyeOffset: offset});
-    }
-    const viewport = {
-      x: 0,
-      y: 0,
-      width,
-      height
-    };
-    return createRenderView({
-      id,
-      viewport,
-      projectionMatrix,
-      viewMatrix: createStereoPreviewViewMatrix(offset),
-      placementMatrix
-    });
+  const renderViews = viewManager.makeStereoRenderViews({
+    width: eyeWidth,
+    height
   });
   const hostFrame = createHostFrame({
     viewport: {x: 0, y: 0, width, height},
@@ -379,16 +292,7 @@ function renderXRFrame(time, xrFrame) {
   }
   const placementMatrix = createPlacementMatrix({immersive: true, time});
   const clearedFramebuffers = new Set();
-  const renderViews = frameState.views.map((view) => {
-    const [x, y, width, height] = view.viewport;
-    return createRenderView({
-      id: view.eye || `eye-${view.index}`,
-      viewport: {x, y, width, height},
-      projectionMatrix: view.projectionMatrix,
-      viewMatrix: view.viewMatrix,
-      placementMatrix
-    });
-  });
+  const renderViews = viewManager.makeXRRenderViews({frameState, placementMatrix});
   const fullViewport = renderViews.reduce(
     (viewport, view) => ({
       x: 0,
@@ -525,6 +429,10 @@ function clearXRSession() {
   }
 }
 
+function clamp(value, minimum, maximum) {
+  return Math.min(maximum, Math.max(minimum, value));
+}
+
 async function initialize() {
   setStatus(`Creating the luma.gl ${requestedDeviceType} device…`);
   const adapters = requestedDeviceType === 'webgpu' ? [webgpuAdapter] : [webgl2Adapter];
@@ -575,6 +483,12 @@ async function initialize() {
     },
     onError: (error) => setStatus(error.message, 'error')
   });
+  const controllerTimeline = animationLoop.attachTimeline(new Timeline());
+  viewManager.attachController({
+    element: canvas,
+    timeline: controllerTimeline,
+    onViewStateChange: () => animationLoop.setNeedsRedraw('deck.gl controller update')
+  });
   await animationLoop.start();
 
   if (query.get('stereo') === '1') {
@@ -612,6 +526,7 @@ function destroy() {
   destroyed = true;
   void exitVR();
   animationLoop?.stop();
+  viewManager.finalize();
   renderer?.destroy();
   webXRManager?.destroy();
   device?.destroy();
@@ -624,15 +539,31 @@ enterButton.addEventListener('click', () => {
   });
 });
 exitButton.addEventListener('click', () => void exitVR());
+canvas.addEventListener('pointerdown', () => canvas.focus());
+canvas.addEventListener('contextmenu', (event) => event.preventDefault());
 window.tangramWebXRExampleDestroy = destroy;
 window.addEventListener('pagehide', destroy, {once: true});
 
 initialize().catch((error) => setStatus(error.message, 'error'));
 
-function createVectorScene() {
+function createTronScene({portable}) {
   return {
+    import: ['https://www.nextzen.org/carto/tron-style/6/tron-style.zip'],
+    global: {
+      sdk_api_key: '',
+      sdk_animated: true,
+      sdk_building_extrude: true
+    },
     scene: {
+      animated: true,
       background: {color: '#030817'}
+    },
+    styles: {
+      'tron-portable-traffic': {
+        base: 'lines',
+        animated: true,
+        texcoords: true
+      }
     },
     lights: {
       ambient: {
@@ -641,28 +572,30 @@ function createVectorScene() {
       }
     },
     sources: {
-      carto: {
+      mapzen: {
         type: 'MVT',
         url: 'https://tiles-a.basemaps.cartocdn.com/vectortiles/carto.streets/v1/{z}/{x}/{y}.mvt',
+        url_params: null,
+        rasters: [],
         tile_size: 512,
         max_zoom: 14
       }
     },
     layers: {
       landcover: {
-        data: {source: 'carto', layer: 'landcover'},
+        data: {source: 'mapzen', layer: 'landcover'},
         draw: {polygons: {order: 1, color: '#377fc4'}}
       },
       landuse: {
-        data: {source: 'carto', layer: 'landuse'},
+        data: {source: 'mapzen', layer: 'landuse'},
         draw: {polygons: {order: 2, color: '#4b91cf'}}
       },
       water: {
-        data: {source: 'carto', layer: 'water'},
+        data: {source: 'mapzen', layer: 'water'},
         draw: {polygons: {order: 3, color: '#071329'}}
       },
       buildings: {
-        data: {source: 'carto', layer: 'building'},
+        data: {source: 'mapzen', layer: 'building'},
         filter: {$zoom: {min: 14}},
         draw: {
           polygons: {order: 4, color: '#142b4b', extrude: true},
@@ -670,7 +603,7 @@ function createVectorScene() {
         }
       },
       roads: {
-        data: {source: 'carto', layer: 'transportation'},
+        data: {source: 'mapzen', layer: 'transportation'},
         draw: {
           lines: {
             order: 5,
@@ -679,12 +612,36 @@ function createVectorScene() {
           }
         },
         major: {
-          filter: {class: ['motorway', 'trunk', 'primary']},
+          filter: {class: ['primary', 'secondary']},
           draw: {
             lines: {
               order: 6,
               color: '#8d50ff',
               width: [[4, '0.75px'], [9, '2px'], [14, '5px']]
+            }
+          }
+        },
+        trunk: {
+          filter: {class: 'trunk', $zoom: {min: 10}},
+          draw: {
+            traffic: {
+              style: portable ? 'tron-portable-traffic' : 'fast-traffic-animation-twoways',
+              order: 7,
+              color: '#10223d',
+              width: [[10, '0.5px'], [13, '3px'], [18, '10px']],
+              outline: {color: '#4ee5e1', width: '0.5px'}
+            }
+          }
+        },
+        highway: {
+          filter: {class: 'motorway', $zoom: {min: 10}},
+          draw: {
+            traffic: {
+              style: portable ? 'tron-portable-traffic' : 'fast-traffic-animation-twoways',
+              order: 8,
+              color: '#15142f',
+              width: [[10, '0.4px'], [13, '2.5px'], [18, '8px']],
+              outline: {color: '#bd5be0', width: '0.55px'}
             }
           }
         }

@@ -14,7 +14,7 @@ Copyright (c) vis.gl contributors
   </head>
   <body class="tangram-webxr-standalone">
     <main id="webxr-container">
-      <canvas id="webxr-canvas"></canvas>
+      <canvas id="webxr-canvas" tabindex="0" aria-label="Interactive Tangram WebXR view"></canvas>
       <canvas id="webxr-stereo-canvas" aria-label="Side-by-side stereoscopic preview"></canvas>
       <div class="webxr-device-tabs" role="tablist" aria-label="Rendering device">
         <button type="button" data-webxr-device="webgl" role="tab">WebGL 2</button>
@@ -30,7 +30,8 @@ Copyright (c) vis.gl contributors
         <p class="webxr-hint">
           This experimental example renders one Tangram scene into the per-eye framebuffers and
           camera matrices supplied by luma.gl. Without an immersive runtime, Enter VR opens a
-          side-by-side stereo preview.
+          side-by-side stereo preview. Drag and scroll to explore; FirstPersonView also supports
+          the deck.gl controller's arrow-key navigation.
         </p>
       </aside>
       <p class="webxr-attribution">
@@ -47,7 +48,9 @@ Copyright (c) vis.gl contributors
           "@luma.gl/webgl": "https://esm.sh/@luma.gl/webgl@9.4.0-beta.3?bundle&external=@luma.gl/core",
           "@luma.gl/webgpu": "https://esm.sh/@luma.gl/webgpu@9.4.0-beta.3?bundle&external=@luma.gl/core",
           "@math.gl/core": "https://esm.sh/@math.gl/core@4.1.0?bundle",
-          "@vis.gl/tangram-renderer": "../../modules/tangram-renderer/dist/index.js?webxr=1"
+          "@vis.gl/tangram-layers": "../../modules/tangram-layers/dist/index.js?webxr=1",
+          "@vis.gl/tangram-renderer": "../../modules/tangram-renderer/dist/index.js?webxr=1",
+          "mjolnir.js": "https://esm.sh/mjolnir.js@3.1.0?bundle"
         }
       }
     </script>

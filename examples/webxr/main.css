@@ -79,6 +79,11 @@ body,
   touch-action: none;
 }
 
+#webxr-canvas:focus-visible {
+  outline: 2px solid #4adfff;
+  outline-offset: -2px;
+}
+
 #webxr-stereo-canvas {
   position: absolute;
   z-index: 1;

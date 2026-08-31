@@ -32,6 +32,7 @@ const VIEW_LABELS = {
 
 export default function WebXRExample({viewMode = 'globe'}) {
   const exampleBaseUrl = useBaseUrl('/examples/webxr/');
+  const layersUrl = useBaseUrl('/modules/tangram-layers/dist/index.js');
   const rendererUrl = useBaseUrl('/modules/tangram-renderer/dist/index.js');
   const [errorMessage, setErrorMessage] = useState(null);
   const appendedElements = useRef([]);
@@ -60,7 +61,9 @@ export default function WebXRExample({viewMode = 'globe'}) {
         '@luma.gl/webgpu':
           'https://esm.sh/@luma.gl/webgpu@9.4.0-beta.3?bundle&external=@luma.gl/core',
         '@math.gl/core': 'https://esm.sh/@math.gl/core@4.1.0?bundle',
-        '@vis.gl/tangram-renderer': `${rendererUrl}?embedded=webxr`
+        '@vis.gl/tangram-layers': `${layersUrl}?embedded=webxr`,
+        '@vis.gl/tangram-renderer': `${rendererUrl}?embedded=webxr`,
+        'mjolnir.js': 'https://esm.sh/mjolnir.js@3.1.0?bundle'
       }
     });
     document.head.appendChild(importMapElement);
@@ -93,12 +96,12 @@ export default function WebXRExample({viewMode = 'globe'}) {
       delete window.tangramWebXRExampleDestroy;
       delete window.tangramWebXRViewMode;
     };
-  }, [exampleBaseUrl, rendererUrl, viewMode]);
+  }, [exampleBaseUrl, layersUrl, rendererUrl, viewMode]);
 
   return (
     <div className="webxr-example-embed">
       <div id="webxr-container">
-        <canvas id="webxr-canvas" />
+        <canvas id="webxr-canvas" tabIndex="0" aria-label="Interactive Tangram WebXR view" />
         <canvas id="webxr-stereo-canvas" aria-label="Side-by-side stereoscopic preview" />
         <div className="webxr-device-tabs" role="tablist" aria-label="Rendering device">
           <button type="button" data-webxr-device="webgl" role="tab">
@@ -123,7 +126,8 @@ export default function WebXRExample({viewMode = 'globe'}) {
           </div>
           <p className="webxr-hint">
             luma.gl supplies the XR session, per-eye framebuffers and camera matrices. Tangram keeps
-            one shared scene and tile cache.
+            one shared scene and tile cache. Drag and scroll to explore; FirstPersonView also
+            supports the deck.gl controller&apos;s arrow-key navigation.
           </p>
           <p className="webxr-hint">
             Without a headset, Enter VR opens a side-by-side stereo preview. Install the{' '}

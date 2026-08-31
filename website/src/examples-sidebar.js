@@ -7,11 +7,11 @@ const sidebars = {
     {
       type: 'doc',
       id: 'index',
-      label: 'Examples overview'
+      label: 'Examples'
     },
     {
       type: 'category',
-      label: 'TangramLayer examples',
+      label: '@vis.gl/tangram-layers',
       collapsed: false,
       items: [
         {type: 'doc', id: 'deck', label: 'MapView perspective'},
@@ -22,21 +22,21 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'Tangram renderer examples',
+      label: '@vis.gl/tangram-layers (WebXR)',
+      collapsed: false,
+      items: [
+        {type: 'doc', id: 'webxr', label: 'GlobeView'},
+        {type: 'doc', id: 'webxr-map-view', label: 'MapView'},
+        {type: 'doc', id: 'webxr-first-person', label: 'FirstPersonView'}
+      ]
+    },
+    {
+      type: 'category',
+      label: '@vis.gl/tangram-renderer',
       collapsed: false,
       items: [
         {type: 'doc', id: 'classic', label: 'Classic playground'},
-        {type: 'doc', id: 'leaflet', label: 'Leaflet integration'},
-        {
-          type: 'category',
-          label: 'WebXR · experimental',
-          collapsed: false,
-          items: [
-            {type: 'doc', id: 'webxr', label: 'GlobeView'},
-            {type: 'doc', id: 'webxr-map-view', label: 'MapView'},
-            {type: 'doc', id: 'webxr-first-person', label: 'FirstPersonView'}
-          ]
-        }
+        {type: 'doc', id: 'leaflet', label: 'Leaflet integration'}
       ]
     }
   ]
