@@ -17,8 +17,11 @@ delete ocularConfig.aliases['@vis.gl/tangram-layers'];
 delete ocularConfig.aliases['@vis.gl/tangram-renderer'];
 
 await build({
-  entryPoints: [resolve(packageRoot, 'bundle.js')],
-  outfile: resolve(packageRoot, 'dist/index.js'),
+  entryPoints: {
+    index: resolve(packageRoot, 'bundle.js'),
+    'experimental/webxr': resolve(packageRoot, 'experimental-webxr.js')
+  },
+  outdir: resolve(packageRoot, 'dist'),
   bundle: true,
   format: 'esm',
   packages: 'external',

@@ -1,6 +1,7 @@
 {
   "name": "@vis.gl/tangram-layers",
   "version": "1.0.0-alpha.0",
+  "private": true,
   "description": "deck.gl layers for Tangram basemaps",
   "type": "module",
   "main": "dist/index.js",
@@ -9,6 +10,11 @@
     ".": {
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./experimental/webxr": {
+      "types": "./src/experimental/webxr/index.d.ts",
+      "import": "./dist/experimental/webxr.js",
+      "default": "./dist/experimental/webxr.js"
     },
     "./dist/*": "./dist/*"
   },
@@ -40,6 +46,9 @@
   },
   "peerDependencies": {
     "@deck.gl/core": "^9.4.0-alpha.0",
-    "@luma.gl/core": "^9.4.0-alpha.0"
+    "@luma.gl/core": "^9.4.0-alpha.0",
+    "@luma.gl/experimental": "^9.4.0-beta.3",
+    "@math.gl/core": "^4.1.0",
+    "mjolnir.js": "^3.1.0"
   }
 }

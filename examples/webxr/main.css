@@ -172,6 +172,11 @@ body,
   opacity: 0.5;
 }
 
+.webxr-actions button.is-active {
+  background: #17a9c7;
+  box-shadow: 0 0 0.9rem rgb(74 223 255 / 45%);
+}
+
 .webxr-hint,
 .webxr-attribution {
   color: #a8c0d4;

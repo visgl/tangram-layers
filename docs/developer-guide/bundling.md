@@ -18,11 +18,13 @@ artifacts. The current reference build reports:
 
 | Asset | Raw | Gzip |
 | --- | ---: | ---: |
-| Deck example source | 21.7 KB | 5.3 KB |
-| `@vis.gl/tangram-layers` package entry | 15.3 KB | 4.2 KB |
-| `@vis.gl/tangram-renderer` package entry | 0.3 KB | 0.2 KB |
-| Minified Tangram renderer ESM | 620.9 KB | 181.1 KB |
-| **TangramLayer + minified renderer** | **636.1 KB** | **185.4 KB** |
+| Deck example source | 0.5 KB | 0.3 KB |
+| `@vis.gl/tangram-layers` package entry | 18.5 KB | 4.6 KB |
+| `@vis.gl/tangram-layers/experimental/webxr` package entry | 42.7 KB | 10.1 KB |
+| WebXR example source | 22.1 KB | 6.0 KB |
+| `@vis.gl/tangram-renderer` package entry | 0.4 KB | 0.2 KB |
+| Minified Tangram renderer ESM | 621.9 KB | 181.3 KB |
+| **TangramLayer + minified renderer** | **640.4 KB** | **185.9 KB** |
 
 The combined row is an additive package-artifact estimate, not a promise about a
 particular webpack, Rollup, or Vite output. It excludes deck.gl, luma.gl, the

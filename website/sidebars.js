@@ -64,7 +64,12 @@ module.exports = {
               id: 'api-reference/tangram-layers',
               label: 'Package overview'
             },
-            {type: 'doc', id: 'api-reference/tangram-layer', label: 'TangramLayer API'}
+            {type: 'doc', id: 'api-reference/tangram-layer', label: 'TangramLayer API'},
+            {
+              type: 'doc',
+              id: 'api-reference/webxr-presentation',
+              label: 'Experimental WebXR API'
+            }
           ]
         }
       ]

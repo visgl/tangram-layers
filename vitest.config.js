@@ -15,7 +15,7 @@ const GENERATED_OR_EXTERNAL_COVERAGE_PATHS = [
 
 export default getVitestConfig({
   overrides: {
-    optimizeDeps: {include: ['sinon']},
+    optimizeDeps: {include: ['sinon', '@luma.gl/experimental']},
     plugins: [
       {
         name: 'tangram-glsl',

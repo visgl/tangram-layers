@@ -10,6 +10,8 @@ const repositoryDirectory = resolve(new URL('..', import.meta.url).pathname);
 const files = [
   ['Deck example source', 'examples/deck/app.js'],
   ['TangramLayer package entry', 'modules/tangram-layers/dist/index.js'],
+  ['Experimental WebXR package entry', 'modules/tangram-layers/dist/experimental/webxr.js'],
+  ['WebXR example source', 'examples/webxr/app.js'],
   ['@vis.gl/tangram-renderer package entry', 'modules/tangram-renderer/dist/index.js'],
   ['Tangram renderer minified ESM', 'modules/tangram-renderer/dist/tangram.min.mjs'],
   ['Tangram renderer debug ESM', 'modules/tangram-renderer/dist/tangram.debug.mjs']
