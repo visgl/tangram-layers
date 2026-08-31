@@ -9,6 +9,8 @@ import { Buffer, Texture } from '@luma.gl/core';
  *
  * This class deliberately never reads `device.handle`. It owns resources and draw
  * submission while Tangram continues to own tile building and scene traversal.
+ *
+ * @implements {import('./tangram_gpu_backend').TangramGPUBackend}
  */
 export default class LumaDeviceRenderer {
 
@@ -23,6 +25,16 @@ export default class LumaDeviceRenderer {
         this.mesh_uniform_buffers = new Set();
     }
 
+    /** Shader language selected by the host device. */
+    get shaderLanguage() {
+        return this.device.info.shadingLanguage;
+    }
+
+    /** Maximum supported two-dimensional texture dimension. */
+    get maxTextureSize() {
+        return this.device.limits && this.device.limits.maxTextureDimension2D;
+    }
+
     /**
      * Returns the resource factories consumed by Tangram Scene and Style objects.
      */
@@ -30,13 +42,13 @@ export default class LumaDeviceRenderer {
         return {
             enableUniformBuffers: true,
             deviceShaderCompilation: true,
-            shaderLanguage: this.device.info.shadingLanguage,
+            shaderLanguage: this.shaderLanguage,
             uniformBufferFactory: options => this.createUniformBuffer(options),
             shaderFactory: options => this.createShader(options),
             shaderProgramValidator: options => this.validateShaderProgram(options),
             meshBufferFactory: options => this.createMeshBuffer(options),
             textureFactory: options => this.createTexture(options),
-            maxTextureSize: this.device.limits && this.device.limits.maxTextureDimension2D,
+            maxTextureSize: this.maxTextureSize,
             meshRenderer: this
         };
     }

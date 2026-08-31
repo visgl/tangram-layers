@@ -16,9 +16,12 @@ import LumaDeviceRenderer from '../gpu/luma_device_renderer';
 export default class Renderer {
 
     constructor(config, options = {}) {
-        this.device_renderer = options.device ? new LumaDeviceRenderer(options.device) : null;
-        const device_options = this.device_renderer ? this.device_renderer.getSceneOptions() : {};
+        this.gpuBackend = options.device ? new LumaDeviceRenderer(options.device) : null;
+        // Retain the historical field while integrations migrate to gpuBackend.
+        this.device_renderer = this.gpuBackend;
+        const device_options = this.gpuBackend ? this.gpuBackend.getSceneOptions() : {};
         this.scene = Scene.create(config, Object.assign({}, options, device_options, {
+            device: this.gpuBackend ? this.gpuBackend.device : options.device,
             disableRenderLoop: true,
             cameraMode: 'external'
         }));
@@ -93,11 +96,14 @@ export default class Renderer {
     }
 
     destroy() {
-        const result = this.scene.destroy();
-        if (this.device_renderer) {
-            this.device_renderer.destroy();
+        try {
+            return this.scene.destroy();
         }
-        return result;
+        finally {
+            if (this.gpuBackend) {
+                this.gpuBackend.destroy();
+            }
+        }
     }
 
 }

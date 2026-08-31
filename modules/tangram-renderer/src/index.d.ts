@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Device, RenderPass} from '@luma.gl/core';
+import type {Buffer, Device, RenderPass, Shader, Texture} from '@luma.gl/core';
 import type {
   HostFrameOptions,
   HostRenderView,
@@ -19,6 +19,17 @@ import type {
   SceneUpdateOptions,
   Viewport
 } from './types.js';
+import type {
+  TangramGPUBackend,
+  TangramGPUSceneOptions,
+  TangramMeshBufferOptions,
+  TangramMeshDrawOptions,
+  TangramShaderLanguage,
+  TangramShaderOptions,
+  TangramShaderProgramOptions,
+  TangramTextureOptions,
+  TangramUniformBufferOptions
+} from './gpu/tangram_gpu_backend.js';
 
 export type * from './types.js';
 
@@ -53,6 +64,7 @@ export declare class ClassicWebGLRenderer {
   constructor(config: SceneDefinition, options?: RendererOptions);
   static create(config: SceneDefinition, options?: RendererOptions): ClassicWebGLRenderer;
   readonly scene: Scene;
+  readonly gpuBackend: LumaDeviceRenderer | null;
   setFrame(
     frame: HostFrame | HostFrameOptions | LegacyHostFrame,
     options?: {renderViewId?: string}
@@ -63,8 +75,18 @@ export declare class ClassicWebGLRenderer {
   destroy(): unknown;
 }
 
-export declare class LumaDeviceRenderer {
+export declare class LumaDeviceRenderer implements TangramGPUBackend {
   constructor(device: Device);
+  readonly device: Device;
+  readonly shaderLanguage: TangramShaderLanguage;
+  readonly maxTextureSize?: number;
+  getSceneOptions(): TangramGPUSceneOptions;
+  createUniformBuffer(options: TangramUniformBufferOptions): Buffer;
+  createMeshBuffer(options: TangramMeshBufferOptions): Buffer;
+  createShader(options: TangramShaderOptions): Shader;
+  validateShaderProgram(options: TangramShaderProgramOptions): void;
+  createTexture(options: TangramTextureOptions): Texture;
+  drawMesh(options: TangramMeshDrawOptions): boolean;
   destroy(): void;
 }
 
