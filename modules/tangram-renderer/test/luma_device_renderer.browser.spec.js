@@ -154,6 +154,62 @@ describe('LumaDeviceRenderer', function () {
         expect(device.pipeline.options.parameters).toBe(render_state);
     });
 
+    it('translates Tangram render modes into luma.gl pipeline parameters', function () {
+        const renderer = new LumaDeviceRenderer(createDevice([]));
+
+        expect(renderer.getRenderPipelineParameters({
+            depthTest: false,
+            depthWrite: false,
+            cullFace: false,
+            blend: 'overlay'
+        })).toEqual({
+            cullMode: 'none',
+            depthCompare: 'always',
+            depthWriteEnabled: false,
+            blend: true,
+            blendColorOperation: 'add',
+            blendColorSrcFactor: 'src-alpha',
+            blendColorDstFactor: 'one-minus-src-alpha',
+            blendAlphaOperation: 'add',
+            blendAlphaSrcFactor: 'one',
+            blendAlphaDstFactor: 'one-minus-src-alpha'
+        });
+        expect(renderer.getRenderPipelineParameters({
+            depthTest: true,
+            depthWrite: true,
+            cullFace: true,
+            blend: 'add'
+        })).toMatchObject({
+            cullMode: 'back',
+            depthCompare: 'less',
+            depthWriteEnabled: true,
+            blend: true,
+            blendColorSrcFactor: 'one',
+            blendColorDstFactor: 'one'
+        });
+        expect(renderer.getRenderPipelineParameters({
+            depthTest: true,
+            depthWrite: true,
+            cullFace: true,
+            blend: 'multiply'
+        })).toMatchObject({
+            blend: true,
+            blendColorSrcFactor: 'zero',
+            blendColorDstFactor: 'src'
+        });
+        expect(renderer.getRenderPipelineParameters({
+            depthTest: true,
+            depthWrite: true,
+            cullFace: true,
+            blend: 'opaque'
+        })).toEqual({
+            cullMode: 'back',
+            depthCompare: 'less',
+            depthWriteEnabled: true,
+            blend: false
+        });
+    });
+
     it('snapshots mutable uniform blocks per mesh for deferred WebGPU execution', function () {
         const device = createDevice([]);
         device.type = 'webgpu';

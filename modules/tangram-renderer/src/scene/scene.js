@@ -959,12 +959,13 @@ export default class Scene {
         depth_write = (depth_write === false) ? false : defaults.depth_write;   // default true
         cull_face = (cull_face === false) ? false : defaults.culling;           // default true
         blend = (blend != null) ? blend : defaults.blending;                    // default false
-        this.mesh_render_state = getMeshRenderState({
-            depth_test,
-            depth_write,
-            cull_face,
-            blend
-        });
+        this.mesh_render_state = this.mesh_renderer ?
+            this.mesh_renderer.getRenderPipelineParameters({
+                depthTest: depth_test,
+                depthWrite: depth_write,
+                cullFace: cull_face,
+                blend
+            }) : null;
 
         if (this.portable_rendering) {
             return;
@@ -1632,48 +1633,6 @@ export default class Scene {
         }
     }
 
-}
-
-function getMeshRenderState({ depth_test, depth_write, cull_face, blend }) {
-    const parameters = {
-        cullMode: cull_face ? 'back' : 'none',
-        depthCompare: depth_test ? 'less' : 'always',
-        depthWriteEnabled: depth_write,
-        blend: Boolean(blend && blend !== 'opaque')
-    };
-
-    if (blend === 'overlay' || blend === 'inlay' || blend === 'translucent') {
-        Object.assign(parameters, {
-            blendColorOperation: 'add',
-            blendColorSrcFactor: 'src-alpha',
-            blendColorDstFactor: 'one-minus-src-alpha',
-            blendAlphaOperation: 'add',
-            blendAlphaSrcFactor: 'one',
-            blendAlphaDstFactor: 'one-minus-src-alpha'
-        });
-    }
-    else if (blend === 'add') {
-        Object.assign(parameters, {
-            blendColorOperation: 'add',
-            blendColorSrcFactor: 'one',
-            blendColorDstFactor: 'one',
-            blendAlphaOperation: 'add',
-            blendAlphaSrcFactor: 'one',
-            blendAlphaDstFactor: 'one'
-        });
-    }
-    else if (blend === 'multiply') {
-        Object.assign(parameters, {
-            blendColorOperation: 'add',
-            blendColorSrcFactor: 'zero',
-            blendColorDstFactor: 'src',
-            blendAlphaOperation: 'add',
-            blendAlphaSrcFactor: 'one',
-            blendAlphaDstFactor: 'one-minus-src-alpha'
-        });
-    }
-
-    return parameters;
 }
 
 Scene.id = 0;         // unique id for a scene instance

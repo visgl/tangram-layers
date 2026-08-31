@@ -24,6 +24,7 @@ import type {
   TangramGPUSceneOptions,
   TangramMeshBufferOptions,
   TangramMeshDrawOptions,
+  TangramRenderStateOptions,
   TangramShaderLanguage,
   TangramShaderOptions,
   TangramShaderProgramOptions,
@@ -87,6 +88,7 @@ export declare class LumaDeviceRenderer implements TangramGPUBackend {
   validateShaderProgram(options: TangramShaderProgramOptions): void;
   createTexture(options: TangramTextureOptions): Texture;
   drawMesh(options: TangramMeshDrawOptions): boolean;
+  getRenderPipelineParameters(options: TangramRenderStateOptions): import('@luma.gl/core').RenderPipelineParameters;
   destroy(): void;
 }
 

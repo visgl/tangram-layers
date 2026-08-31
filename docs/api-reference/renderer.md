@@ -51,6 +51,11 @@ backend implementation or a public backend-selection mechanism. The classic
 standalone path keeps its legacy WebGL implementation as a compatibility
 fallback.
 
+On the portable path, Tangram blend modes plus culling, depth-test, and
+depth-write settings are translated by `LumaDeviceRenderer` into luma.gl
+`RenderPipelineParameters`. Classic rendering continues to apply the equivalent
+state through its existing WebGL state manager.
+
 ## TypeScript contracts
 
 The package root exports the runtime classes together with `RendererOptions`,

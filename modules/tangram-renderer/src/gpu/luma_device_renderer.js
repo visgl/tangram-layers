@@ -167,6 +167,49 @@ export default class LumaDeviceRenderer {
         }
     }
 
+    /** Translates normalized Tangram state into luma.gl pipeline parameters. */
+    getRenderPipelineParameters({ depthTest, depthWrite, cullFace, blend }) {
+        const parameters = {
+            cullMode: cullFace ? 'back' : 'none',
+            depthCompare: depthTest ? 'less' : 'always',
+            depthWriteEnabled: depthWrite,
+            blend: Boolean(blend && blend !== 'opaque')
+        };
+
+        if (blend === 'overlay' || blend === 'inlay' || blend === 'translucent') {
+            Object.assign(parameters, {
+                blendColorOperation: 'add',
+                blendColorSrcFactor: 'src-alpha',
+                blendColorDstFactor: 'one-minus-src-alpha',
+                blendAlphaOperation: 'add',
+                blendAlphaSrcFactor: 'one',
+                blendAlphaDstFactor: 'one-minus-src-alpha'
+            });
+        }
+        else if (blend === 'add') {
+            Object.assign(parameters, {
+                blendColorOperation: 'add',
+                blendColorSrcFactor: 'one',
+                blendColorDstFactor: 'one',
+                blendAlphaOperation: 'add',
+                blendAlphaSrcFactor: 'one',
+                blendAlphaDstFactor: 'one'
+            });
+        }
+        else if (blend === 'multiply') {
+            Object.assign(parameters, {
+                blendColorOperation: 'add',
+                blendColorSrcFactor: 'zero',
+                blendColorDstFactor: 'src',
+                blendAlphaOperation: 'add',
+                blendAlphaSrcFactor: 'one',
+                blendAlphaDstFactor: 'one-minus-src-alpha'
+            });
+        }
+
+        return parameters;
+    }
+
     /** Draws one Tangram mesh into a host-provided luma.gl RenderPass. */
     drawMesh({ mesh, program, renderPass, renderState, visibleTime }) {
         if (!renderPass || !program || !program.vertex_shader_resource ||
