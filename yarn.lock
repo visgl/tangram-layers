@@ -6379,9 +6379,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vis.gl/dev-tools@npm:2.0.0-alpha.6":
-  version: 2.0.0-alpha.6
-  resolution: "@vis.gl/dev-tools@npm:2.0.0-alpha.6"
+"@vis.gl/dev-tools@npm:2.0.0-alpha.8":
+  version: 2.0.0-alpha.8
+  resolution: "@vis.gl/dev-tools@npm:2.0.0-alpha.8"
   dependencies:
     "@biomejs/biome": "npm:^2.4.8"
     "@vitest/browser": "npm:^4.0.18"
@@ -6414,7 +6414,7 @@ __metadata:
     ocular-metrics: scripts/metrics.js
     ocular-publish: scripts/publish.js
     ocular-test: scripts/test.js
-  checksum: 10c0/ad12ad9b9e174e767adc637f8440d449f66e28a033dbb06e4d62eae257b142d00c55654497d69d0886f23c038ec63fe2f97c159e66e21c7ba24d0bf03986c077
+  checksum: 10c0/9db11e31d43e1b6dc3cdb7bfbad54658962c510e10c516e0ad557c06123afb8d039331b0bfd66e1e4f140a1b84729decf97fb33f6a4a3d3cd4a19cfb838728b9
   languageName: node
   linkType: hard
 
@@ -6436,8 +6436,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@vis.gl/tangram-layers@workspace:modules/tangram-layers"
   dependencies:
+    "@vis.gl/dev-tools": "npm:2.0.0-alpha.8"
     "@vis.gl/tangram-renderer": "workspace:^"
     eslint: "npm:7.8.1"
+    playwright: "npm:^1.58.0"
+    vitest: "npm:^4.0.18"
   peerDependencies:
     "@deck.gl/core": ^9.4.0-alpha.0
     "@luma.gl/core": ^9.4.0-alpha.0
@@ -18832,10 +18835,9 @@ __metadata:
     "@rollup/plugin-replace": "npm:^6.0.1"
     "@rollup/plugin-terser": "npm:^0.4.4"
     "@rollup/pluginutils": "npm:^5.1.3"
-    "@vis.gl/dev-tools": "npm:2.0.0-alpha.6"
+    "@vis.gl/dev-tools": "npm:2.0.0-alpha.8"
     "@vitest/coverage-v8": "npm:^4.0.18"
     chai: "npm:^4.5.0"
-    esbuild: "npm:^0.28.1"
     eslint: "npm:7.8.1"
     fast-async: "npm:6.3.8"
     playwright: "npm:^1.58.0"

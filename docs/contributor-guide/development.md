@@ -43,9 +43,9 @@ source. Do not add generated bundles or schemas to a commit.
 
 The root build is split into an explicit `build:modules` stage so package
 builds can be migrated to `ocular-build` independently. The renderer still
-uses its worker-aware Rollup pipeline; the TangramLayer package uses the
-Ocular-configured esbuild entry until the renderer's GLSL and worker outputs
-can be reproduced by dev-tools.
+uses its worker-aware Rollup pipeline; the TangramLayer package builds its main
+and experimental WebXR entries with `ocular-bundle`. The renderer remains an
+external package boundary in both layer bundles.
 
 The classic playground is also a workspace package. Its build copies the
 playground source and style gallery into `examples/classic/dist/`; the website
