@@ -42,6 +42,11 @@ page, so the examples sidebar stays visible while you move between demos.
 ## Tangram renderer examples
 
 <div className="example-tile-grid">
+  <a className="example-tile" href="/tangram.gl/examples/webxr">
+    <span className="example-tile__eyebrow">luma.gl experimental · WebXR</span>
+    <strong>Stereoscopic globe</strong>
+    <span>Render one Tangram scene into host-provided left- and right-eye framebuffers.</span>
+  </a>
   <a className="example-tile" href="/tangram.gl/examples/classic">
     <span className="example-tile__eyebrow">Playground</span>
     <strong>Classic playground</strong>

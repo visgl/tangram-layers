@@ -26,6 +26,13 @@ await cp(
 await cp(resolve(repositoryDirectory, 'examples/deck'), resolve(staticDirectory, 'examples/deck'), {
   recursive: true
 });
+await cp(
+  resolve(repositoryDirectory, 'examples/webxr'),
+  resolve(staticDirectory, 'examples/webxr'),
+  {
+    recursive: true
+  }
+);
 
 const websiteExampleRedirect = (target) => `<!doctype html>
 <html lang="en">
@@ -58,6 +65,10 @@ await writeFile(
 await writeFile(
   resolve(staticDirectory, 'examples/deck/index.html'),
   websiteExampleRedirect('deck')
+);
+await writeFile(
+  resolve(staticDirectory, 'examples/webxr/index.html'),
+  websiteExampleRedirect('webxr')
 );
 await cp(
   resolve(repositoryDirectory, 'modules/tangram-renderer/dist/tangram.debug.mjs'),

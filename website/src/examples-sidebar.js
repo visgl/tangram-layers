@@ -26,7 +26,8 @@ const sidebars = {
       collapsed: false,
       items: [
         {type: 'doc', id: 'classic', label: 'Classic playground'},
-        {type: 'doc', id: 'leaflet', label: 'Leaflet integration'}
+        {type: 'doc', id: 'leaflet', label: 'Leaflet integration'},
+        {type: 'doc', id: 'webxr', label: 'WebXR globe · experimental'}
       ]
     }
   ]

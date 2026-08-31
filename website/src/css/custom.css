@@ -111,6 +111,7 @@
 }
 
 .deck-example-embed,
+.webxr-example-embed,
 .classic-playground-embed {
   position: relative;
   height: 680px;
@@ -123,6 +124,10 @@
 }
 
 .deck-example-embed #deck-container {
+  height: 680px;
+}
+
+.webxr-example-embed #webxr-container {
   height: 680px;
 }
 
@@ -219,8 +224,10 @@
   }
 
   .deck-example-embed,
+  .webxr-example-embed,
   .classic-playground-embed,
   .deck-example-embed #deck-container,
+  .webxr-example-embed #webxr-container,
   .classic-playground-embed #classic-playground-frame {
     min-height: 560px;
     height: 560px;
