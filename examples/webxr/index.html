@@ -1,0 +1,59 @@
+<!doctype html>
+<!--
+tangram-layers
+SPDX-License-Identifier: MIT
+Copyright (c) vis.gl contributors
+-->
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <title>Tangram WebXR globe</title>
+    <link rel="stylesheet" href="./main.css">
+  </head>
+  <body class="tangram-webxr-standalone">
+    <main id="webxr-container">
+      <canvas id="webxr-canvas" tabindex="0" aria-label="Interactive Tangram WebXR view"></canvas>
+      <canvas id="webxr-stereo-canvas" aria-label="Side-by-side stereoscopic preview"></canvas>
+      <div class="webxr-device-tabs" role="tablist" aria-label="Rendering device">
+        <button type="button" data-webxr-device="webgl" role="tab">WebGL 2</button>
+        <button type="button" data-webxr-device="webgpu" role="tab">WebGPU</button>
+      </div>
+      <aside class="webxr-panel">
+        <h1 id="webxr-title">Tangram WebXR GlobeView</h1>
+        <p id="webxr-status" role="status">Preparing the renderer…</p>
+        <div class="webxr-actions">
+          <button id="webxr-enter" type="button">Enter VR</button>
+          <button id="webxr-exit" type="button" hidden>Exit VR</button>
+        </div>
+        <p class="webxr-hint">
+          This experimental example renders one Tangram scene into the per-eye framebuffers and
+          camera matrices supplied by luma.gl. Without an immersive runtime, Enter VR opens a
+          side-by-side stereo preview. Drag and scroll to explore; FirstPersonView also supports
+          the deck.gl controller's arrow-key navigation.
+        </p>
+      </aside>
+      <p class="webxr-attribution">
+        &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>
+      </p>
+    </main>
+    <script type="importmap">
+      {
+        "imports": {
+          "@deck.gl/core": "https://esm.sh/deck.gl@9.4.0-alpha.2?bundle&external=@luma.gl/core,@math.gl/core",
+          "@luma.gl/core": "https://esm.sh/@luma.gl/core@9.4.0-beta.3?bundle",
+          "@luma.gl/engine": "https://esm.sh/@luma.gl/engine@9.4.0-beta.3?bundle&external=@luma.gl/core,@math.gl/core",
+          "@luma.gl/experimental": "https://esm.sh/@luma.gl/experimental@9.4.0-beta.3?bundle&external=@luma.gl/core,@math.gl/core",
+          "@luma.gl/webgl": "https://esm.sh/@luma.gl/webgl@9.4.0-beta.3?bundle&external=@luma.gl/core",
+          "@luma.gl/webgpu": "https://esm.sh/@luma.gl/webgpu@9.4.0-beta.3?bundle&external=@luma.gl/core",
+          "@math.gl/core": "https://esm.sh/@math.gl/core@4.1.0?bundle",
+          "@vis.gl/tangram-layers": "../../modules/tangram-layers/dist/index.js?webxr=1",
+          "@vis.gl/tangram-renderer": "../../modules/tangram-renderer/dist/index.js?webxr=1",
+          "mjolnir.js": "https://esm.sh/mjolnir.js@3.1.0?bundle"
+        }
+      }
+    </script>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

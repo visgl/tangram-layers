@@ -1,6 +1,6 @@
 ---
 sidebar_position: 1
-title: Tangram examples
+title: Examples
 description: Runnable Tangram renderer and deck.gl integration examples.
 ---
 
@@ -14,7 +14,7 @@ Copyright (c) vis.gl contributors
 Explore the runnable Tangram integrations. Each example is a first-class Docusaurus
 page, so the examples sidebar stays visible while you move between demos.
 
-## TangramLayer examples
+## @vis.gl/tangram-layers
 
 <div className="example-tile-grid">
   <a className="example-tile" href="/tangram.gl/examples/deck">
@@ -39,7 +39,27 @@ page, so the examples sidebar stays visible while you move between demos.
   </a>
 </div>
 
-## Tangram renderer examples
+## @vis.gl/tangram-layers (WebXR)
+
+<div className="example-tile-grid">
+  <a className="example-tile" href="/tangram.gl/examples/webxr">
+    <span className="example-tile__eyebrow">luma.gl experimental · WebXR</span>
+    <strong>WebXR GlobeView</strong>
+    <span>Render one Tangram scene into host-provided left- and right-eye framebuffers.</span>
+  </a>
+  <a className="example-tile" href="/tangram.gl/examples/webxr-map-view">
+    <span className="example-tile__eyebrow">luma.gl experimental · WebXR</span>
+    <strong>WebXR MapView</strong>
+    <span>Place a pitched Tangram basemap in physical space with a stereoscopic tabletop view.</span>
+  </a>
+  <a className="example-tile" href="/tangram.gl/examples/webxr-first-person">
+    <span className="example-tile__eyebrow">luma.gl experimental · WebXR</span>
+    <strong>WebXR FirstPersonView</strong>
+    <span>Stand at street level while Tangram uses per-eye first-person camera matrices.</span>
+  </a>
+</div>
+
+## @vis.gl/tangram-renderer
 
 <div className="example-tile-grid">
   <a className="example-tile" href="/tangram.gl/examples/classic">
