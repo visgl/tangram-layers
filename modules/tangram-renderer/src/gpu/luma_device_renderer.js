@@ -29,9 +29,11 @@ export default class LumaDeviceRenderer {
     getSceneOptions() {
         return {
             enableUniformBuffers: true,
+            deviceShaderCompilation: true,
             shaderLanguage: this.device.info.shadingLanguage,
             uniformBufferFactory: options => this.createUniformBuffer(options),
             shaderFactory: options => this.createShader(options),
+            shaderProgramValidator: options => this.validateShaderProgram(options),
             meshBufferFactory: options => this.createMeshBuffer(options),
             textureFactory: options => this.createTexture(options),
             maxTextureSize: this.device.limits && this.device.limits.maxTextureDimension2D,
@@ -63,6 +65,26 @@ export default class LumaDeviceRenderer {
             shader_options.entryPoint = options.entryPoint;
         }
         return this.device.createShader(shader_options);
+    }
+
+    /** Validates that a device-owned shader pair can be linked before a style is used. */
+    validateShaderProgram({ id, vertexShader, fragmentShader }) {
+        const pipeline = this.device.createRenderPipeline({
+            id: `tangram-${id}-validation`,
+            vs: vertexShader,
+            fs: fragmentShader,
+            topology: 'triangle-list',
+            bufferLayout: [],
+            disableWarnings: true
+        });
+        try {
+            if (pipeline.isErrored) {
+                throw new Error(`Tangram shader program '${id}' failed device link validation`);
+            }
+        }
+        finally {
+            pipeline.destroy();
+        }
     }
 
     /** Creates a luma.gl vertex or index buffer. */

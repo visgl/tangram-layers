@@ -253,8 +253,10 @@ describe('TangramLayer', function () {
         assert.isTrue(scene.options.disableRenderLoop);
         assert.strictEqual(scene.options.cameraMode, 'external');
         assert.isTrue(scene.options.enableUniformBuffers);
+        assert.isTrue(scene.options.deviceShaderCompilation);
         assert.isFunction(scene.options.uniformBufferFactory);
         assert.isFunction(scene.options.shaderFactory);
+        assert.isFunction(scene.options.shaderProgramValidator);
         assert.isFunction(scene.options.meshBufferFactory);
         assert.isFunction(scene.options.textureFactory);
         assert.strictEqual(scene.options.maxTextureSize, 8192);

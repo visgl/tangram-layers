@@ -1,6 +1,7 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 import log from '../utils/log';
 import Utils from '../utils/utils';
@@ -106,8 +107,10 @@ export default class Scene {
         this.webgl_context_scope = options.webGLContextScope;
         this.redraw_callback = options.requestRedraw;
         this.enable_uniform_buffers = options.enableUniformBuffers === true;
+        this.device_shader_compilation = options.deviceShaderCompilation === true;
         this.uniform_buffer_factory = options.uniformBufferFactory;
         this.shader_factory = options.shaderFactory;
+        this.shader_program_validator = options.shaderProgramValidator;
         this.mesh_buffer_factory = options.meshBufferFactory;
         this.mesh_renderer = options.meshRenderer;
         this.texture_factory = options.textureFactory;
@@ -1350,7 +1353,9 @@ export default class Scene {
             this.styles[style].setGL(this.portable_rendering ? null : this.gl, this.uniform_buffers, {
                 resourceContext: this.portable_rendering ? this.resource_context : this.gl,
                 shaderFactory: this.shader_factory,
+                shaderProgramValidator: this.shader_program_validator,
                 shaderLanguage: this.shader_language,
+                deviceShaderCompilation: this.device_shader_compilation,
                 uniformBlockFactory: options => this.createUniformBuffer(options),
                 meshBufferFactory: this.mesh_buffer_factory,
                 textureFactory: this.texture_factory,
