@@ -37,7 +37,39 @@ describe('LumaDeviceRenderer', function () {
         ]);
         expect(options.meshRenderer).toBe(renderer);
         expect(options.deviceShaderCompilation).toBe(true);
+        expect(options.shaderProgramValidator).toBeTypeOf('function');
         expect(options.maxTextureSize).toBe(4096);
+    });
+
+    it('validates and releases temporary shader-pair pipelines', function () {
+        const device = createDevice([]);
+        const renderer = new LumaDeviceRenderer(device);
+
+        renderer.validateShaderProgram({
+            id: 'polygons',
+            vertexShader: {id: 'vertex'},
+            fragmentShader: {id: 'fragment'}
+        });
+
+        expect(device.pipeline.options).toMatchObject({
+            id: 'tangram-polygons-validation',
+            topology: 'triangle-list',
+            bufferLayout: []
+        });
+        expect(device.pipeline.destroyed).toBe(true);
+    });
+
+    it('rejects a shader pair that fails device link validation', function () {
+        const device = createDevice([]);
+        device.pipelineErrored = true;
+        const renderer = new LumaDeviceRenderer(device);
+
+        expect(() => renderer.validateShaderProgram({
+            id: 'broken',
+            vertexShader: {id: 'vertex'},
+            fragmentShader: {id: 'fragment'}
+        })).toThrow("Tangram shader program 'broken' failed device link validation");
+        expect(device.pipeline.destroyed).toBe(true);
     });
 
     it('omits WebGL compatibility uniforms from WebGPU draw calls', function () {
@@ -246,6 +278,7 @@ function createDevice(calls) {
                 },
                 bufferLayout: options.bufferLayout,
                 isPending: false,
+                isErrored: this.pipelineErrored === true,
                 destroyed: false,
                 destroy() {
                     this.destroyed = true;

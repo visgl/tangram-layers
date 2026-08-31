@@ -251,6 +251,7 @@ describe('generic style data lifecycle', () => {
             meshBufferFactory: vi.fn(),
             resourceContext: {device: true},
             shaderFactory: vi.fn(),
+            shaderProgramValidator: vi.fn(),
             shaderLanguage: 'wgsl',
             textureFactory: vi.fn(),
             uniformBlockFactory: vi.fn()
@@ -261,6 +262,7 @@ describe('generic style data lifecycle', () => {
             defer_uniform_blocks: true,
             defer_uniform_updates: true,
             max_texture_size: 2048,
+            shader_program_validator: expect.any(Function),
             shader_language: 'wgsl'
         });
         const mesh = {render: vi.fn(() => 6)};

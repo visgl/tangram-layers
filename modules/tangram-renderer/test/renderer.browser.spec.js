@@ -229,6 +229,7 @@ describe('Renderer', function () {
         assert.strictEqual(renderer.scene.max_texture_size, 4096);
         assert.isFunction(renderer.scene.uniform_buffer_factory);
         assert.isFunction(renderer.scene.shader_factory);
+        assert.isFunction(renderer.scene.shader_program_validator);
         assert.isFunction(renderer.scene.mesh_buffer_factory);
         assert.isFunction(renderer.scene.texture_factory);
 

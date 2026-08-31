@@ -54,6 +54,7 @@ export default class ShaderProgram {
         this.texture_uniforms = {};
         this.shader_language = options.shaderLanguage || 'glsl';
         this.shader_factory = options.shaderFactory;
+        this.shader_program_validator = options.shaderProgramValidator;
         this.device_shader_compilation = options.deviceShaderCompilation === true;
         this.vertex_shader_resource = null;
         this.fragment_shader_resource = null;
@@ -100,8 +101,11 @@ export default class ShaderProgram {
         if (this.shader_language !== 'glsl') {
             return this.compilePortable();
         }
-        if (this.device_shader_compilation && !this.shader_factory) {
-            throw new Error('ShaderProgram: device compilation requires a shaderFactory');
+        if (this.device_shader_compilation &&
+            (!this.shader_factory || !this.shader_program_validator)) {
+            throw new Error(
+                'ShaderProgram: device compilation requires shaderFactory and shaderProgramValidator'
+            );
         }
         if (this.compiling) {
             throw(new Error(`ShaderProgram.compile(): skipping for ${this.id} (${this.name}) because already compiling`));
@@ -224,6 +228,18 @@ export default class ShaderProgram {
                 );
             }
             if (this.device_shader_compilation) {
+                try {
+                    this.shader_program_validator({
+                        id: this.name || this.id,
+                        vertexShader: shader_resources.vertex_shader,
+                        fragmentShader: shader_resources.fragment_shader
+                    });
+                }
+                catch (error) {
+                    destroyShaderResource(shader_resources && shader_resources.vertex_shader);
+                    destroyShaderResource(shader_resources && shader_resources.fragment_shader);
+                    throw error;
+                }
                 this.destroyShaderResources();
                 this.vertex_shader_resource = shader_resources && shader_resources.vertex_shader;
                 this.fragment_shader_resource = shader_resources && shader_resources.fragment_shader;

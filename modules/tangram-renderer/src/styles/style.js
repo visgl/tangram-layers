@@ -417,6 +417,7 @@ export var Style = {
         this.uniform_blocks = uniform_blocks;
         this.shader_language = options.shaderLanguage || 'glsl';
         this.shader_factory = options.shaderFactory;
+        this.shader_program_validator = options.shaderProgramValidator;
         this.device_shader_compilation = options.deviceShaderCompilation === true;
         this.uniform_block_factory = options.uniformBlockFactory;
         this.mesh_buffer_factory = options.meshBufferFactory;
@@ -524,6 +525,7 @@ export var Style = {
                 uniform_blocks: this.uniform_blocks,
                 shaderLanguage: this.shader_language,
                 deviceShaderCompilation: this.device_shader_compilation,
+                shaderProgramValidator: this.shader_program_validator,
                 deferUniformBlocks: this.defer_uniform_blocks,
                 deferTextureBindings: this.defer_texture_bindings,
                 deferUniformUpdates: this.defer_uniform_updates,
@@ -546,6 +548,7 @@ export var Style = {
                     uniform_blocks: this.uniform_blocks,
                     shaderLanguage: this.shader_language,
                     deviceShaderCompilation: this.device_shader_compilation,
+                    shaderProgramValidator: this.shader_program_validator,
                     deferUniformBlocks: this.defer_uniform_blocks,
                     deferTextureBindings: this.defer_texture_bindings,
                     deferUniformUpdates: this.defer_uniform_updates,
