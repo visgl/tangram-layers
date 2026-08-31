@@ -132,6 +132,7 @@ let immersiveVRSupported = false;
 let xrReferenceSpaceType = 'local-floor';
 let destroyed = false;
 let thorController = null;
+let lastXRFrameTime = null;
 
 const scene = createTronScene({portable: requestedDeviceType === 'webgpu'});
 
@@ -192,7 +193,7 @@ function createPlacementMatrix({immersive, time}) {
     );
   }
 
-  if (viewMode.id === 'map') {
+  if (viewMode.id === 'map' || viewMode.id === 'thor') {
     const extraAngle = immersive ? 0 : Math.PI * 0.14;
     return createXRPlacementMatrix(
       {
@@ -219,7 +220,7 @@ function createPlacementMatrix({immersive, time}) {
       type: 'first-person',
       origin: [viewState.longitude, viewState.latitude, 0],
       pose: {position: [0, groundY, 0]},
-      position: [0, 0, 0],
+      position: viewManager.placement.position || [0, 0, 0],
       bearing: viewState.bearing || 0
     },
     viewState
@@ -327,7 +328,13 @@ function renderXRFrame(time, xrFrame) {
   if (!frameState || frameState.views.length === 0) {
     return;
   }
-  for (const intent of webXRInputAdapter.update(webXRManager.getInputState(xrFrame) || [])) {
+  const elapsedSeconds =
+    lastXRFrameTime === null ? 0 : clamp((time - lastXRFrameTime) / 1000, 0, 0.1);
+  lastXRFrameTime = time;
+  for (const intent of webXRInputAdapter.update(
+    webXRManager.getInputState(xrFrame) || [],
+    elapsedSeconds
+  )) {
     viewManager.dispatchInteractionIntent(intent);
   }
   const placementMatrix = createPlacementMatrix({immersive: true, time});
@@ -405,6 +412,7 @@ async function enterVR() {
   try {
     await setXRSession(session);
     xrSession = session;
+    lastXRFrameTime = null;
     session.addEventListener('end', clearXRSession, {once: true});
     animationLoop.setProps({
       animationFrameProvider: new WebXRAnimationFrameProvider(session)
@@ -447,6 +455,7 @@ async function exitVR() {
 
 function clearXRSession() {
   xrSession = null;
+  lastXRFrameTime = null;
   stereoPreview = false;
   xrReferenceSpaceType = 'local-floor';
   container.classList.remove('is-stereo');

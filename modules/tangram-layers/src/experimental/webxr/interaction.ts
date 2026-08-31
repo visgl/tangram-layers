@@ -31,7 +31,9 @@ export type WebXRReferenceSpaceType =
 export type WebXRInputAdapterOptions = {
   moveDeadzone?: number;
   turnDeadzone?: number;
+  /** Movement units emitted per second at full stick deflection. */
   moveSpeed?: number;
+  /** Degrees emitted per second while the turn stick is held. */
   turnSpeed?: number;
 };
 
@@ -54,8 +56,11 @@ export class WebXRInputAdapter {
     };
   }
 
-  /** Translate one XR input frame into navigation, pointing, and signal intents. */
-  update(inputStates: readonly WebXRInputSnapshot[]): XRInteractionIntent[] {
+  /** Translate one XR input frame into time-scaled navigation, pointing, and signal intents. */
+  update(
+    inputStates: readonly WebXRInputSnapshot[],
+    elapsedSeconds: number = 1 / 60
+  ): XRInteractionIntent[] {
     const intents: XRInteractionIntent[] = [];
     const activeKeys = new Set<string>();
     for (const inputState of inputStates) {
@@ -90,7 +95,7 @@ export class WebXRInputAdapter {
       }
       this.previousSelect.set(key, Boolean(inputState.selectActive));
       this.previousSqueeze.set(key, Boolean(inputState.squeezeActive));
-      this.appendGamepadIntents(intents, inputState);
+      this.appendGamepadIntents(intents, inputState, Math.max(0, elapsedSeconds));
     }
     for (const key of this.previousSelect.keys()) {
       if (!activeKeys.has(key)) {
@@ -109,7 +114,8 @@ export class WebXRInputAdapter {
 
   private appendGamepadIntents(
     intents: XRInteractionIntent[],
-    inputState: WebXRInputSnapshot
+    inputState: WebXRInputSnapshot,
+    elapsedSeconds: number
   ): void {
     const axes = inputState.gamepad?.axes;
     if (!axes || axes.length < 2) {
@@ -122,7 +128,7 @@ export class WebXRInputAdapter {
         intents.push({
           type: 'navigate',
           action: 'turn',
-          delta: [Math.sign(horizontal) * this.options.turnSpeed],
+          delta: [Math.sign(horizontal) * this.options.turnSpeed * elapsedSeconds],
           handedness: inputState.handedness
         });
       }
@@ -132,7 +138,10 @@ export class WebXRInputAdapter {
       intents.push({
         type: 'navigate',
         action: 'move',
-        delta: [horizontal * this.options.moveSpeed, -vertical * this.options.moveSpeed],
+        delta: [
+          horizontal * this.options.moveSpeed * elapsedSeconds,
+          -vertical * this.options.moveSpeed * elapsedSeconds
+        ],
         handedness: inputState.handedness
       });
     }

@@ -72,16 +72,19 @@ describe('experimental WebXR geospatial presentation', () => {
     ).toEqual([170, -20, 190, 20]);
   });
 
-  it('translates controller axes into renderer-independent intents', () => {
+  it('translates controller axes into time-scaled renderer-independent intents', () => {
     const adapter = new WebXRInputAdapter();
     expect(
-      adapter.update([
-        {index: 0, handedness: 'left', gamepad: {axes: [0, 0, 0.5, -0.75]}},
-        {index: 1, handedness: 'right', gamepad: {axes: [0, 0, 0.8, 0]}}
-      ])
+      adapter.update(
+        [
+          {index: 0, handedness: 'left', gamepad: {axes: [0, 0, 0.5, -0.75]}},
+          {index: 1, handedness: 'right', gamepad: {axes: [0, 0, 0.8, 0]}}
+        ],
+        0.5
+      )
     ).toEqual([
-      {type: 'navigate', action: 'move', delta: [0.5, 0.75], handedness: 'left'},
-      {type: 'navigate', action: 'turn', delta: [30], handedness: 'right'}
+      {type: 'navigate', action: 'move', delta: [0.25, 0.375], handedness: 'left'},
+      {type: 'navigate', action: 'turn', delta: [15], handedness: 'right'}
     ]);
   });
 });
