@@ -44,8 +44,18 @@ page, so the examples sidebar stays visible while you move between demos.
 <div className="example-tile-grid">
   <a className="example-tile" href="/tangram.gl/examples/webxr">
     <span className="example-tile__eyebrow">luma.gl experimental · WebXR</span>
-    <strong>Stereoscopic globe</strong>
+    <strong>WebXR GlobeView</strong>
     <span>Render one Tangram scene into host-provided left- and right-eye framebuffers.</span>
+  </a>
+  <a className="example-tile" href="/tangram.gl/examples/webxr-map-view">
+    <span className="example-tile__eyebrow">luma.gl experimental · WebXR</span>
+    <strong>WebXR MapView</strong>
+    <span>Place a pitched Tangram basemap in physical space with a stereoscopic tabletop view.</span>
+  </a>
+  <a className="example-tile" href="/tangram.gl/examples/webxr-first-person">
+    <span className="example-tile__eyebrow">luma.gl experimental · WebXR</span>
+    <strong>WebXR FirstPersonView</strong>
+    <span>Stand at street level while Tangram uses per-eye first-person camera matrices.</span>
   </a>
   <a className="example-tile" href="/tangram.gl/examples/classic">
     <span className="example-tile__eyebrow">Playground</span>

@@ -1,7 +1,7 @@
 ---
-sidebar_position: 3
-title: WebXR GlobeView
-description: Experimental stereoscopic Tangram GlobeView rendering through luma.gl WebXR.
+sidebar_position: 4
+title: WebXR MapView
+description: Experimental stereoscopic Tangram MapView rendering through luma.gl WebXR.
 hide_title: true
 ---
 
@@ -13,4 +13,4 @@ Copyright (c) vis.gl contributors
 
 import WebXRExample from '@site/src/components/WebXRExample';
 
-<WebXRExample viewMode="globe" />
+<WebXRExample viewMode="map" />

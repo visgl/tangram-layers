@@ -15,20 +15,22 @@ Copyright (c) vis.gl contributors
   <body class="tangram-webxr-standalone">
     <main id="webxr-container">
       <canvas id="webxr-canvas"></canvas>
+      <canvas id="webxr-stereo-canvas" aria-label="Side-by-side stereoscopic preview"></canvas>
       <div class="webxr-device-tabs" role="tablist" aria-label="Rendering device">
         <button type="button" data-webxr-device="webgl" role="tab">WebGL 2</button>
         <button type="button" data-webxr-device="webgpu" role="tab">WebGPU</button>
       </div>
       <aside class="webxr-panel">
-        <h1>Tangram WebXR globe</h1>
+        <h1 id="webxr-title">Tangram WebXR GlobeView</h1>
         <p id="webxr-status" role="status">Preparing the renderer…</p>
         <div class="webxr-actions">
-          <button id="webxr-enter" type="button" disabled>Enter VR</button>
+          <button id="webxr-enter" type="button">Enter VR</button>
           <button id="webxr-exit" type="button" hidden>Exit VR</button>
         </div>
         <p class="webxr-hint">
           This experimental example renders one Tangram scene into the per-eye framebuffers and
-          camera matrices supplied by luma.gl.
+          camera matrices supplied by luma.gl. Without an immersive runtime, Enter VR opens a
+          side-by-side stereo preview.
         </p>
       </aside>
       <p class="webxr-attribution">
@@ -38,6 +40,7 @@ Copyright (c) vis.gl contributors
     <script type="importmap">
       {
         "imports": {
+          "@deck.gl/core": "https://esm.sh/deck.gl@9.4.0-alpha.2?bundle&external=@luma.gl/core,@math.gl/core",
           "@luma.gl/core": "https://esm.sh/@luma.gl/core@9.4.0-beta.3?bundle",
           "@luma.gl/engine": "https://esm.sh/@luma.gl/engine@9.4.0-beta.3?bundle&external=@luma.gl/core,@math.gl/core",
           "@luma.gl/experimental": "https://esm.sh/@luma.gl/experimental@9.4.0-beta.3?bundle&external=@luma.gl/core,@math.gl/core",

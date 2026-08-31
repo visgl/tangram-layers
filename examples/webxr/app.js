@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {luma} from '@luma.gl/core';
+import {FirstPersonViewport, WebMercatorViewport} from '@deck.gl/core';
 import {AnimationLoop} from '@luma.gl/engine';
 import {WebXRAnimationFrameProvider, WebXRManager} from '@luma.gl/experimental';
 import {webgl2Adapter} from '@luma.gl/webgl';
@@ -15,23 +16,65 @@ const PREVIEW_RADIUS_METERS = 0.72;
 const NEW_YORK_LONGITUDE = -74.009764;
 const NEW_YORK_LATITUDE = 40.705319;
 const FULL_GLOBE_BOUNDS = [-180, -85, 180, 85];
+const TANGRAM_HALF_WORLD_METERS = 20037508.342789244;
+const DECK_WORLD_SIZE = 512;
+const NEW_YORK_METERS = longitudeLatitudeToMeters(
+  NEW_YORK_LONGITUDE,
+  NEW_YORK_LATITUDE
+);
+const VIEW_MODES = {
+  globe: {
+    id: 'globe',
+    label: 'GlobeView',
+    zoom: 2,
+    projection: {type: 'globe', visibleBounds: FULL_GLOBE_BOUNDS},
+    tileBuffer: 0
+  },
+  map: {
+    id: 'map',
+    label: 'MapView',
+    zoom: 16,
+    projection: {type: 'web-mercator'},
+    tileBuffer: 2
+  },
+  firstPerson: {
+    id: 'firstPerson',
+    label: 'FirstPersonView',
+    zoom: 16,
+    projection: {type: 'web-mercator'},
+    tileBuffer: 2
+  }
+};
 
 const canvas = document.getElementById('webxr-canvas');
+const stereoCanvas = document.getElementById('webxr-stereo-canvas');
+const stereoContext = stereoCanvas.getContext('2d');
+const container = document.getElementById('webxr-container');
 const enterButton = document.getElementById('webxr-enter');
 const exitButton = document.getElementById('webxr-exit');
 const statusElement = document.getElementById('webxr-status');
+const titleElement = document.getElementById('webxr-title');
 const deviceButtons = document.querySelectorAll('[data-webxr-device]');
 const query = new URLSearchParams(window.location.search);
 const requestedDeviceType = query.get('device') === 'webgpu' ? 'webgpu' : 'webgl';
+const requestedViewMode = window.tangramWebXRViewMode || query.get('view');
+const viewMode = VIEW_MODES[requestedViewMode] || VIEW_MODES.globe;
 
 let device;
 let renderer;
 let webXRManager;
 let animationLoop;
 let xrSession = null;
+let stereoPreview = false;
+let immersiveVRSupported = false;
+let xrReferenceSpaceType = 'local-floor';
 let destroyed = false;
 
-const scene = createVectorGlobeScene();
+const scene = createVectorScene();
+
+if (titleElement) {
+  titleElement.textContent = `WebXR ${viewMode.label}`;
+}
 
 for (const button of deviceButtons) {
   const active = button.dataset.webxrDevice === requestedDeviceType;
@@ -63,14 +106,60 @@ function resizePreviewCanvas() {
 }
 
 function createPlacementMatrix({immersive, time}) {
-  const scale = PREVIEW_RADIUS_METERS / GLOBE_RADIUS;
-  const placement = new Matrix4();
-  if (immersive) {
-    placement.translate([0, 1.35, -2.35]);
-  } else {
-    placement.translate([0.5, 0, -2.6]);
+  if (viewMode.id === 'globe') {
+    const scale = PREVIEW_RADIUS_METERS / GLOBE_RADIUS;
+    const placement = new Matrix4();
+    if (immersive) {
+      placement.translate([0, 1.35, -2.35]);
+    } else {
+      placement.translate([0.5, 0, -2.6]);
+    }
+    return placement.rotateY(time * 0.00004).scale([scale, scale, scale]);
   }
-  return placement.rotateY(time * 0.00004).scale([scale, scale, scale]);
+
+  if (viewMode.id === 'map') {
+    const scale = 1 / 2500;
+    return new Matrix4()
+      .translate(immersive ? [0, 0.72, -1.8] : [0.25, -0.48, -2.4])
+      .rotateX(immersive ? -Math.PI / 2 : -Math.PI * 0.36)
+      .scale([scale, scale, scale])
+      .translate([-NEW_YORK_METERS[0], -NEW_YORK_METERS[1], 0]);
+  }
+
+  const groundY = immersive
+    ? xrReferenceSpaceType === 'local-floor'
+      ? 0
+      : -1.6
+    : 0;
+  return new Matrix4()
+    .translate([0, groundY, 0])
+    .rotateX(-Math.PI / 2)
+    .translate([-NEW_YORK_METERS[0], -NEW_YORK_METERS[1], 0]);
+}
+
+function createPreviewViewMatrix() {
+  if (viewMode.id === 'firstPerson') {
+    return new Matrix4().lookAt({
+      eye: [0, 1.65, 1.2],
+      center: [0, 0, -12],
+      up: [0, 1, 0]
+    });
+  }
+  return new Matrix4();
+}
+
+function createStereoPreviewViewMatrix(eyeOffset) {
+  const target =
+    viewMode.id === 'globe'
+      ? [0, 1.35, -2.35]
+      : viewMode.id === 'map'
+        ? [0, 0.72, -1.8]
+        : [0, 1.25, -10];
+  return new Matrix4().lookAt({
+    eye: [eyeOffset, 1.62, 0],
+    center: target,
+    up: [0, 1, 0]
+  });
 }
 
 function createRenderView({id, viewport, projectionMatrix, viewMatrix, placementMatrix}) {
@@ -81,9 +170,57 @@ function createRenderView({id, viewport, projectionMatrix, viewMatrix, placement
     viewport,
     camera: {
       view: placedViewMatrix,
-      projection: viewProjectionMatrix,
+      projection: viewMode.id === 'globe' ? viewProjectionMatrix : projectionMatrix,
       position: [0, 0, 0]
     }
+  };
+}
+
+function createDeckRenderView({id, width, height, eyeOffset = 0}) {
+  const longitudeOffset =
+    eyeOffset / (111320 * Math.cos((NEW_YORK_LATITUDE * Math.PI) / 180));
+  const viewport =
+    viewMode.id === 'map'
+      ? new WebMercatorViewport({
+          width,
+          height,
+          longitude: NEW_YORK_LONGITUDE + longitudeOffset,
+          latitude: NEW_YORK_LATITUDE,
+          zoom: 15,
+          bearing: -20,
+          pitch: 45
+        })
+      : new FirstPersonViewport({
+          width,
+          height,
+          longitude: NEW_YORK_LONGITUDE,
+          latitude: NEW_YORK_LATITUDE,
+          position: [eyeOffset, 0, 200],
+          bearing: 0,
+          pitch: 45,
+          far: 20000
+        });
+  return {
+    id,
+    viewport: {x: 0, y: 0, width, height},
+    camera: getDeckExternalCamera(viewport)
+  };
+}
+
+function getDeckExternalCamera(viewport) {
+  const distanceScales = viewport.getDistanceScales();
+  const unitsPerMeter = distanceScales.unitsPerMeter;
+  const xyScale = DECK_WORLD_SIZE / (TANGRAM_HALF_WORLD_METERS * 2);
+  const metersToCommon = new Matrix4();
+  metersToCommon[0] = xyScale;
+  metersToCommon[5] = xyScale;
+  metersToCommon[10] = unitsPerMeter[2];
+  metersToCommon[12] = DECK_WORLD_SIZE / 2;
+  metersToCommon[13] = DECK_WORLD_SIZE / 2;
+  return {
+    view: new Matrix4(viewport.viewMatrix).multiplyRight(metersToCommon),
+    projection: new Matrix4(viewport.projectionMatrix),
+    position: [0, 0, 0]
   };
 }
 
@@ -93,15 +230,12 @@ function createHostFrame({viewport, renderViews, activeRenderViewId}) {
     geographicAnchor: {
       longitude: NEW_YORK_LONGITUDE,
       latitude: NEW_YORK_LATITUDE,
-      zoom: 2
+      zoom: viewMode.zoom
     },
-    projection: {
-      type: 'globe',
-      visibleBounds: FULL_GLOBE_BOUNDS
-    },
+    projection: viewMode.projection,
     renderViews,
     activeRenderViewId,
-    tileBuffer: 0
+    tileBuffer: viewMode.tileBuffer
   };
 }
 
@@ -116,9 +250,30 @@ function renderTangram({frame, renderPass, renderViewId}) {
 
 function renderPreview(time) {
   const {width, height} = resizePreviewCanvas();
+  if (viewMode.id !== 'globe') {
+    const viewport = {x: 0, y: 0, width, height};
+    const renderView = createDeckRenderView({id: 'preview', width, height});
+    const renderPass = device.beginRenderPass({
+      clearColor: [0.006, 0.014, 0.04, 1],
+      clearDepth: 1,
+      clearStencil: 0
+    });
+    renderPass.setParameters({viewport: [0, 0, width, height]});
+    renderTangram({
+      frame: createHostFrame({
+        viewport,
+        renderViews: [renderView],
+        activeRenderViewId: renderView.id
+      }),
+      renderPass,
+      renderViewId: renderView.id
+    });
+    renderPass.end();
+    return;
+  }
   const aspect = width / height;
   const placementMatrix = createPlacementMatrix({immersive: false, time});
-  const viewMatrix = new Matrix4();
+  const viewMatrix = createPreviewViewMatrix();
   const projectionMatrix = new Matrix4().perspective({
     fovy: Math.PI / 3,
     aspect,
@@ -150,6 +305,71 @@ function renderPreview(time) {
     renderViewId: 'preview'
   });
   renderPass.end();
+}
+
+function renderStereoPreview(time) {
+  const {width, height} = resizePreviewCanvas();
+  const eyeWidth = Math.floor(width / 2);
+  if (stereoCanvas.width !== width || stereoCanvas.height !== height) {
+    stereoCanvas.width = width;
+    stereoCanvas.height = height;
+  }
+  const projectionMatrix = new Matrix4().perspective({
+    fovy: Math.PI / 3,
+    aspect: eyeWidth / height,
+    near: 0.05,
+    far: 2000
+  });
+  const placementMatrix = createPlacementMatrix({immersive: true, time});
+  const eyes = [
+    {id: 'left-eye', x: 0, offset: -0.032},
+    {id: 'right-eye', x: eyeWidth, offset: 0.032}
+  ];
+  const renderViews = eyes.map(({id, x, offset}) => {
+    if (viewMode.id !== 'globe') {
+      return createDeckRenderView({id, width, height, eyeOffset: offset});
+    }
+    const viewport = {
+      x: 0,
+      y: 0,
+      width,
+      height
+    };
+    return createRenderView({
+      id,
+      viewport,
+      projectionMatrix,
+      viewMatrix: createStereoPreviewViewMatrix(offset),
+      placementMatrix
+    });
+  });
+  const hostFrame = createHostFrame({
+    viewport: {x: 0, y: 0, width, height},
+    renderViews,
+    activeRenderViewId: renderViews[0].id
+  });
+  for (let index = 0; index < renderViews.length; index++) {
+    const renderView = renderViews[index];
+    const renderPass = device.beginRenderPass({
+      clearColor: [0.006, 0.014, 0.04, 1],
+      clearDepth: 1,
+      clearStencil: 0
+    });
+    renderPass.setParameters({viewport: [0, 0, width, height]});
+    renderTangram({frame: hostFrame, renderPass, renderViewId: renderView.id});
+    renderPass.end();
+    stereoContext.drawImage(
+      canvas,
+      0,
+      0,
+      width,
+      height,
+      eyes[index].x,
+      0,
+      index === eyes.length - 1 ? width - eyes[index].x : eyeWidth,
+      height
+    );
+  }
 }
 
 function renderXRFrame(time, xrFrame) {
@@ -209,16 +429,26 @@ function renderXRFrame(time, xrFrame) {
 async function setXRSession(session) {
   try {
     await webXRManager.setSession(session, {referenceSpaceType: 'local-floor'});
+    xrReferenceSpaceType = 'local-floor';
   } catch (error) {
     if (error?.name !== 'NotSupportedError') {
       throw error;
     }
     await webXRManager.setSession(session, {referenceSpaceType: 'local'});
+    xrReferenceSpaceType = 'local';
   }
 }
 
 async function enterVR() {
-  if (xrSession || !navigator.xr) {
+  if (xrSession || stereoPreview) {
+    return;
+  }
+  if (
+    !navigator.xr ||
+    !immersiveVRSupported ||
+    (device.type === 'webgpu' && (!device.props.xrCompatible || !('XRGPUBinding' in window)))
+  ) {
+    enterStereoPreview();
     return;
   }
   enterButton.disabled = true;
@@ -227,7 +457,16 @@ async function enterVR() {
     device.type === 'webgpu'
       ? {requiredFeatures: ['webgpu'], optionalFeatures: ['local-floor']}
       : {optionalFeatures: ['local-floor']};
-  const session = await navigator.xr.requestSession('immersive-vr', sessionInit);
+  let session;
+  try {
+    session = await navigator.xr.requestSession('immersive-vr', sessionInit);
+  } catch (error) {
+    if (error?.name === 'NotSupportedError') {
+      enterStereoPreview();
+      return;
+    }
+    throw error;
+  }
   try {
     await setXRSession(session);
     xrSession = session;
@@ -237,12 +476,31 @@ async function enterVR() {
     });
     enterButton.hidden = true;
     exitButton.hidden = false;
-    setStatus(`Rendering a stereoscopic Tangram globe through ${device.type}.`, 'success');
+    setStatus(`Rendering stereoscopic Tangram ${viewMode.label} through ${device.type}.`, 'success');
   } catch (error) {
     await session.end().catch(() => {});
     enterButton.disabled = false;
     throw error;
   }
+}
+
+function enterStereoPreview() {
+  if (device.type !== 'webgl') {
+    const url = new URL(window.location.href);
+    url.searchParams.set('device', 'webgl');
+    url.searchParams.set('stereo', '1');
+    window.location.assign(url);
+    return;
+  }
+  stereoPreview = true;
+  container.classList.add('is-stereo');
+  enterButton.hidden = true;
+  enterButton.disabled = false;
+  exitButton.hidden = false;
+  setStatus(
+    `Rendering split-screen Tangram ${viewMode.label} with distinct left- and right-eye cameras.`,
+    'success'
+  );
 }
 
 async function exitVR() {
@@ -254,13 +512,16 @@ async function exitVR() {
 
 function clearXRSession() {
   xrSession = null;
-  webXRManager.clearSession();
+  stereoPreview = false;
+  xrReferenceSpaceType = 'local-floor';
+  container.classList.remove('is-stereo');
+  webXRManager?.clearSession();
   if (!destroyed) {
     animationLoop.setProps({animationFrameProvider: undefined});
     enterButton.hidden = false;
     enterButton.disabled = false;
     exitButton.hidden = true;
-    setStatus('VR session ended. The desktop globe preview remains active.', 'success');
+    setStatus(`VR session ended. The desktop ${viewMode.label} preview remains active.`, 'success');
   }
 }
 
@@ -306,6 +567,8 @@ async function initialize() {
     onRender: ({animationFrame, time}) => {
       if (xrSession && animationFrame) {
         renderXRFrame(time, animationFrame);
+      } else if (stereoPreview) {
+        renderStereoPreview(time);
       } else {
         renderPreview(time);
       }
@@ -314,17 +577,31 @@ async function initialize() {
   });
   await animationLoop.start();
 
-  if (!navigator.xr) {
-    setStatus('Desktop preview ready. WebXR is not available in this browser.', 'warning');
+  if (query.get('stereo') === '1') {
+    enterStereoPreview();
+  }
+
+  if (stereoPreview) {
     return;
   }
-  const supported = await navigator.xr.isSessionSupported('immersive-vr');
-  enterButton.disabled = !supported;
+
+  if (!navigator.xr) {
+    enterButton.disabled = false;
+    setStatus(
+      `Desktop ${viewMode.label} preview ready. Enter VR opens the split-screen stereo preview.`,
+      'warning'
+    );
+    return;
+  }
+  immersiveVRSupported = await navigator.xr
+    .isSessionSupported('immersive-vr')
+    .catch(() => false);
+  enterButton.disabled = false;
   setStatus(
-    supported
-      ? `Desktop preview ready on ${device.type}. Enter VR for stereoscopic rendering.`
-      : 'Desktop preview ready. This browser has no immersive-vr device.',
-    supported ? 'success' : 'warning'
+    immersiveVRSupported
+      ? `Desktop ${viewMode.label} preview ready on ${device.type}. Enter VR for stereoscopic rendering.`
+      : `Desktop ${viewMode.label} preview ready. Enter VR opens split-screen stereo; enable the emulator for an immersive session.`,
+    immersiveVRSupported ? 'success' : 'warning'
   );
 }
 
@@ -352,7 +629,7 @@ window.addEventListener('pagehide', destroy, {once: true});
 
 initialize().catch((error) => setStatus(error.message, 'error'));
 
-function createVectorGlobeScene() {
+function createVectorScene() {
   return {
     scene: {
       background: {color: '#030817'}
@@ -384,6 +661,14 @@ function createVectorGlobeScene() {
         data: {source: 'carto', layer: 'water'},
         draw: {polygons: {order: 3, color: '#071329'}}
       },
+      buildings: {
+        data: {source: 'carto', layer: 'building'},
+        filter: {$zoom: {min: 14}},
+        draw: {
+          polygons: {order: 4, color: '#142b4b', extrude: true},
+          lines: {order: 5, color: '#267f9e', width: '0.5px', extrude: true}
+        }
+      },
       roads: {
         data: {source: 'carto', layer: 'transportation'},
         draw: {
@@ -406,4 +691,13 @@ function createVectorGlobeScene() {
       }
     }
   };
+}
+
+function longitudeLatitudeToMeters(longitude, latitude) {
+  const clampedLatitude = Math.max(-85.05112878, Math.min(85.05112878, latitude));
+  return [
+    (longitude / 180) * TANGRAM_HALF_WORLD_METERS,
+    (Math.log(Math.tan(((90 + clampedLatitude) * Math.PI) / 360)) / Math.PI) *
+      TANGRAM_HALF_WORLD_METERS
+  ];
 }

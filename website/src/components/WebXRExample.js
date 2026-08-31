@@ -24,14 +24,22 @@ function appendScript(url, type = 'text/javascript') {
   });
 }
 
-export default function WebXRExample() {
+const VIEW_LABELS = {
+  globe: 'GlobeView',
+  map: 'MapView',
+  firstPerson: 'FirstPersonView'
+};
+
+export default function WebXRExample({viewMode = 'globe'}) {
   const exampleBaseUrl = useBaseUrl('/examples/webxr/');
   const rendererUrl = useBaseUrl('/modules/tangram-renderer/dist/index.js');
   const [errorMessage, setErrorMessage] = useState(null);
   const appendedElements = useRef([]);
+  const viewLabel = VIEW_LABELS[viewMode] || VIEW_LABELS.globe;
 
   useEffect(() => {
     let cancelled = false;
+    window.tangramWebXRViewMode = viewMode;
     document.body.classList.add('tangram-webxr-embedded');
     const stylesheetElement = appendStylesheet(`${exampleBaseUrl}main.css`);
     appendedElements.current.push(stylesheetElement);
@@ -40,6 +48,8 @@ export default function WebXRExample() {
     importMapElement.type = 'importmap';
     importMapElement.textContent = JSON.stringify({
       imports: {
+        '@deck.gl/core':
+          'https://esm.sh/deck.gl@9.4.0-alpha.2?bundle&external=@luma.gl/core,@math.gl/core',
         '@luma.gl/core': 'https://esm.sh/@luma.gl/core@9.4.0-beta.3?bundle',
         '@luma.gl/engine':
           'https://esm.sh/@luma.gl/engine@9.4.0-beta.3?bundle&external=@luma.gl/core,@math.gl/core',
@@ -56,7 +66,10 @@ export default function WebXRExample() {
     document.head.appendChild(importMapElement);
     appendedElements.current.push(importMapElement);
 
-    appendScript(`${exampleBaseUrl}app.js?embedded=1`, 'module')
+    appendScript(
+      `${exampleBaseUrl}app.js?embedded=1&view=${encodeURIComponent(viewMode)}`,
+      'module'
+    )
       .then((scriptElement) => {
         appendedElements.current.push(scriptElement);
         if (cancelled) {
@@ -78,13 +91,15 @@ export default function WebXRExample() {
       appendedElements.current = [];
       document.body.classList.remove('tangram-webxr-embedded');
       delete window.tangramWebXRExampleDestroy;
+      delete window.tangramWebXRViewMode;
     };
-  }, [exampleBaseUrl, rendererUrl]);
+  }, [exampleBaseUrl, rendererUrl, viewMode]);
 
   return (
     <div className="webxr-example-embed">
       <div id="webxr-container">
         <canvas id="webxr-canvas" />
+        <canvas id="webxr-stereo-canvas" aria-label="Side-by-side stereoscopic preview" />
         <div className="webxr-device-tabs" role="tablist" aria-label="Rendering device">
           <button type="button" data-webxr-device="webgl" role="tab">
             WebGL 2
@@ -94,12 +109,12 @@ export default function WebXRExample() {
           </button>
         </div>
         <aside className="webxr-panel">
-          <h1>WebXR globe</h1>
+          <h1 id="webxr-title">WebXR {viewLabel}</h1>
           <p id="webxr-status" role="status">
             Preparing the renderer…
           </p>
           <div className="webxr-actions">
-            <button id="webxr-enter" type="button" disabled>
+            <button id="webxr-enter" type="button">
               Enter VR
             </button>
             <button id="webxr-exit" type="button" hidden>
@@ -111,7 +126,11 @@ export default function WebXRExample() {
             one shared scene and tile cache.
           </p>
           <p className="webxr-hint">
-            Use a WebXR headset or the Immersive Web Emulator extension to enter VR.
+            Without a headset, Enter VR opens a side-by-side stereo preview. Install the{' '}
+            <a href="https://chromewebstore.google.com/detail/immersive-web-emulator/cgffilbpcibhmcfbgggfhfolhkfbhmik">
+              Immersive Web Emulator
+            </a>{' '}
+            to exercise the real WebXR session path in desktop Chrome.
           </p>
         </aside>
         <p className="webxr-attribution">

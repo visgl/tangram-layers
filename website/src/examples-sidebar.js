@@ -27,7 +27,16 @@ const sidebars = {
       items: [
         {type: 'doc', id: 'classic', label: 'Classic playground'},
         {type: 'doc', id: 'leaflet', label: 'Leaflet integration'},
-        {type: 'doc', id: 'webxr', label: 'WebXR globe · experimental'}
+        {
+          type: 'category',
+          label: 'WebXR · experimental',
+          collapsed: false,
+          items: [
+            {type: 'doc', id: 'webxr', label: 'GlobeView'},
+            {type: 'doc', id: 'webxr-map-view', label: 'MapView'},
+            {type: 'doc', id: 'webxr-first-person', label: 'FirstPersonView'}
+          ]
+        }
       ]
     }
   ]
