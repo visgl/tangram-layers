@@ -30,6 +30,8 @@ const VIEW_LABELS = {
   firstPerson: 'FirstPersonView'
 };
 
+let webXRExampleMountId = 0;
+
 export default function WebXRExample({viewMode = 'globe'}) {
   const exampleBaseUrl = useBaseUrl('/examples/webxr/');
   const layersUrl = useBaseUrl('/modules/tangram-layers/dist/index.js');
@@ -40,6 +42,7 @@ export default function WebXRExample({viewMode = 'globe'}) {
 
   useEffect(() => {
     let cancelled = false;
+    const mountId = String(++webXRExampleMountId);
     window.tangramWebXRViewMode = viewMode;
     document.body.classList.add('tangram-webxr-embedded');
     const stylesheetElement = appendStylesheet(`${exampleBaseUrl}main.css`);
@@ -70,7 +73,7 @@ export default function WebXRExample({viewMode = 'globe'}) {
     appendedElements.current.push(importMapElement);
 
     appendScript(
-      `${exampleBaseUrl}app.js?embedded=1&view=${encodeURIComponent(viewMode)}`,
+      `${exampleBaseUrl}app.js?embedded=1&view=${encodeURIComponent(viewMode)}&mount=${mountId}`,
       'module'
     )
       .then((scriptElement) => {
