@@ -225,6 +225,7 @@ describe('Renderer', function () {
         assert.strictEqual(renderer.device_renderer.device, device);
         assert.strictEqual(renderer.scene.mesh_renderer, renderer.device_renderer);
         assert.isTrue(renderer.scene.enable_uniform_buffers);
+        assert.isTrue(renderer.scene.device_shader_compilation);
         assert.strictEqual(renderer.scene.max_texture_size, 4096);
         assert.isFunction(renderer.scene.uniform_buffer_factory);
         assert.isFunction(renderer.scene.shader_factory);

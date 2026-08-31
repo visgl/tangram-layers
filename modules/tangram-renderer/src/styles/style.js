@@ -1,6 +1,7 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 // Rendering styles
 
@@ -416,6 +417,7 @@ export var Style = {
         this.uniform_blocks = uniform_blocks;
         this.shader_language = options.shaderLanguage || 'glsl';
         this.shader_factory = options.shaderFactory;
+        this.device_shader_compilation = options.deviceShaderCompilation === true;
         this.uniform_block_factory = options.uniformBlockFactory;
         this.mesh_buffer_factory = options.meshBufferFactory;
         this.texture_factory = options.textureFactory;
@@ -521,6 +523,7 @@ export var Style = {
                 uniforms,
                 uniform_blocks: this.uniform_blocks,
                 shaderLanguage: this.shader_language,
+                deviceShaderCompilation: this.device_shader_compilation,
                 deferUniformBlocks: this.defer_uniform_blocks,
                 deferTextureBindings: this.defer_texture_bindings,
                 deferUniformUpdates: this.defer_uniform_updates,
@@ -542,6 +545,7 @@ export var Style = {
                     uniforms,
                     uniform_blocks: this.uniform_blocks,
                     shaderLanguage: this.shader_language,
+                    deviceShaderCompilation: this.device_shader_compilation,
                     deferUniformBlocks: this.defer_uniform_blocks,
                     deferTextureBindings: this.defer_texture_bindings,
                     deferUniformUpdates: this.defer_uniform_updates,

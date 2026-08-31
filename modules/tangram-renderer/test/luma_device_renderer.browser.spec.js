@@ -36,6 +36,7 @@ describe('LumaDeviceRenderer', function () {
             'buffer', 'buffer', 'shader', 'texture', 'texture-write'
         ]);
         expect(options.meshRenderer).toBe(renderer);
+        expect(options.deviceShaderCompilation).toBe(true);
         expect(options.maxTextureSize).toBe(4096);
     });
 

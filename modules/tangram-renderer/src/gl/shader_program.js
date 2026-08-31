@@ -1,6 +1,7 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 // GL program wrapper to cache uniform locations/values, do compile-time pre-processing
 // (injecting #defines and #pragma blocks into shaders), etc.
@@ -53,6 +54,7 @@ export default class ShaderProgram {
         this.texture_uniforms = {};
         this.shader_language = options.shaderLanguage || 'glsl';
         this.shader_factory = options.shaderFactory;
+        this.device_shader_compilation = options.deviceShaderCompilation === true;
         this.vertex_shader_resource = null;
         this.fragment_shader_resource = null;
         this.glsl_version = options.glsl_version || (Object.keys(this.uniform_blocks).length > 0 ? 300 : 100);
@@ -66,7 +68,7 @@ export default class ShaderProgram {
     }
 
     destroy() {
-        if (this.shader_language === 'glsl') {
+        if (this.shader_language === 'glsl' && !this.device_shader_compilation) {
             this.gl.useProgram(null);
             this.gl.deleteProgram(this.program);
         }
@@ -97,6 +99,9 @@ export default class ShaderProgram {
     compile() {
         if (this.shader_language !== 'glsl') {
             return this.compilePortable();
+        }
+        if (this.device_shader_compilation && !this.shader_factory) {
+            throw new Error('ShaderProgram: device compilation requires a shaderFactory');
         }
         if (this.compiling) {
             throw(new Error(`ShaderProgram.compile(): skipping for ${this.id} (${this.name}) because already compiling`));
@@ -218,26 +223,34 @@ export default class ShaderProgram {
                     this.computed_fragment_source
                 );
             }
-            try {
-                this.program = ShaderProgram.updateProgram(
-                    this.gl,
-                    this.program,
-                    this.computed_vertex_source,
-                    this.computed_fragment_source,
-                    shader_resources
-                );
+            if (this.device_shader_compilation) {
+                this.destroyShaderResources();
+                this.vertex_shader_resource = shader_resources && shader_resources.vertex_shader;
+                this.fragment_shader_resource = shader_resources && shader_resources.fragment_shader;
+                this.program = null;
             }
-            catch (error) {
-                destroyShaderResource(shader_resources && shader_resources.vertex_shader);
-                destroyShaderResource(shader_resources && shader_resources.fragment_shader);
-                throw error;
+            else {
+                try {
+                    this.program = ShaderProgram.updateProgram(
+                        this.gl,
+                        this.program,
+                        this.computed_vertex_source,
+                        this.computed_fragment_source,
+                        shader_resources
+                    );
+                }
+                catch (error) {
+                    destroyShaderResource(shader_resources && shader_resources.vertex_shader);
+                    destroyShaderResource(shader_resources && shader_resources.fragment_shader);
+                    throw error;
+                }
+                this.destroyShaderResources();
+                this.vertex_shader_resource = shader_resources && shader_resources.vertex_shader;
+                this.fragment_shader_resource = shader_resources && shader_resources.fragment_shader;
             }
-            this.destroyShaderResources();
-            this.vertex_shader_resource = shader_resources && shader_resources.vertex_shader;
-            this.fragment_shader_resource = shader_resources && shader_resources.fragment_shader;
             this.compiled = true;
             this.compiling = false;
-            ShaderProgram.current = null; // updateProgram() explicitly unbinds the current GL program
+            ShaderProgram.current = null;
             for (const uniform_buffer of Object.values(this.uniform_blocks)) {
                 if (typeof uniform_buffer.invalidateProgram === 'function') {
                     uniform_buffer.invalidateProgram(this.program);
@@ -298,7 +311,7 @@ export default class ShaderProgram {
             const fragment_shader = this.shader_factory(fragment_options);
             const resources_valid = vertex_shader && typeof vertex_shader.destroy === 'function' &&
                 fragment_shader && typeof fragment_shader.destroy === 'function';
-            const handles_valid = this.shader_language !== 'glsl' ||
+            const handles_valid = this.shader_language !== 'glsl' || this.device_shader_compilation ||
                 (vertex_shader.handle && fragment_shader.handle);
             if (!resources_valid || !handles_valid) {
                 destroyShaderResource(fragment_shader);

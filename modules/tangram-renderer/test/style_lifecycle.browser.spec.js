@@ -243,6 +243,7 @@ describe('generic style data lifecycle', () => {
         const style = createStyle();
         const gl = {};
         style.setGL(gl, {Scene: {}}, {
+            deviceShaderCompilation: true,
             deferTextureBindings: true,
             deferUniformBlocks: true,
             deferUniformUpdates: true,
@@ -255,6 +256,7 @@ describe('generic style data lifecycle', () => {
             uniformBlockFactory: vi.fn()
         });
         expect(style).toMatchObject({
+            device_shader_compilation: true,
             defer_texture_bindings: true,
             defer_uniform_blocks: true,
             defer_uniform_updates: true,
