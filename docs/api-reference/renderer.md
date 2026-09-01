@@ -38,6 +38,19 @@ The host supplies the frame and owns scheduling. `LumaDeviceRenderer` provides
 resource factories for luma.gl devices, including the WebGPU backend. The
 renderer does not depend on deck.gl and does not create a second host device.
 
+### GPU backend ownership
+
+Passing `device` creates one renderer-owned `LumaDeviceRenderer`. It owns the
+Tangram buffers, textures, shaders, pipelines, vertex arrays, and draw submission
+and is released by `renderer.destroy()`. The embedding application continues to
+own the luma.gl `Device` and each `RenderPass`; Tangram never destroys them.
+
+`TangramGPUBackend` documents this deck-independent internal boundary so legacy
+resource wrappers can migrate incrementally. It does not introduce a second
+backend implementation or a public backend-selection mechanism. The classic
+standalone path keeps its legacy WebGL implementation as a compatibility
+fallback.
+
 ## TypeScript contracts
 
 The package root exports the runtime classes together with `RendererOptions`,
