@@ -1,6 +1,7 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 import log from '../utils/log';
 import DataSource, {NetworkSource, NetworkTileSource} from './data_source';
@@ -10,6 +11,8 @@ import Geo from '../utils/geo';
 // For tiling GeoJSON client-side
 import geojsonvt from 'geojson-vt';
 
+type SourceConfig = Record<string, any>;
+
 /**
  GeoJSON standalone (non-tiled) source
  Uses geojson-vt split into tiles client-side
@@ -17,7 +20,11 @@ import geojsonvt from 'geojson-vt';
 
 export class GeoJSONSource extends NetworkSource {
 
-    constructor(source, sources) {
+    load_data: Promise<any> | null = null;
+    tile_indexes!: Record<string, any>;
+    loaded = false;
+
+    constructor(source: SourceConfig, sources?: Record<string, unknown>) {
         super(source, sources);
         this.load_data = null;
         this.tile_indexes = {}; // geojson-vt tile indices, by layer name
@@ -25,7 +32,10 @@ export class GeoJSONSource extends NetworkSource {
         this.pad_scale = 0; // we don't want padding on auto-tiled sources
     }
 
-    _load(dest) {
+    _load(dest?: any): Promise<any> {
+        if (!dest) {
+            throw new Error('GeoJSON source loading requires a destination tile');
+        }
         if (!this.load_data) {
             this.load_data = super._load({ source_data: { layers: {} } }).then(data => {
                 // Warn and continue on data source error
@@ -56,8 +66,8 @@ export class GeoJSONSource extends NetworkSource {
         });
     }
 
-    getTileFeatures(tile, layer_name) {
-        let coords = Geo.wrapTile(tile.coords, { x: true });
+    getTileFeatures(tile: any, layer_name: string): any {
+        let coords = Geo.wrapTile(tile.coords, {x: true, y: false});
 
         // request a particular tile
         let t = this.tile_indexes[layer_name].getTile(coords.z, coords.x, coords.y);
@@ -67,14 +77,14 @@ export class GeoJSONSource extends NetworkSource {
         if (t && t.features) {
             collection = {
                 type: 'FeatureCollection',
-                features: []
+                features: [] as any[]
             };
 
             for (let i=0; i < t.features.length; i++) {
                 const feature = t.features[i];
 
                 // GeoJSON feature
-                let f = {
+                let f: any = {
                     type: 'Feature',
                     geometry: {},
                     id: feature.id,
@@ -82,12 +92,12 @@ export class GeoJSONSource extends NetworkSource {
                 };
 
                 if (feature.type === 1) {
-                    f.geometry.coordinates = feature.geometry.map(coord => [coord[0], coord[1]]);
+                    f.geometry.coordinates = feature.geometry.map((coord: any) => [coord[0], coord[1]]);
                     f.geometry.type = 'MultiPoint';
                 }
                 else if (feature.type === 2 || feature.type === 3) {
-                    f.geometry.coordinates = feature.geometry.map(ring =>
-                        ring.map(coord => [coord[0], coord[1]])
+                    f.geometry.coordinates = feature.geometry.map((ring: any[]) =>
+                        ring.map((coord: any) => [coord[0], coord[1]])
                     );
 
                     if (feature.type === 2) {
@@ -115,13 +125,16 @@ export class GeoJSONSource extends NetworkSource {
         return this.url;
     }
 
-    parseSourceData (tile, source, response) {
+    parseSourceData (tile?: any, source?: any, response?: any): void {
+        if (!tile || !source) {
+            throw new Error('GeoJSON source parsing requires a tile and source data');
+        }
         let data = typeof response === 'string' ? JSON.parse(response) : response;
         let layers = this.getLayers(data);
         source.layers = this.preprocessLayers(layers, tile);
     }
 
-    preprocessLayers (layers, tile){
+    preprocessLayers (layers: any, tile: any): any {
         for (let key in layers) {
             let layer = layers[key];
             layer.features = this.preprocessFeatures(layer.features);
@@ -146,14 +159,14 @@ export class GeoJSONSource extends NetworkSource {
     }
 
     // Preprocess features. Currently used to add a new "centroid" feature for polygon labeling
-    preprocessFeatures (features) {
+    preprocessFeatures (features: any[]): any[] {
         // Remove features without geometry (which is valid GeoJSON)
         features = features.filter(f => f.geometry != null);
 
         // Define centroids for polygons for centroid label placement
         // Avoids redundant label placement for each generated tile at higher zoom levels
         if (this.config.generate_label_centroids){
-            let features_centroid = [];
+            let features_centroid: any[] = [];
             let centroid_properties = {'label_placement' : true};
 
             features.forEach(feature => {
@@ -169,7 +182,7 @@ export class GeoJSONSource extends NetworkSource {
                     let max_area = -Infinity;
                     let max_area_index = 0;
                     for (let index = 0; index < coordinates.length; index++) {
-                        let area = Geo.polygonArea(coordinates[index]);
+                        let area = Geo.polygonArea(coordinates[index]) || 0;
                         if (area > max_area) {
                             max_area = area;
                             max_area_index = index;
@@ -189,7 +202,7 @@ export class GeoJSONSource extends NetworkSource {
     }
 
     // Detect single or multiple layers in returned data
-    getLayers (data) {
+    getLayers (data: any): any {
         if (data.type === 'Feature') {
             return {
                 _default: {
@@ -216,16 +229,19 @@ export class GeoJSONSource extends NetworkSource {
 */
 export class GeoJSONTileSource extends NetworkTileSource {
 
-    constructor(source, sources) {
+    constructor(source: SourceConfig, sources?: Record<string, unknown>) {
         super(source, sources);
     }
 
-    parseSourceData (tile, source, response) {
+    parseSourceData (tile?: any, source?: any, response?: any): void {
+        if (!tile || !source) {
+            throw new Error('GeoJSON tile parsing requires a tile and source data');
+        }
         let data = typeof response === 'string' ? JSON.parse(response) : response;
         this.prepareGeoJSON(data, tile, source);
     }
 
-    prepareGeoJSON (data, tile, source) {
+    prepareGeoJSON (data: any, tile: any, source: any): void {
         // Apply optional data transform
         if (typeof this.transform === 'function') {
             const tile_data = {
@@ -241,7 +257,7 @@ export class GeoJSONTileSource extends NetworkTileSource {
         // A "synthetic" tile that adjusts the tile min anchor to account for tile longitude wrapping
         let anchor = {
             coords: tile.coords,
-            min: Geo.metersForTile(Geo.wrapTile(tile.coords, { x: true }))
+            min: Geo.metersForTile(Geo.wrapTile(tile.coords, {x: true, y: false}))
         };
 
         DataSource.projectData(source); // mercator projection
@@ -251,13 +267,18 @@ export class GeoJSONTileSource extends NetworkTileSource {
 }
 
 // Check for URL tile pattern, if not found, treat as standalone GeoJSON/TopoJSON object
-DataSource.register('GeoJSON', source => {
+DataSource.register('GeoJSON', (source: SourceConfig) => {
     return GeoJSONTileSource.urlHasTilePattern(source.url) ? GeoJSONTileSource : GeoJSONSource;
 });
 
 
 // Helper function to create centroid point feature from polygon coordinates and provided feature meta-data
-function getCentroidFeatureForPolygon (coordinates, id, properties, newProperties) {
+function getCentroidFeatureForPolygon (
+    coordinates: any,
+    id: string | number | undefined,
+    properties: Record<string, unknown>,
+    newProperties: Record<string, unknown>
+): any {
     let centroid = Geo.centroid(coordinates);
     if (!centroid) {
         return;
