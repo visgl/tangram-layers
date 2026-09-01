@@ -10,9 +10,20 @@ import { isGlobalReference } from './globals';
 import JSZip from 'jszip';
 import {parseSceneYamlLegacy} from '../procedures/scene-yaml-legacy';
 
+type SceneConfig = Record<string, any>;
+type ResourceDescriptor = {url: any; path: any; type: any};
+type SceneBundleFile = {data: ArrayBuffer; type: string | undefined; depth: number; url?: any};
+type SceneBundleParent = SceneBundle | ZipSceneBundle | null;
+
 export class SceneBundle {
 
-    constructor(url, path, parent = null) {
+    url: any;
+    path: any;
+    path_for_parent: any;
+    parent: SceneBundleParent;
+    container: SceneBundle | ZipSceneBundle | null;
+
+    constructor (url: any, path: any, parent: SceneBundleParent = null) {
         this.url = url;
 
         // If a base path was provided, use it for resolving local bundle resources only if
@@ -41,7 +52,7 @@ export class SceneBundle {
         }
     }
 
-    load() {
+    load (): Promise<SceneConfig> {
         return loadResource(this.url);
     }
 
@@ -49,7 +60,7 @@ export class SceneBundle {
     // url: fully qualified URL to retrieve the content of the resource (e.g. zips will transform this to blob URL)
     // path: original path of the resource within the bundle (for resolving paths up the bundle tree)
     // type: file extension (used for determining bundle type, `yaml` or `zip`)
-    resourceFor(url) {
+    resourceFor (url: any): ResourceDescriptor {
         return {
             url: this.urlFor(url),
             path: this.pathFor(url),
@@ -57,26 +68,26 @@ export class SceneBundle {
         };
     }
 
-    urlFor(url) {
+    urlFor (url: any): any {
         if (isGlobalReference(url)) {
             return url;
         }
 
         if (URLs.isRelativeURL(url) && this.container) {
-            return this.parent.urlFor(this.path_for_parent + url);
+            return this.parent!.urlFor(this.path_for_parent + url);
         }
         return URLs.addBaseURL(url, this.path);
     }
 
-    pathFor(url) {
+    pathFor (url: any): any {
         return URLs.pathForURL(url);
     }
 
-    typeFor(url) {
+    typeFor (url: any): any {
         return URLs.extensionForURL(url);
     }
 
-    isContainer() {
+    isContainer (): boolean {
         return false;
     }
 
@@ -84,7 +95,11 @@ export class SceneBundle {
 
 export class ZipSceneBundle extends SceneBundle {
 
-    constructor(url, path, parent) {
+    zip: any;
+    files: Record<string, SceneBundleFile>;
+    root: string | null;
+
+    constructor (url: any, path: any, parent: SceneBundleParent) {
         super(url, path, parent);
         this.zip = null;
         this.files = {};
@@ -92,11 +107,11 @@ export class ZipSceneBundle extends SceneBundle {
         this.path = '';
     }
 
-    isContainer() {
+    isContainer (): boolean {
         return true;
     }
 
-    async load() {
+    async load (): Promise<SceneConfig> {
         this.zip = new JSZip();
 
         if (typeof this.url === 'string') {
@@ -109,7 +124,7 @@ export class ZipSceneBundle extends SceneBundle {
         }
     }
 
-    urlFor(url) {
+    urlFor (url: any): any {
         if (isGlobalReference(url)) {
             return url;
         }
@@ -120,19 +135,19 @@ export class ZipSceneBundle extends SceneBundle {
         return super.urlFor(url);
     }
 
-    typeFor(url) {
+    typeFor (url: any): any {
         if (URLs.isRelativeURL(url)) {
             return this.typeForZipFile(url);
         }
         return super.typeFor(url);
     }
 
-    loadRoot() {
+    loadRoot (): Promise<SceneConfig> {
         this.findRoot();
-        return loadResource(this.urlForZipFile(this.root));
+        return loadResource(this.urlForZipFile(this.root as string));
     }
 
-    findRoot() {
+    findRoot (): void {
         // There must be a single YAML file at the top level of the zip
         const yamls = Object.keys(this.files)
             .filter(path => this.files[path].depth === 0)
@@ -156,10 +171,10 @@ export class ZipSceneBundle extends SceneBundle {
         }
     }
 
-    async parseZipFiles() {
-        let paths = [];
-        let queue = [];
-        this.zip.forEach((path, file) => {
+    async parseZipFiles (): Promise<void> {
+        let paths: string[] = [];
+        let queue: Promise<ArrayBuffer>[] = [];
+        this.zip.forEach((path: string, file: any) => {
             if (!file.dir) {
                 paths.push(path);
                 queue.push(file.async('arraybuffer'));
@@ -178,7 +193,7 @@ export class ZipSceneBundle extends SceneBundle {
         }
     }
 
-    urlForZipFile(file) {
+    urlForZipFile (file: string): string | undefined {
         if (this.files[file]) {
             if (!this.files[file].url) {
                 this.files[file].url = URLs.createObjectURL(new Blob([this.files[file].data]));
@@ -188,13 +203,13 @@ export class ZipSceneBundle extends SceneBundle {
         }
     }
 
-    typeForZipFile(file) {
+    typeForZipFile (file: string): string | undefined {
         return this.files[file] && this.files[file].type;
     }
 
 }
 
-export function createSceneBundle(url, path, parent, type = null) {
+export function createSceneBundle (url: any, path: any, parent: SceneBundleParent, type: string | null = null): SceneBundle | ZipSceneBundle {
     if ((type != null && type === 'zip') ||
         (typeof url === 'string' && !URLs.isLocalURL(url) && URLs.extensionForURL(url) === 'zip')) {
         return new ZipSceneBundle(url, path, parent);
@@ -202,11 +217,11 @@ export function createSceneBundle(url, path, parent, type = null) {
     return new SceneBundle(url, path, parent);
 }
 
-function parseResource (body) {
+function parseResource (body: any): SceneConfig {
     return parseSceneYamlLegacy(body);
 }
 
-function loadResource (source) {
+function loadResource (source: any): Promise<SceneConfig> {
     return new Promise((resolve, reject) => {
         if (typeof source === 'string') {
             Utils.io(source).then(({ body }) => {

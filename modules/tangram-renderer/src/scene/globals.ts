@@ -1,6 +1,7 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 import log from '../utils/log';
 import { getPropertyPathTarget } from '../utils/props';
@@ -12,22 +13,25 @@ const GLOBAL_PREFIX_LENGTH = GLOBAL_PREFIX.length;
 // name of 'hidden' (non-enumerable) property used to track global property references on an object
 const GLOBAL_REGISTRY = '__global_prop';
 
+type GlobalValue = any;
+type GlobalObject = Record<string, any>;
+
 // Property name references a global property?
-export function isGlobalReference (val) {
+export function isGlobalReference (val: GlobalValue): boolean {
     return val?.slice(0, GLOBAL_PREFIX_LENGTH) === GLOBAL_PREFIX;
 }
 
 // Has object property been substitued with a value from a global reference?
 // Property provided as a single-depth string name, or nested path array (`a.b.c` => ['a', 'b', 'c'])
-export function isGlobalSubstitution (object, prop_or_path) {
+export function isGlobalSubstitution (object: GlobalObject, prop_or_path: string | string[]): boolean {
     const path = Array.isArray(prop_or_path) ? prop_or_path : [prop_or_path];
-    const target = getPropertyPathTarget(object, path);
+    const target: any = getPropertyPathTarget(object, path);
     const prop = path[path.length - 1];
     return target?.[GLOBAL_REGISTRY]?.[prop] !== undefined;
 }
 
 // Flatten nested global properties for simpler string look-ups
-export function flattenGlobalProperties (obj, prefix = null, globals = {}) {
+export function flattenGlobalProperties (obj: GlobalObject, prefix: string | null = null, globals: GlobalObject = {}): GlobalObject {
     prefix = prefix ? (prefix + '.') : GLOBAL_PREFIX;
 
     for (const p in obj) {
@@ -43,7 +47,7 @@ export function flattenGlobalProperties (obj, prefix = null, globals = {}) {
 }
 
 // Find and apply new global properties (and re-apply old ones)
-export function applyGlobalProperties (globals, obj, target, key) {
+export function applyGlobalProperties (globals: GlobalObject, obj: GlobalValue, target?: any, key?: any): GlobalValue {
     let prop;
 
     // Check for previously applied global substitution
