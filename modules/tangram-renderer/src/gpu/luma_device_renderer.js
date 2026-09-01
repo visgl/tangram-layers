@@ -79,8 +79,16 @@ export default class LumaDeviceRenderer {
         return this.device.createShader(shader_options);
     }
 
-    /** Validates that a device-owned shader pair can be linked before a style is used. */
+    /** Validates a device-owned shader pair when the backend supports layout-free linking. */
     validateShaderProgram({ id, vertexShader, fragmentShader }) {
+        // A WebGL program can only be linked against its concrete vertex
+        // layout. Tangram does not know that layout until the first mesh draw,
+        // where getPipeline() creates the real pipeline with the required
+        // attributes. An empty validation layout incorrectly rejects shaders
+        // such as TRON roads that declare style-specific vertex attributes.
+        if (this.device.type === 'webgl') {
+            return;
+        }
         const pipeline = this.device.createRenderPipeline({
             id: `tangram-${id}-validation`,
             vs: vertexShader,

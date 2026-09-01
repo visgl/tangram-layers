@@ -43,6 +43,8 @@ describe('LumaDeviceRenderer', function () {
 
     it('validates and releases temporary shader-pair pipelines', function () {
         const device = createDevice([]);
+        device.type = 'webgpu';
+        device.info.shadingLanguage = 'wgsl';
         const renderer = new LumaDeviceRenderer(device);
 
         renderer.validateShaderProgram({
@@ -61,6 +63,8 @@ describe('LumaDeviceRenderer', function () {
 
     it('rejects a shader pair that fails device link validation', function () {
         const device = createDevice([]);
+        device.type = 'webgpu';
+        device.info.shadingLanguage = 'wgsl';
         device.pipelineErrored = true;
         const renderer = new LumaDeviceRenderer(device);
 
@@ -70,6 +74,19 @@ describe('LumaDeviceRenderer', function () {
             fragmentShader: {id: 'fragment'}
         })).toThrow("Tangram shader program 'broken' failed device link validation");
         expect(device.pipeline.destroyed).toBe(true);
+    });
+
+    it('defers WebGL shader linking until the concrete mesh layout is available', function () {
+        const device = createDevice([]);
+        const renderer = new LumaDeviceRenderer(device);
+
+        renderer.validateShaderProgram({
+            id: 'roads-glow',
+            vertexShader: {id: 'vertex'},
+            fragmentShader: {id: 'fragment'}
+        });
+
+        expect(device.pipeline).toBeUndefined();
     });
 
     it('omits WebGL compatibility uniforms from WebGPU draw calls', function () {
