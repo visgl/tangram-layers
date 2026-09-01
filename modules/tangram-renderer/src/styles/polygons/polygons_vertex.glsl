@@ -76,13 +76,13 @@ varying vec4 v_world_position;
 #pragma tangram: global
 
 vec3 tangramGlobePosition(vec3 mercator_position) {
-    const float MERCATOR_RADIUS = 6378137.;
-    const float GLOBE_EARTH_RADIUS = 6370972.;
-    const float GLOBE_RADIUS = 256.;
-    const float HALF_PI = 1.5707963;
-    float longitude = mercator_position.x / MERCATOR_RADIUS;
-    float latitude = 2. * atan(exp(mercator_position.y / MERCATOR_RADIUS)) - HALF_PI;
-    float radius = (mercator_position.z / GLOBE_EARTH_RADIUS + 1.) * GLOBE_RADIUS;
+    const float TANGRAM_MERCATOR_RADIUS = 6378137.;
+    const float TANGRAM_GLOBE_EARTH_RADIUS = 6370972.;
+    const float TANGRAM_GLOBE_RADIUS = 256.;
+    const float TANGRAM_GLOBE_HALF_PI = 1.5707963;
+    float longitude = mercator_position.x / TANGRAM_MERCATOR_RADIUS;
+    float latitude = 2. * atan(exp(mercator_position.y / TANGRAM_MERCATOR_RADIUS)) - TANGRAM_GLOBE_HALF_PI;
+    float radius = (mercator_position.z / TANGRAM_GLOBE_EARTH_RADIUS + 1.) * TANGRAM_GLOBE_RADIUS;
     float latitude_cosine = cos(latitude);
     return vec3(
         sin(longitude) * latitude_cosine,

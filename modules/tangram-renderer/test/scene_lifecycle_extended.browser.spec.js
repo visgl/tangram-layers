@@ -199,14 +199,28 @@ describe('Scene render orchestration', () => {
             scene.gl = {ONE: 1, ONE_MINUS_SRC_ALPHA: 771, SRC_ALPHA: 770, SRC_COLOR: 768, ZERO: 0};
             scene.setRenderState({blend});
             expect(scene.render_states.blending.set).toHaveBeenCalled();
-            expect(scene.mesh_render_state).toMatchObject({blend: Boolean(blend && blend !== 'opaque')});
+            expect(scene.mesh_render_state).toBeNull();
 
             scene.portable_rendering = true;
+            scene.mesh_renderer = {
+                getRenderPipelineParameters: vi.fn(() => ({
+                    cullMode: 'none',
+                    depthCompare: 'always',
+                    depthWriteEnabled: false,
+                    blend: Boolean(blend && blend !== 'opaque')
+                }))
+            };
             scene.setRenderState({blend, cull_face: false, depth_test: false, depth_write: false});
             expect(scene.mesh_render_state).toMatchObject({
                 cullMode: 'none',
                 depthCompare: 'always',
                 depthWriteEnabled: false
+            });
+            expect(scene.mesh_renderer.getRenderPipelineParameters).toHaveBeenCalledWith({
+                depthTest: false,
+                depthWrite: false,
+                cullFace: false,
+                blend
             });
         }
     );

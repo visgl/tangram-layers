@@ -79,8 +79,16 @@ export default class LumaDeviceRenderer {
         return this.device.createShader(shader_options);
     }
 
-    /** Validates that a device-owned shader pair can be linked before a style is used. */
+    /** Validates a device-owned shader pair when the backend supports layout-free linking. */
     validateShaderProgram({ id, vertexShader, fragmentShader }) {
+        // A WebGL program can only be linked against its concrete vertex
+        // layout. Tangram does not know that layout until the first mesh draw,
+        // where getPipeline() creates the real pipeline with the required
+        // attributes. An empty validation layout incorrectly rejects shaders
+        // such as TRON roads that declare style-specific vertex attributes.
+        if (this.device.type === 'webgl') {
+            return;
+        }
         const pipeline = this.device.createRenderPipeline({
             id: `tangram-${id}-validation`,
             vs: vertexShader,
@@ -165,6 +173,49 @@ export default class LumaDeviceRenderer {
             texture.destroy();
             throw error;
         }
+    }
+
+    /** Translates normalized Tangram state into luma.gl pipeline parameters. */
+    getRenderPipelineParameters({ depthTest, depthWrite, cullFace, blend }) {
+        const parameters = {
+            cullMode: cullFace ? 'back' : 'none',
+            depthCompare: depthTest ? 'less' : 'always',
+            depthWriteEnabled: depthWrite,
+            blend: Boolean(blend && blend !== 'opaque')
+        };
+
+        if (blend === 'overlay' || blend === 'inlay' || blend === 'translucent') {
+            Object.assign(parameters, {
+                blendColorOperation: 'add',
+                blendColorSrcFactor: 'src-alpha',
+                blendColorDstFactor: 'one-minus-src-alpha',
+                blendAlphaOperation: 'add',
+                blendAlphaSrcFactor: 'one',
+                blendAlphaDstFactor: 'one-minus-src-alpha'
+            });
+        }
+        else if (blend === 'add') {
+            Object.assign(parameters, {
+                blendColorOperation: 'add',
+                blendColorSrcFactor: 'one',
+                blendColorDstFactor: 'one',
+                blendAlphaOperation: 'add',
+                blendAlphaSrcFactor: 'one',
+                blendAlphaDstFactor: 'one'
+            });
+        }
+        else if (blend === 'multiply') {
+            Object.assign(parameters, {
+                blendColorOperation: 'add',
+                blendColorSrcFactor: 'zero',
+                blendColorDstFactor: 'src',
+                blendAlphaOperation: 'add',
+                blendAlphaSrcFactor: 'one',
+                blendAlphaDstFactor: 'one-minus-src-alpha'
+            });
+        }
+
+        return parameters;
     }
 
     /** Draws one Tangram mesh into a host-provided luma.gl RenderPass. */

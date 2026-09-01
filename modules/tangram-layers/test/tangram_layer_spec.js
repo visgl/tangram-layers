@@ -746,13 +746,13 @@ describe('TangramLayer', function () {
         assert.match(layer.errors[1].error.message, /only one/);
 
         deck.viewports = null;
-        layer.context.viewport = Object.assign({}, layer.context.viewport, { projectionMode: 2 });
+        layer.context.viewport = Object.assign({}, layer.context.viewport, { isGeospatial: false });
         layer.draw();
         assert.lengthOf(layer.errors, 3);
         assert.match(layer.errors[2].error.message, /Web Mercator/);
 
         layer.context.viewport = Object.assign({}, layer.context.viewport, {
-            projectionMode: 1,
+            isGeospatial: true,
             viewMatrix: null
         });
         layer.draw();
@@ -850,6 +850,9 @@ describe('TangramLayer', function () {
             zoom: 15.25,
             bearing: 0,
             pitch: 0,
+            isGeospatial: true,
+            // deck.gl selects WEB_MERCATOR_AUTO_OFFSET at zoom 12 and above.
+            projectionMode: 4,
             width: 800,
             height: 600,
             viewMatrix: IDENTITY_MATRIX,

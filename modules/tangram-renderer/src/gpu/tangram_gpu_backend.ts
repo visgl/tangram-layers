@@ -67,6 +67,24 @@ export type TangramMeshDrawOptions = {
   visibleTime: number;
 };
 
+/** Tangram blend modes accepted by the portable renderer. */
+export type TangramBlendMode =
+  | false
+  | 'opaque'
+  | 'overlay'
+  | 'inlay'
+  | 'translucent'
+  | 'add'
+  | 'multiply';
+
+/** Normalized Tangram state used to create a luma.gl render pipeline. */
+export type TangramRenderStateOptions = {
+  depthTest: boolean;
+  depthWrite: boolean;
+  cullFace: boolean;
+  blend: TangramBlendMode;
+};
+
 /**
  * Scene integration hooks supplied by a portable Tangram GPU backend.
  *
@@ -123,6 +141,9 @@ export interface TangramGPUBackend {
 
   /** Submits one mesh to a host-owned render pass. */
   drawMesh(options: TangramMeshDrawOptions): boolean;
+
+  /** Translates Tangram state into luma.gl render-pipeline parameters. */
+  getRenderPipelineParameters(options: TangramRenderStateOptions): RenderPipelineParameters;
 
   /** Releases resources owned by this backend. */
   destroy(): void;
