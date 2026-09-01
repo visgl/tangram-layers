@@ -35,9 +35,9 @@ const TANGRAM_RENDERER_FILES = new Set([
   'modules/tangram-renderer/src/builders/polygons.js',
   'modules/tangram-renderer/src/builders/polylines.js',
   'modules/tangram-renderer/src/builders/wireframe.js',
-  'modules/tangram-renderer/src/gl/constants.js',
+  'modules/tangram-renderer/src/gl/constants.ts',
   'modules/tangram-renderer/src/gl/context.js',
-  'modules/tangram-renderer/src/gl/extensions.js',
+  'modules/tangram-renderer/src/gl/extensions.ts',
   'modules/tangram-renderer/src/gl/glsl.js',
   'modules/tangram-renderer/src/gl/render_state.js',
   'modules/tangram-renderer/src/gl/shader_program.js',
@@ -161,6 +161,8 @@ const TANGRAM_RENDERER_FILES = new Set([
 // Tangram-derived files that have received substantive vis.gl modifications.
 // Keep the original Tangram notice and append the vis.gl modification notice.
 const VISGL_MODIFIED_TANGRAM_FILES = new Set([
+  'modules/tangram-renderer/src/gl/constants.ts',
+  'modules/tangram-renderer/src/gl/extensions.ts',
   'modules/tangram-renderer/src/procedures/mvt-legacy.js',
   'modules/tangram-renderer/src/procedures/mvt-properties.ts',
   'modules/tangram-renderer/src/procedures/scene-yaml-legacy.js',
