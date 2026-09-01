@@ -48,7 +48,6 @@
   "modules/tangram-renderer/src/selection/selection.js",
   "modules/tangram-renderer/src/sources/data_source.js",
   "modules/tangram-renderer/src/sources/geojson.js",
-  "modules/tangram-renderer/src/sources/mvt.js",
   "modules/tangram-renderer/src/sources/raster.js",
   "modules/tangram-renderer/src/sources/sources.js",
   "modules/tangram-renderer/src/sources/topojson.js",

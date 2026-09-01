@@ -18,13 +18,33 @@ const PARSE_JSON_TYPE = {
     SOME: 2
 };
 
+type MvtSourceConfig = {
+    parse_json?: boolean | readonly string[];
+    name?: string;
+    [key: string]: unknown;
+};
+
+type TileData = {
+    min: Record<string, unknown>;
+    max: Record<string, unknown>;
+    coords: Record<string, unknown>;
+};
+
+type SourceData = {
+    layers?: Record<string, unknown>;
+};
+
 /**
  Mapbox Vector Tile format
  @class MVTSource
 */
 export class MVTSource extends NetworkTileSource {
 
-    constructor (source, sources) {
+    response_type!: string;
+    parse_json_type!: number;
+    parse_json_prop_list?: readonly string[];
+
+    constructor (source: MvtSourceConfig, sources?: Record<string, unknown>) {
         super(source, sources);
         this.response_type = 'arraybuffer'; // binary data
 
@@ -50,8 +70,11 @@ export class MVTSource extends NetworkTileSource {
         }
     }
 
-    parseSourceData (tile, source, response) {
-        source.layers = parseMvtWithLegacy(response, {parseJson: this.parseJsonOption()});
+    parseSourceData (tile?: TileData, source?: SourceData, response?: ArrayBuffer | Uint8Array): void {
+        if (!tile || !source || !response) {
+            throw new Error('MVT source parsing requires a tile, source data and response');
+        }
+        source.layers = parseMvtWithLegacy(response, {parseJson: this.parseJsonOption()}) as Record<string, unknown>;
 
         // Apply optional data transform
         if (typeof this.transform === 'function') {
@@ -67,16 +90,16 @@ export class MVTSource extends NetworkTileSource {
 
     // Loop through layers/features using Mapbox lib API, convert to GeoJSON features
     // Returns an object with keys for each layer, e.g. { layer: geojson }
-    toGeoJSON (tile) {
+    toGeoJSON (tile: unknown) {
         return convertMvtTileWithLegacy(tile, {parseJson: this.parseJsonOption()});
     }
 
     // Optionally parse some or all feature properties from JSON strings
-    parseJSONProperties (feature) {
+    parseJSONProperties (feature: {properties: Record<string, unknown>}): void {
         parseMvtJsonProperties(feature, this.parseJsonOption());
     }
 
-    parseJsonOption () {
+    parseJsonOption (): boolean | readonly string[] | undefined {
         if (this.parse_json_type === PARSE_JSON_TYPE.ALL) {
             return true;
         }
