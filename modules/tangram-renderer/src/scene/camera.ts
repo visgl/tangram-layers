@@ -307,8 +307,8 @@ export class PerspectiveCamera extends Camera {
         // Compute camera properties to fit desired view
         var { height, fov } = this.constrainCamera({
             view_height: viewport_height,
-            focal_length: Utils.interpolate(this.view.zoom, this.focal_length),
-            fov: Utils.interpolate(this.view.zoom, this.fov)
+            focal_length: Utils.interpolate(this.view.zoom, this.focal_length) as number | undefined,
+            fov: Utils.interpolate(this.view.zoom, this.fov) as number | undefined
         });
 
         // View matrix
