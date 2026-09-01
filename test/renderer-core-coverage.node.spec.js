@@ -29,10 +29,10 @@ describe('renderer core utility modules', () => {
   beforeAll(async () => {
     globalThis.self = globalThis;
     globalThis.self.addEventListener = () => {};
-    GLSL = (await import('../modules/tangram-renderer/src/gl/glsl.js')).default;
-    ({default: RenderStateManager, RenderState} = await import('../modules/tangram-renderer/src/gl/render_state.js'));
-    VertexElements = (await import('../modules/tangram-renderer/src/gl/vertex_elements.js')).default;
-    VertexLayout = (await import('../modules/tangram-renderer/src/gl/vertex_layout.js')).default;
+    GLSL = (await import('../modules/tangram-renderer/src/gl/glsl.ts')).default;
+    ({default: RenderStateManager, RenderState} = await import('../modules/tangram-renderer/src/gl/render_state.ts'));
+    VertexElements = (await import('../modules/tangram-renderer/src/gl/vertex_elements.ts')).default;
+    VertexLayout = (await import('../modules/tangram-renderer/src/gl/vertex_layout.ts')).default;
     ({TileID} = await import('../modules/tangram-renderer/src/tile/tile_id.js'));
     TilePyramid = (await import('../modules/tangram-renderer/src/tile/tile_pyramid.js')).default;
     ({isTextCurveBlacklisted, isTextNeutral, isTextRTL, splitLabelText} = await import('../modules/tangram-renderer/src/styles/text/text_segments.js'));

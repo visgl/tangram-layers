@@ -1,10 +1,22 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 import gl from './constants'; // web workers don't have access to GL context, so import all GL constants
 import log from '../utils/log';
 import VertexElements from './vertex_elements';
+
+type VertexAttribute = {
+    type: number;
+    size: number;
+    static?: number | number[];
+};
+type VertexLayoutLike = {
+    stride: number;
+    dynamic_attribs: VertexAttribute[];
+    getAddVertexFunction(): (vertex: number[], views: Record<number, ArrayBufferView>, offset: number) => void;
+};
 
 // Maps GL types to JS array types
 let array_types = {
@@ -21,13 +33,27 @@ let array_types = {
 // Used to construct a mesh/VBO for rendering
 export default class VertexData {
 
-    constructor (vertex_layout, { prealloc = 500 } = {}) {
+    static array_pool: Uint8Array[] = [];
+    vertex_layout: VertexLayoutLike;
+    vertex_elements: VertexElements;
+    stride: number;
+    vertex_buffer: Uint8Array;
+    element_buffer!: Uint16Array | Uint32Array | false;
+    byte_length: number;
+    size: number;
+    offset: number;
+    vertex_count: number;
+    realloc_count: number;
+    views!: Record<number, ArrayBufferView>;
+    vertexLayoutAddVertex!: (vertex: number[], views: Record<number, ArrayBufferView>, offset: number) => void;
+
+    constructor (vertex_layout: VertexLayoutLike, { prealloc = 500 }: {prealloc?: number} = {}) {
         this.vertex_layout = vertex_layout;
         this.vertex_elements = new VertexElements();
         this.stride = this.vertex_layout.stride;
 
         if (VertexData.array_pool.length > 0) {
-            this.vertex_buffer = VertexData.array_pool.pop();
+            this.vertex_buffer = VertexData.array_pool.pop()!;
             this.byte_length = this.vertex_buffer.byteLength;
             this.size = Math.floor(this.byte_length / this.stride);
             log('trace', `VertexData: reused buffer of bytes ${this.byte_length}, ${this.size} vertices`);
@@ -46,20 +72,20 @@ export default class VertexData {
     }
 
     // (Re-)allocate typed views into the main buffer - only create the types we need for this layout
-    setBufferViews () {
+    setBufferViews (): void {
         this.views = {};
         this.views[gl.UNSIGNED_BYTE] = this.vertex_buffer;
         this.vertex_layout.dynamic_attribs.forEach(attrib => {
             // Need view for this type?
             if (this.views[attrib.type] == null) {
-                var array_type = array_types[attrib.type];
-                this.views[attrib.type] = new array_type(this.vertex_buffer.buffer);
+                const arrayType = array_types[attrib.type];
+                this.views[attrib.type] = new arrayType(this.vertex_buffer.buffer as ArrayBuffer);
             }
         });
     }
 
     // Check allocated buffer size, expand/realloc buffer if needed
-    checkBufferSize () {
+    checkBufferSize (): void {
         if ((this.offset + this.stride) > this.byte_length) {
             this.size = Math.floor(this.size * 1.5);
             this.size -= this.size % 4;
@@ -75,12 +101,12 @@ export default class VertexData {
     }
 
     // Initialize the add vertex function (lazily compiled by vertex layout)
-    setAddVertexFunction () {
+    setAddVertexFunction (): void {
         this.vertexLayoutAddVertex = this.vertex_layout.getAddVertexFunction();
     }
 
     // Add a vertex, copied from a plain JS array of elements matching the order of the vertex layout
-    addVertex (vertex) {
+    addVertex (vertex: number[]): void {
         this.checkBufferSize();
         this.vertexLayoutAddVertex(vertex, this.views, this.offset);
         this.offset += this.stride;
@@ -88,7 +114,7 @@ export default class VertexData {
     }
 
     // Finalize vertex buffer for use in constructing a mesh
-    end () {
+    end (): this {
         // Clip the buffer to size used for this VBO
         this.vertex_buffer = this.vertex_buffer.subarray(0, this.offset);
         this.element_buffer = this.vertex_elements.end();
@@ -100,4 +126,4 @@ export default class VertexData {
 
 }
 
-VertexData.array_pool = []; // pool of currently available (previously used) buffers (uint8)
+// Pool of currently available (previously used) buffers (uint8).

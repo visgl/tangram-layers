@@ -1,8 +1,26 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
-var GLSL = {};
+type UniformValue = number | string | boolean | number[] | string[] | number[][];
+type ParsedUniform = {
+    type: string;
+    method: string;
+    name: string;
+    value: UniformValue;
+    path: (string | number)[];
+};
+
+interface GLSLNamespace {
+    parseUniforms(uniforms?: Record<string, UniformValue>): ParsedUniform[];
+    defineVariable(name: string, value: UniformValue): string | undefined;
+    defineUniform(name: string, value: UniformValue): string | undefined;
+    expandVec3(value: UniformValue, z?: number): number[] | undefined;
+    expandVec4(value: UniformValue, w?: number): number[] | undefined;
+}
+
+const GLSL = {} as GLSLNamespace;
 export default GLSL;
 
 /**
@@ -21,8 +39,8 @@ export default GLSL;
     for actually setting the uniforms). For example, this could be used as a key into a dictionary of
     known texture names, or it could simply be used as a URL to dynamically load the texture from.
 */
-GLSL.parseUniforms = function (uniforms = {}) {
-    var parsed = [];
+GLSL.parseUniforms = function (uniforms: Record<string, UniformValue> = {}): ParsedUniform[] {
+    const parsed: ParsedUniform[] = [];
 
     for (const [name, uniform] of Object.entries(uniforms)) {
         // Single float
@@ -119,8 +137,9 @@ GLSL.parseUniforms = function (uniforms = {}) {
 /**
     Generate a GLSL variable definition from a JS object
 */
-GLSL.defineVariable = function (name, value) {
-    var type, array;
+GLSL.defineVariable = function (name: string, value: UniformValue): string | undefined {
+    let type: string | undefined;
+    let array: number | undefined;
 
     // Single float
     if (typeof value === 'number') {
@@ -181,7 +200,7 @@ GLSL.defineVariable = function (name, value) {
 /**
     Generate a GLSL uniform definition from a JS object
 */
-GLSL.defineUniform = function (name, value) {
+GLSL.defineUniform = function (name: string, value: UniformValue): string | undefined {
     var def = GLSL.defineVariable(name, value);
     if (!def) {
         return;
@@ -194,18 +213,18 @@ GLSL.defineUniform = function (name, value) {
     coordinate defaulting to 1 (with option to specify). Also runs parseFloat to try to maintain
     data integrity. Returns null if input couldn't be parsed.
 */
-GLSL.expandVec3 = function (v, z = 1) {
-    let x;
+GLSL.expandVec3 = function (v: UniformValue, z = 1): number[] | undefined {
+    let x: number[];
     if (Array.isArray(v)) {
         if (v.length === 2) {
-            x = [...v, z].map(parseFloat);
+            x = [...v, z].map(parseFloat as any);
         }
         else {
-            return v;
+            return v as number[];
         }
     }
     else {
-        x = [v, v, v].map(parseFloat);
+        x = [v, v, v].map(parseFloat as any);
     }
 
     if (x && x.every(n => typeof n === 'number' && !isNaN(n))) {
@@ -218,23 +237,21 @@ GLSL.expandVec3 = function (v, z = 1) {
     coordinate defaulting to 1 (with option to specify). Also runs parseFloat to try to maintain
     data integrity. Returns null if input couldn't be parsed.
 */
-GLSL.expandVec4 = function (v, w = 1) {
-    let x;
+GLSL.expandVec4 = function (v: UniformValue, w = 1): number[] | undefined {
+    let x: number[];
     if (Array.isArray(v)) {
         if (v.length === 3) {
-            x = [...v, w].map(parseFloat);
+            x = [...v, w].map(parseFloat as any);
         }
         else {
-            return v;
+            return v as number[];
         }
     }
     else {
-        x = [v, v, v, w].map(parseFloat);
+        x = [v, v, v, w].map(parseFloat as any);
     }
 
     if (x && x.every(n => typeof n === 'number' && !isNaN(n))) {
         return x;
     }
 };
-
-
