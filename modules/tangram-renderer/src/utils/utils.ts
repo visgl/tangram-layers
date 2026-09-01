@@ -1,15 +1,48 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 // Miscellaneous utilities
-/*jshint worker: true*/
 
 import log from './log';
 import Thread from './thread';
 import WorkerBroker from './worker_broker';
 
-const Utils = {};
+type ControlPoint = [number, number | number[]];
+type InterpolationTransform = (value: number) => number;
+type RequestHeaders = Record<string, string>;
+type RequestResponse = {body: string | ArrayBuffer | null; status: number};
+
+interface UtilsApi {
+    isSafari(): boolean;
+    isMicrosoft(): boolean;
+    _requests: Record<string, XMLHttpRequest>;
+    _proxy_requests: Record<string, boolean>;
+    io(
+        url: string,
+        timeout?: number,
+        responseType?: XMLHttpRequestResponseType,
+        method?: string,
+        headers?: RequestHeaders,
+        request_key?: string | null,
+        proxy?: boolean
+    ): Promise<RequestResponse>;
+    cancelRequest(key: string): void | Promise<unknown>;
+    serializeWithFunctions(obj: unknown): string | undefined;
+    use_high_density_display: boolean;
+    device_pixel_ratio?: number;
+    updateDevicePixelRatio(): boolean;
+    isPowerOf2(value: number): boolean;
+    interpolate(
+        x: number,
+        points: ControlPoint[] | unknown,
+        transform?: InterpolationTransform
+    ): unknown;
+    toCSSColor(color: number[] | null | undefined): string | undefined;
+}
+
+const Utils = {} as UtilsApi;
 
 export default Utils;
 
@@ -30,7 +63,15 @@ Utils._requests = {};       // XHR requests on current thread
 Utils._proxy_requests = {}; // XHR requests proxied to main thread
 
 // `request_key` is a user-provided key that can be later used to cancel the request
-Utils.io = function (url, timeout = 60000, responseType = 'text', method = 'GET', headers = {}, request_key = null, proxy = false) {
+Utils.io = function (
+    url,
+    timeout = 60000,
+    responseType = 'text',
+    method = 'GET',
+    headers = {},
+    request_key = null,
+    proxy = false
+) {
     if (Thread.is_worker && Utils.isMicrosoft()) {
         // Some versions of IE11 and Edge will hang web workers when performing XHR requests
         // These requests can be proxied through the main thread
@@ -40,14 +81,23 @@ Utils.io = function (url, timeout = 60000, responseType = 'text', method = 'GET'
         if (request_key) {
             Utils._proxy_requests[request_key] = true; // mark as proxied
         }
-        return WorkerBroker.postMessage('Utils.io', url, timeout, responseType, method, headers, request_key, true);
+        return (WorkerBroker as any).postMessage(
+            'Utils.io',
+            url,
+            timeout,
+            responseType,
+            method,
+            headers,
+            request_key,
+            true
+        ) as Promise<RequestResponse>;
     }
     else {
-        var request = new XMLHttpRequest();
-        var promise = new Promise((resolve, reject) => {
+        const request = new XMLHttpRequest();
+        let promise = new Promise<RequestResponse>((resolve, reject) => {
             request.open(method, url, true);
             request.timeout = timeout;
-            request.responseType = responseType;
+            request.responseType = responseType as XMLHttpRequestResponseType;
 
             // Attach optional request headers
             if (headers && typeof headers === 'object') {
@@ -72,10 +122,10 @@ Utils.io = function (url, timeout = 60000, responseType = 'text', method = 'GET'
                     reject(Error('Request error with a status of ' + request.statusText));
                 }
             };
-            request.onerror = (evt) => {
+            request.onerror = (evt: ProgressEvent<EventTarget>) => {
                 reject(Error('There was a network error' + evt.toString()));
             };
-            request.ontimeout = (evt) => {
+            request.ontimeout = (evt: ProgressEvent<EventTarget>) => {
                 reject(Error('timeout '+ evt.toString()));
             };
             request.send();
@@ -87,7 +137,7 @@ Utils.io = function (url, timeout = 60000, responseType = 'text', method = 'GET'
             }
 
             if (proxy) {
-                return WorkerBroker.withTransferables(response);
+                return (WorkerBroker as any).withTransferables(response) as RequestResponse;
             }
             return response;
         });
@@ -104,7 +154,7 @@ Utils.io = function (url, timeout = 60000, responseType = 'text', method = 'GET'
 Utils.cancelRequest = function (key) {
     // Check for a request that was proxied to the main thread
     if (Thread.is_worker && Utils._proxy_requests[key]) {
-        return WorkerBroker.postMessage('Utils.cancelRequest', key); // forward to main thread
+        return (WorkerBroker as any).postMessage('Utils.cancelRequest', key); // forward to main thread
     }
 
     let req = Utils._requests[key];
@@ -124,12 +174,12 @@ Utils.serializeWithFunctions = function (obj) {
         return obj.toString();
     }
 
-    let serialized = JSON.stringify(obj, function(k, v) {
+    const serialized = JSON.stringify(obj, function (_key, value) {
         // Convert functions to strings
-        if (typeof v === 'function') {
-            return v.toString();
+        if (typeof value === 'function') {
+            return value.toString();
         }
-        return v;
+        return value;
     });
 
     return serialized;
@@ -139,7 +189,7 @@ Utils.serializeWithFunctions = function (obj) {
 // Returns true if display density changed
 Utils.use_high_density_display = true;
 Utils.updateDevicePixelRatio = function () {
-    let prev = Utils.device_pixel_ratio;
+    const prev = Utils.device_pixel_ratio;
     Utils.device_pixel_ratio = (Utils.use_high_density_display && window.devicePixelRatio) || 1;
     return Utils.device_pixel_ratio !== prev;
 };
@@ -150,7 +200,7 @@ if (Thread.is_main) {
 
 // Used for differentiating between power-of-2 and non-power-of-2 textures
 // Via: http://stackoverflow.com/questions/19722247/webgl-wait-for-texture-to-load
-Utils.isPowerOf2 = function(value) {
+Utils.isPowerOf2 = function (value) {
     return (value & (value - 1)) === 0;
 };
 
@@ -168,7 +218,7 @@ Utils.isPowerOf2 = function(value) {
 //
 // TODO: add other interpolation methods besides linear
 //
-Utils.interpolate = function(x, points, transform) {
+Utils.interpolate = function (x, points, transform) {
     // If this doesn't resemble a list of control points, just return the original value
     if (!Array.isArray(points) || !Array.isArray(points[0])) {
         return points;
@@ -177,57 +227,66 @@ Utils.interpolate = function(x, points, transform) {
         return points;
     }
 
-    var x1, x2, d, y, y1, y2;
+    let x1: number;
+    let x2: number;
+    let d: number;
+    let y: unknown;
+    let y1: number;
+    let y2: number;
+
+    const controlPoints = points as ControlPoint[];
 
     // Min bounds
-    if (x <= points[0][0]) {
-        y = points[0][1];
+    if (x <= controlPoints[0][0]) {
+        y = controlPoints[0][1];
         if (typeof transform === 'function') {
-            y = transform(y);
+            y = transform(y as number);
         }
     }
     // Max bounds
-    else if (x >= points[points.length-1][0]) {
-        y = points[points.length-1][1];
+    else if (x >= controlPoints[controlPoints.length - 1][0]) {
+        y = controlPoints[controlPoints.length - 1][1];
         if (typeof transform === 'function') {
-            y = transform(y);
+            y = transform(y as number);
         }
     }
     // Find which control points x is between
     else {
-        for (var i=0; i < points.length - 1; i++) {
-            if (x >= points[i][0] && x < points[i+1][0]) {
+        for (let i = 0; i < controlPoints.length - 1; i++) {
+            if (x >= controlPoints[i][0] && x < controlPoints[i + 1][0]) {
                 // Linear interpolation
-                x1 = points[i][0];
-                x2 = points[i+1][0];
+                x1 = controlPoints[i][0];
+                x2 = controlPoints[i + 1][0];
 
                 // Multiple values
-                if (Array.isArray(points[i][1])) {
-                    y = [];
-                    for (var c=0; c < points[i][1].length; c++) {
+                const firstValue = controlPoints[i][1];
+                const secondValue = controlPoints[i + 1][1];
+                if (Array.isArray(firstValue) && Array.isArray(secondValue)) {
+                    y = [] as number[];
+                    for (let c = 0; c < firstValue.length; c++) {
                         if (typeof transform === 'function') {
-                            y1 = transform(points[i][1][c]);
-                            y2 = transform(points[i+1][1][c]);
+                            y1 = transform(firstValue[c]);
+                            y2 = transform(secondValue[c]);
                             d = y2 - y1;
-                            y[c] = d * (x - x1) / (x2 - x1) + y1;
+                            (y as number[])[c] = d * (x - x1) / (x2 - x1) + y1;
                         }
                         else {
-                            d = points[i+1][1][c] - points[i][1][c];
-                            y[c] = d * (x - x1) / (x2 - x1) + points[i][1][c];
+                            d = secondValue[c] - firstValue[c];
+                            (y as number[])[c] = d * (x - x1) / (x2 - x1) + firstValue[c];
                         }
                     }
                 }
                 // Single value
                 else {
                     if (typeof transform === 'function') {
-                        y1 = transform(points[i][1]);
-                        y2 = transform(points[i+1][1]);
+                        y1 = transform(firstValue as number);
+                        y2 = transform(secondValue as number);
                         d = y2 - y1;
                         y = d * (x - x1) / (x2 - x1) + y1;
                     }
                     else {
-                        d = points[i+1][1] - points[i][1];
-                        y = d * (x - x1) / (x2 - x1) + points[i][1];
+                        d = (secondValue as number) - (firstValue as number);
+                        y = d * (x - x1) / (x2 - x1) + (firstValue as number);
                     }
                 }
                 break;
@@ -243,6 +302,6 @@ Utils.toCSSColor = function (color) {
             return `rgb(${color.slice(0, 3).map(c => Math.round(c * 255)).join(', ')})`;
         }
         // RGB is between [0, 255] opacity is between [0, 1]
-        return `rgba(${color.map((c, i) => (i < 3 && Math.round(c * 255)) || c).join(', ')})`;
+        return `rgba(${color.map((channel, index) => (index < 3 && Math.round(channel * 255)) || channel).join(', ')})`;
     }
 };

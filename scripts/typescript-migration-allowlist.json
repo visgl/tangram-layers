@@ -82,6 +82,5 @@
   "modules/tangram-renderer/src/tile/tile_manager.js",
   "modules/tangram-renderer/src/tile/tile_pyramid.js",
   "modules/tangram-renderer/src/utils/media_capture.js",
-  "modules/tangram-renderer/src/utils/utils.js",
   "modules/tangram-renderer/src/utils/worker_broker.js"
 ]
