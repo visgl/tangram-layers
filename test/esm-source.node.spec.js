@@ -15,7 +15,7 @@ describe('renderer ESM sources', () => {
       'modules/tangram-renderer/src/utils/debug_settings.ts',
       'modules/tangram-renderer/src/utils/geo.ts',
       'modules/tangram-renderer/src/utils/vector.ts',
-      'modules/tangram-renderer/src/utils/worker_broker.js'
+      'modules/tangram-renderer/src/utils/worker_broker.ts'
     ];
 
     for (const file of files) {

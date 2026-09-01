@@ -344,4 +344,4 @@ logic needs access to Tangram feature data.
 ## Source
 
 - [Interactive MapView example](../../examples/deck)
-- [`TangramLayer` source](https://github.com/visgl/tangram.gl/blob/master/modules/tangram-layers/src/tangram-layer.js)
+- [`TangramLayer` source](https://github.com/visgl/tangram.gl/blob/master/modules/tangram-layers/src/tangram-layer.ts)

@@ -46,7 +46,7 @@ const Utils = {} as UtilsApi;
 
 export default Utils;
 
-WorkerBroker.addTarget('Utils', Utils);
+(WorkerBroker as any).addTarget('Utils', Utils);
 
 // Basic Safari detection
 // http://stackoverflow.com/questions/7944460/detect-safari-browser

@@ -33,7 +33,7 @@ const outputFile = `dist/tangram.${MINIFY ? 'min' : 'debug'}.${ESM ? 'm' : ''}js
 // https://github.com/mapbox/mapbox-gl-js/blob/master/rollup.config.js
 
 const config = [{
-    input: ['src/index.js', 'src/scene/scene_worker.js'],
+    input: ['src/index.ts', 'src/scene/scene_worker.ts'],
     output: {
         dir: 'build',
         format: 'amd',

@@ -35,7 +35,7 @@ export default class Material {
                     this[prop] = { amount: GLSL.expandVec4(value) };
                 }
                 else if (typeof value === 'string') {
-                    this[prop] = { amount: StyleParser.parseColor(value) };
+                    this[prop] = { amount: (StyleParser as any).parseColor(value) };
                 }
                 else {
                     this[prop] = value;

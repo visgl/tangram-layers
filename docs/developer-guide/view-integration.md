@@ -98,13 +98,13 @@ silently.
 
 ## Good code entry points
 
-- `modules/tangram-layers/src/tangram-layer.js`: extract viewport validation
+- `modules/tangram-layers/src/tangram-layer.ts`: extract viewport validation
   and `getExternalCameraFrame()` into adapters.
-- `modules/tangram-renderer/src/scene/renderer.js`: define the new host frame
+- `modules/tangram-renderer/src/scene/renderer.ts`: define the new host frame
   contract.
-- `modules/tangram-renderer/src/scene/view.js`: inject projection and
+- `modules/tangram-renderer/src/scene/view.ts`: inject projection and
   visibility/LOD policies.
-- `modules/tangram-renderer/src/tile/tile_manager.js`: consume adapter-provided
+- `modules/tangram-renderer/src/tile/tile_manager.ts`: consume adapter-provided
   visible tiles instead of assuming rectangular Web Mercator bounds.
 - Tangram's vertex shader assembly: add the host projection hook after style
   position transforms and before camera projection.

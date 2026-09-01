@@ -137,7 +137,7 @@ export class ExternalCamera extends Camera {
         mat4.identity(this.view_matrix);
         mat4.identity(this.projection_matrix);
 
-        ShaderProgram.replaceBlock('camera', `
+        (ShaderProgram as any).replaceBlock('camera', `
             uniform mat4 u_projection;
             uniform vec3 u_eye;
             uniform vec2 u_vanishing_point;
@@ -248,7 +248,7 @@ export class PerspectiveCamera extends Camera {
         this.projection_matrix = new Float32Array(16);
 
         // 'camera' is the name of the shader block, e.g. determines where in the shader this code is injected
-        ShaderProgram.replaceBlock('camera', `
+        (ShaderProgram as any).replaceBlock('camera', `
             uniform mat4 u_projection;
             uniform vec3 u_eye;
             uniform vec2 u_vanishing_point;
@@ -397,7 +397,7 @@ export class IsometricCamera extends Camera {
         this.projection_matrix = new Float32Array(16);
 
         // 'camera' is the name of the shader block, e.g. determines where in the shader this code is injected
-        ShaderProgram.replaceBlock('camera', `
+        (ShaderProgram as any).replaceBlock('camera', `
             uniform mat4 u_projection;
             uniform vec3 u_eye;
             uniform vec2 u_vanishing_point;

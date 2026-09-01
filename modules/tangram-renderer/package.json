@@ -40,12 +40,12 @@
     "build:nomodule": "ESM=false rollup -c",
     "build:module:minify": "ESM=true MINIFY=true rollup -c",
     "build:nomodule:minify": "ESM=false MINIFY=true rollup -c",
-    "build:style-schema": "yarn --cwd ../.. ocular-bundle modules/tangram-renderer/src/styles/style-schema.js --env=dev --format=esm --output=modules/tangram-renderer/dist/style-schema.js --externals=zod --sourcemap=true --sourcesContent=false",
+    "build:style-schema": "yarn --cwd ../.. ocular-bundle modules/tangram-renderer/src/styles/style-schema.ts --env=dev --format=esm --output=modules/tangram-renderer/dist/style-schema.js --externals=zod --sourcemap=true --sourcesContent=false",
     "generate-style-schema": "node scripts/generate-style-schema.mjs",
     "build:size": "gzip dist/tangram.min.mjs -c | wc -c | awk '{kb=$1/1024; print kb}' OFMT='Module:\\t\\t%.0fk (min/gzip)' && gzip dist/tangram.min.js -c | wc -c | awk '{kb=$1/1024; print kb}' OFMT='No module:\\t%.0fk (min/gzip)'",
     "prepack": "yarn build",
     "watch": "ESM=\"${ESM:=true}\" SERVE=true rollup -cw",
-    "lint": "eslint src/",
+    "lint": "eslint --ext .js src/ --no-error-on-unmatched-pattern",
     "test-build-worker": "ESM=false rollup -c test/rollup.config.worker.js"
   },
   "devDependencies": {

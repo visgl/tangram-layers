@@ -38,7 +38,7 @@
     "build:bundle:main": "ocular-bundle ./bundle.js --env=dev --output=dist/index.js --externals=@vis.gl/tangram-renderer --sourcemap=true --sourcesContent=false",
     "build:bundle:webxr": "ocular-bundle ./experimental-webxr.js --env=dev --output=dist/experimental/webxr.js --externals=@vis.gl/tangram-renderer --sourcemap=true --sourcesContent=false",
     "prepack": "yarn build",
-    "lint": "eslint src/"
+    "lint": "eslint --ext .js src/ --no-error-on-unmatched-pattern"
   },
   "devDependencies": {
     "@vis.gl/dev-tools": "2.0.0-alpha.8",
