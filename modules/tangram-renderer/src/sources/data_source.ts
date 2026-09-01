@@ -1,6 +1,7 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 /*jshint worker: true */
 import Geo from '../utils/geo';
@@ -10,13 +11,38 @@ import sliceObject from '../utils/slice';
 import * as URLs from '../utils/urls';
 import log from '../utils/log';
 
+type SourceConfig = Record<string, any>;
+type Tile = any;
+type SourceData = any;
+type DataSourceFactory = (source: SourceConfig) => any;
+
 export default class DataSource {
 
-    constructor (config, sources) {
+    static types: Record<string, DataSourceFactory> = {};
+    config!: SourceConfig;
+    sources!: Record<string, any>;
+    id!: string | number;
+    name!: string;
+    pad_scale!: number;
+    default_winding!: string | null | undefined;
+    rasters!: string[];
+    preprocess: any;
+    transform: any;
+    extra_data: any;
+    scripts: any;
+    max_zoom!: number;
+    zooms!: number[];
+    zoom_offset!: number;
+    tile_size!: number;
+    zoom_bias!: number;
+    min_display_zoom!: number;
+    max_display_zoom!: number | null;
+
+    constructor (config: SourceConfig, sources?: Record<string, any>) {
         this.validate(config);
 
         this.config = config; // save original config
-        this.sources = sources; // full set of data sources TODO: centralize these like textures?
+        this.sources = sources as Record<string, any>; // full set of data sources TODO: centralize these like textures?
         this.id = config.id;
         this.name = config.name;
         this.pad_scale = config.pad_scale || 0.00001; // scale tile up by small factor to cover seams
@@ -70,7 +96,7 @@ export default class DataSource {
 
     // Register a new data source type name, providing a function that returns the class name
     // to instantiate based on the source definition in the scene
-    static register (type_name, type_func) {
+    static register (type_name: string, type_func: DataSourceFactory): void {
         if (!type_name || !type_func) {
             return;
         }
@@ -79,7 +105,7 @@ export default class DataSource {
     }
 
     // Create a data source, factory-style
-    static create (source, sources) {
+    static create (source: SourceConfig, sources?: Record<string, any>): DataSource | undefined {
         // Find the class to instantiate based on the source definition
         if (typeof DataSource.types[source.type] === 'function') {
             const source_class = DataSource.types[source.type](source);
@@ -90,7 +116,7 @@ export default class DataSource {
     }
 
     // Check if a data source definition changed in a way that could affect which tiles are in view
-    static tileLayoutChanged (source, prev_source) {
+    static tileLayoutChanged (source: any, prev_source: any): boolean {
         if (!source || !prev_source) {
             return true;
         }
@@ -112,7 +138,7 @@ export default class DataSource {
     }
 
     // Mercator projection
-    static projectData (source) {
+    static projectData (source: SourceData): void {
         var timer = +new Date();
         for (var t in source.layers) {
             var num_features = source.layers[t].features.length;
@@ -127,14 +153,14 @@ export default class DataSource {
         }
     }
 
-    static projectCoord (coord) {
+    static projectCoord (coord: number[]): void {
         Geo.latLngToMeters(coord);
     }
 
     /**
      Re-scale geometries within each source to internal tile units
     */
-    static scaleData (source, { coords: { z }, min }) {
+    static scaleData (source: SourceData, {coords: {z}, min}: any): void {
         let units_per_meter = Geo.unitsPerMeter(z);
         for (var t in source.layers) {
             var num_features = source.layers[t].features.length;
@@ -148,7 +174,7 @@ export default class DataSource {
         }
     }
 
-    load (dest) {
+    load (dest: Tile): Promise<Tile> {
         dest.source_data = {};
         dest.source_data.layers = {};
         dest.pad_scale = this.pad_scale;
@@ -159,7 +185,7 @@ export default class DataSource {
             for (let layer in dest.source_data.layers) {
                 let data = dest.source_data.layers[layer];
                 if (data && data.features) {
-                    data.features.forEach(feature => {
+                    data.features.forEach((feature: any) => {
                         Geo.transformGeometry(feature.geometry, coord => {
                             // Flip Y coords
                             coord[1] = -coord[1];
@@ -183,12 +209,12 @@ export default class DataSource {
     }
 
     // Sub-classes must implement
-    _load (/*dest*/) {
+    _load (_dest?: Tile): Promise<Tile> {
         throw new MethodNotImplemented('_load');
     }
 
     // Copy source data from another tile (so we can reuse source data for overzoomed tiles)
-    copyTileData (source, dest) {
+    copyTileData (source: Tile, dest: Tile): Tile {
         log('trace', `Copy tile data from ${source.key} to ${dest.key}`);
         dest.source_data = { layers: source.source_data.layers };
         dest.rasters = [...source.rasters];
@@ -199,7 +225,7 @@ export default class DataSource {
 
     // Configure zoom ranges at which new data will be loaded
     // e.g. can be used to skip fetching data for some zooms, reusing data from next lowest available zoom instead
-    setZooms ({ max_zoom, zooms }) {
+    setZooms ({max_zoom, zooms}: SourceConfig): void {
         // overzoom will apply for zooms higher than this
         this.max_zoom = (max_zoom != null) ? max_zoom : Geo.default_source_max_zoom;
         if (Array.isArray(zooms)) {
@@ -216,7 +242,7 @@ export default class DataSource {
 
     // Set the internal tile size in pixels, e.g. '256px' (default), '512px', etc.
     // Must be a power of 2, and greater than or equal to 256
-    setTileSize (tile_size) {
+    setTileSize (tile_size?: number): void {
         this.tile_size = tile_size || 256;
         if (typeof this.tile_size !== 'number' || this.tile_size < 256 || !Utils.isPowerOf2(this.tile_size)) {
             log({ level: 'warn', once: true },
@@ -232,7 +258,7 @@ export default class DataSource {
     }
 
     // Infer winding for data source from first ring of provided geometry
-    updateDefaultWinding (geom) {
+    updateDefaultWinding (geom: any): string | null | undefined {
         if (this.default_winding == null) {
             if (geom.type === 'Polygon') {
                 this.default_winding = Geo.ringWinding(geom.coordinates[0]);
@@ -245,7 +271,7 @@ export default class DataSource {
     }
 
     // All data sources support a min zoom, tiled sources can subclass for more specific limits (e.g. bounding box)
-    includesTile (coords, style_z) {
+    includesTile (coords: any, style_z: number): boolean {
         // Limit by this data source
         if (coords.z < this.min_display_zoom || (this.max_display_zoom != null && style_z > this.max_display_zoom)) {
             return false;
@@ -264,13 +290,10 @@ export default class DataSource {
         return true;
     }
 
-    validate (/*source*/) {
+    validate (_source?: SourceConfig): void {
     }
 
 }
-
-DataSource.types = {}; // set of supported data source classes, referenced by type name
-
 
 /*** Generic network loading source - abstract class ***/
 
@@ -278,7 +301,14 @@ let network_request_id = 0; // used to namespace URL requests
 
 export class NetworkSource extends DataSource {
 
-    constructor (source, sources) {
+    response_type!: string;
+    tilejson: any;
+    url_params: any;
+    url: string | null;
+    request_headers?: Record<string, string>;
+    tilejson_promise?: Promise<string>;
+
+    constructor (source: SourceConfig, sources?: Record<string, any>) {
         super(source, sources);
         this.response_type = ''; // use to set explicit XHR type
 
@@ -292,14 +322,14 @@ export class NetworkSource extends DataSource {
         }
     }
 
-    _load (dest) {
+    _load (dest?: Tile): Promise<Tile> {
         return this.resolveURL().then(url => this.loadURL(dest, url)).catch(error => {
             dest.source_data.error = error.stack;
             return dest;
         });
     }
 
-    resolveURL () {
+    resolveURL (): Promise<string> {
         if (this.url) {
             return Promise.resolve(this.url);
         }
@@ -318,7 +348,7 @@ export class NetworkSource extends DataSource {
         return this.tilejson_promise;
     }
 
-    addURLParams (url) {
+    addURLParams (url: string): string {
         const [resolved_url, dupes] = URLs.addParamsToURL(url, this.url_params);
         dupes.forEach(([param, value]) => {
             log({ level: 'warn', once: true },
@@ -328,8 +358,8 @@ export class NetworkSource extends DataSource {
         return resolved_url;
     }
 
-    loadURL (dest, url_template) {
-        let url = this.formatURL(url_template, dest);
+    loadURL (dest: Tile, url_template: string): Promise<Tile> {
+        let url = this.formatURL(url_template, dest) as string;
 
         let source_data = dest.source_data;
         source_data.url = url;
@@ -338,7 +368,14 @@ export class NetworkSource extends DataSource {
 
         return new Promise(resolve => {
             let request_id = (network_request_id++) + '-' + url;
-            let promise = Utils.io(url, 60 * 1000, this.response_type, 'GET', this.request_headers, request_id);
+            let promise: Promise<any> = Utils.io(
+                url,
+                60 * 1000,
+                this.response_type as any,
+                'GET',
+                this.request_headers,
+                request_id
+            ) as Promise<any>;
 
             source_data.request_id = request_id;
             source_data.error = null;
@@ -355,7 +392,7 @@ export class NetworkSource extends DataSource {
 
                 // Return data immediately, or after user-returned promise resolves
                 body = (body instanceof Promise) ? body : Promise.resolve(body);
-                body.then(body => {
+                body.then((body: any) => {
                     if (body != null) {
                         this.parseSourceData(dest, source_data, body);
                     }
@@ -372,7 +409,7 @@ export class NetworkSource extends DataSource {
         });
     }
 
-    validate (source) {
+    validate (source: SourceConfig): void {
         if (typeof source.url !== 'string' && typeof source.tilejson !== 'string') {
             throw Error('Network data source must provide a string `url` or `tilejson` property');
         }
@@ -380,11 +417,11 @@ export class NetworkSource extends DataSource {
 
     // Sub-classes must implement:
 
-    formatURL (/*url_template, dest*/) {
+    formatURL (_url_template?: string, _dest?: Tile): string | null {
         throw new MethodNotImplemented('formatURL');
     }
 
-    parseSourceData (/*dest, source, reponse*/) {
+    parseSourceData (_dest?: Tile, _source?: SourceData, _response?: any): void {
         throw new MethodNotImplemented('parseSourceData');
     }
 }
@@ -394,7 +431,15 @@ export class NetworkSource extends DataSource {
 
 export class NetworkTileSource extends NetworkSource {
 
-    constructor (source, sources) {
+    tiled!: boolean;
+    bounds: any;
+    builds_geometry_tiles!: boolean;
+    tms!: boolean;
+    url_subdomains?: string[];
+    next_url_subdomain?: number;
+    url_density_scales?: number[];
+
+    constructor (source: SourceConfig, sources?: Record<string, any>) {
         super(source, sources);
 
         this.tiled = true;
@@ -431,7 +476,7 @@ export class NetworkTileSource extends NetworkSource {
     }
 
     // Get bounds from source config parameters
-    parseBounds (source) {
+    parseBounds (source: SourceConfig): any {
         if (Array.isArray(source.bounds) && source.bounds.length === 4) {
             const [w, s, e, n] = source.bounds;
             return {
@@ -449,7 +494,7 @@ export class NetworkTileSource extends NetworkSource {
     }
 
     // Returns false if tile is outside data source's bounds, true if within
-    checkBounds (coords, bounds) {
+    checkBounds (coords: any, bounds: any): boolean {
         // Check tile bounds
         if (bounds) {
             // get tile and bounds coords at current zoom, wrapping to keep x coords in positive range
@@ -484,7 +529,7 @@ export class NetworkTileSource extends NetworkSource {
         return true;
     }
 
-    includesTile (coords, style_z) {
+    includesTile (coords: any, style_z: number): boolean {
         if (!super.includesTile(coords, style_z)) {
             return false;
         }
@@ -496,8 +541,8 @@ export class NetworkTileSource extends NetworkSource {
         return true;
     }
 
-    formatURL (url_template, tile) {
-        let coords = Geo.wrapTile(tile.coords, { x: true });
+    formatURL (url_template: string, tile: Tile): string {
+        let coords = Geo.wrapTile(tile.coords, {x: true} as any);
 
         if (this.tms) {
             coords.y = Math.pow(2, coords.z) - 1 - coords.y; // optionally flip tile coords for TMS
@@ -505,15 +550,15 @@ export class NetworkTileSource extends NetworkSource {
 
         // tile URL template replacement
         let url = url_template
-            .replace('{x}', coords.x)
-            .replace('{y}', coords.y)
-            .replace('{z}', coords.z)
+            .replace('{x}', String(coords.x))
+            .replace('{y}', String(coords.y))
+            .replace('{z}', String(coords.z))
             .replace('{r}', this.getDensityModifier()) // modify URL by display density (e.g. @2x)
             .replace('{q}', this.toQuadKey(coords)); // quadkey for tile coordinates
 
         if (this.url_subdomains != null) {
-            url = url.replace('{s}', this.url_subdomains[this.next_url_subdomain]);
-            this.next_url_subdomain = (this.next_url_subdomain + 1) % this.url_subdomains.length;
+            url = url.replace('{s}', this.url_subdomains[this.next_url_subdomain as number]);
+            this.next_url_subdomain = ((this.next_url_subdomain as number) + 1) % this.url_subdomains.length;
         }
         return url;
     }
@@ -521,10 +566,10 @@ export class NetworkTileSource extends NetworkSource {
     // Find the right tile URL modifier based on the display density, e.g. add `@2x` for sources supporting 2x tiles.
     // Source `url_density_scales` param can specify an array of densities supported by the source,
     // each entry serves as a threshold based on the current display density.
-    getDensityModifier () {
+    getDensityModifier (): string {
         if (this.url_density_scales) {
             // find the highest matching density
-            const dpr = Utils.device_pixel_ratio;
+            const dpr = Utils.device_pixel_ratio as number;
             let scale = this.url_density_scales
                 .filter(s => dpr >= s)
                 .reverse()[0];
@@ -540,7 +585,7 @@ export class NetworkTileSource extends NetworkSource {
         return ''; // for 1x (or less) displays, no URL modifier is used (following @2x URL convention)
     }
 
-    toQuadKey ({ x, y, z }) {
+    toQuadKey ({x, y, z}: {x: number; y: number; z: number}): string {
         let quadkey = '';
         for (let i = z; i > 0; i--) {
             let b = 0;
@@ -553,7 +598,7 @@ export class NetworkTileSource extends NetworkSource {
     }
 
     // Checks for the x/y/z tile pattern in URL template
-    static urlHasTilePattern (url) {
+    static urlHasTilePattern (url?: string | null): any {
         return url && (
             (url.search('{x}') > -1 && url.search('{y}') > -1 && url.search('{z}') > -1) ||
             url.search('{q}') > -1
