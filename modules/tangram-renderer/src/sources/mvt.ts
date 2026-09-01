@@ -40,7 +40,6 @@ type SourceData = {
 */
 export class MVTSource extends NetworkTileSource {
 
-    response_type!: string;
     parse_json_type!: number;
     parse_json_prop_list?: readonly string[];
 

@@ -1,6 +1,6 @@
-// Tangram
+// tangram-layers
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 vis.gl contributors
+// Copyright (c) vis.gl contributors
 
 import {describe, expect, test} from 'vitest';
 import {MVTSource} from '../src/sources/mvt';
