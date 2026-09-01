@@ -184,9 +184,10 @@
 
 .example-tile {
   display: flex;
-  min-height: 148px;
+  min-height: 300px;
   flex-direction: column;
   gap: 0.45rem;
+  overflow: hidden;
   padding: 1.1rem;
   border: 1px solid var(--ifm-color-emphasis-300);
   border-radius: 10px;
@@ -194,6 +195,19 @@
   color: var(--ifm-font-color-base);
   text-decoration: none;
   transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.example-tile__image {
+  width: calc(100% + 2.2rem);
+  aspect-ratio: 16 / 9;
+  margin: -1.1rem -1.1rem 0.65rem;
+  background: #07111f;
+  object-fit: cover;
+  transition: transform 180ms ease;
+}
+
+.example-tile:hover .example-tile__image {
+  transform: scale(1.025);
 }
 
 .example-tile:hover {

@@ -226,13 +226,14 @@ properties. The properties below are specific to `TangramLayer`.
 
 ### Scene
 
-#### `scene` (string | object | array, required) {#scene}
+#### `scene` (string | object, required) {#scene}
 
 The Tangram scene to load. It may be:
 
-- a URL to a YAML or JSON scene;
-- a parsed scene configuration object; or
-- an array of scene definitions to merge.
+- a URL to a YAML or JSON scene; or
+- a parsed scene configuration object.
+
+To compose multiple scene files, use Tangram's `import` property from one root scene.
 
 Changing the `scene` reference destroys the current Tangram renderer and creates a new one.
 Keep an object-valued scene stable between React renders (for example, define it outside the
@@ -318,8 +319,10 @@ and [experimental WebXR presentation API](./webxr-presentation.md) instead of `T
 
 ### Layer order and depth
 
-Use `TangramLayer` as the first layer in the `layers` array. Tangram preserves its color output,
-then clears its internal depth and stencil state so later deck.gl layers can render normally.
+Use `TangramLayer` as the first layer in the `layers` array. With WebGL, Tangram preserves its
+color output and then clears its internal depth and stencil state before later deck.gl layers
+render. With WebGPU, Tangram and subsequent layers share the host render pass's depth attachment,
+so normal depth testing applies across the basemap and overlays.
 
 ### Animation
 
