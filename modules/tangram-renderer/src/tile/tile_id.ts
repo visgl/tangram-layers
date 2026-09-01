@@ -11,7 +11,7 @@ export type TileCoordinates = {
 export type TileCoordinate = TileCoordinates & {key: string};
 
 export type TileSource = {
-    id: string;
+    id: string | number;
     name: string;
     zoom_bias?: number;
     zooms: number[];
