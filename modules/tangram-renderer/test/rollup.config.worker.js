@@ -12,7 +12,7 @@ import json from '@rollup/plugin-json';
 import { importAsString } from 'rollup-plugin-string-import';
 
 const config = {
-    input: 'src/scene/scene_worker.js',
+    input: 'src/scene/scene_worker.ts',
     output: {
         file: 'build/worker.test.js',
         format: 'umd',

@@ -109,7 +109,7 @@ export default function setupSceneDebug (scene: any): void {
 
         // Return sum of all texture memory usage
         textureSizeTotal() {
-            return Object.values(Texture.textures).map(t => t.byteSize()).reduce((p, c) => p + c);
+            return Object.values((Texture as any).textures).map((t: any) => t.byteSize()).reduce((p, c) => p + c);
         },
 
         layerStats (): Record<string, any> {

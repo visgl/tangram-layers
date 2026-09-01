@@ -62,7 +62,7 @@ export default class MediaCapture {
             // Optional background to blend with (only RGB, alpha is ignored)
             let background = this.queue_screenshot.background;
             if (background && background !== 'transparent') {
-                background = StyleParser.parseColor(background).slice(0, 3).map((c: number) => c * 255) as any;
+                background = (StyleParser as any).parseColor(background).slice(0, 3).map((c: number) => c * 255) as any;
             }
             else {
                 background = null; // skip blend if transparent

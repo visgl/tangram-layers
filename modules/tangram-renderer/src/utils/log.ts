@@ -107,7 +107,7 @@ if (Thread.is_main) {
   };
 }
 
-WorkerBroker.addTarget('_logProxy', log);
-WorkerBroker.addTarget('_logSetLevelProxy', log.setLevel);
+(WorkerBroker as any).addTarget('_logProxy', log);
+(WorkerBroker as any).addTarget('_logSetLevelProxy', log.setLevel);
 
 export default log;

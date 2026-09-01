@@ -11,7 +11,7 @@ import type {
   XRPlacementPose,
   XRSpatialRay,
   XRVector3
-} from './types.js';
+} from './types.ts';
 
 const TANGRAM_HALF_WORLD_METERS = 20037508.342789244;
 const EARTH_RADIUS = 6370972;
