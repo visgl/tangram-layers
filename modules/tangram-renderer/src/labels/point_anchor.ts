@@ -1,6 +1,7 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 // Sets of values to match for directional and corner anchors
 const lefts = ['left', 'top-left', 'bottom-left'];
@@ -8,14 +9,27 @@ const rights = ['right', 'top-right', 'bottom-right'];
 const tops = ['top', 'top-left', 'top-right'];
 const bottoms = ['bottom', 'bottom-left', 'bottom-right'];
 
+type AnchorName = string | undefined;
+type Point = [number, number];
+type Buffer = [number, number, number, number];
+interface PointAnchorNamespace {
+    computeOffset(offset: Point, size: Point, anchor: AnchorName, buffer?: Buffer | null): Point;
+    alignForAnchor(anchor: AnchorName): string;
+    isLeftAnchor(anchor: AnchorName): boolean;
+    isRightAnchor(anchor: AnchorName): boolean;
+    isTopAnchor(anchor: AnchorName): boolean;
+    isBottomAnchor(anchor: AnchorName): boolean;
+    default_buffer: Buffer;
+    zero_buffer: Buffer;
+}
 const PointAnchor = {
 
-    computeOffset (offset, size, anchor, buffer = null) {
+    computeOffset (offset: Point, size: Point, anchor: AnchorName, buffer: Buffer | null = null): Point {
         if (!anchor || anchor === 'center') {
             return offset;
         }
 
-        let offset2 = [offset[0], offset[1]];
+        const offset2: Point = [offset[0], offset[1]];
         buffer = buffer || this.default_buffer;
 
         // An optional left/right offset
@@ -49,7 +63,7 @@ const PointAnchor = {
         return offset2;
     },
 
-    alignForAnchor (anchor) {
+    alignForAnchor (anchor: AnchorName): string {
         if (anchor && anchor !== 'center') {
             if (this.isLeftAnchor(anchor)) {
                 return 'right';
@@ -61,26 +75,26 @@ const PointAnchor = {
         return 'center';
     },
 
-    isLeftAnchor (anchor) {
-        return (lefts.indexOf(anchor) > -1);
+    isLeftAnchor (anchor: AnchorName): boolean {
+        return (lefts.indexOf(anchor ?? '') > -1);
     },
 
-    isRightAnchor (anchor) {
-        return (rights.indexOf(anchor) > -1);
+    isRightAnchor (anchor: AnchorName): boolean {
+        return (rights.indexOf(anchor ?? '') > -1);
     },
 
-    isTopAnchor (anchor) {
-        return (tops.indexOf(anchor) > -1);
+    isTopAnchor (anchor: AnchorName): boolean {
+        return (tops.indexOf(anchor ?? '') > -1);
     },
 
-    isBottomAnchor (anchor) {
-        return (bottoms.indexOf(anchor) > -1);
+    isBottomAnchor (anchor: AnchorName): boolean {
+        return (bottoms.indexOf(anchor ?? '') > -1);
     },
 
     // Buffers: [left, right, top, bottom]
     default_buffer: [2.5, 2.5, 1.5, 0.75],
     zero_buffer: [0, 0, 0, 0]
 
-};
+} as PointAnchorNamespace;
 
 export default PointAnchor;
