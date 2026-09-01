@@ -1,11 +1,14 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 import DataSource from './data_source';
 import {GeoJSONSource, GeoJSONTileSource} from './geojson';
 
 import * as topojson from 'topojson-client';
+
+type SourceConfig = Record<string, any>;
 
 /**
  TopoJSON standalone (non-tiled) source
@@ -14,7 +17,10 @@ import * as topojson from 'topojson-client';
 
 export class TopoJSONSource extends GeoJSONSource {
 
-    parseSourceData (tile, source, response) {
+    parseSourceData (tile?: any, source?: any, response?: any): void {
+        if (!tile || !source) {
+            throw new Error('TopoJSON source parsing requires a tile and source data');
+        }
         let data = typeof response === 'string' ? JSON.parse(response) : response;
         data = this.toGeoJSON(data);
 
@@ -23,7 +29,7 @@ export class TopoJSONSource extends GeoJSONSource {
         source.layers = layers;
     }
 
-    toGeoJSON (data) {
+    toGeoJSON (data: any): any {
         // Single layer
         if (data.objects &&
             Object.keys(data.objects).length === 1) {
@@ -32,7 +38,7 @@ export class TopoJSONSource extends GeoJSONSource {
         }
         // Multiple layers
         else {
-            let layers = {};
+            let layers: Record<string, any> = {};
             for (let key in data.objects) {
                 layers[key] = getTopoJSONFeature(data, data.objects[key]);
             }
@@ -43,7 +49,7 @@ export class TopoJSONSource extends GeoJSONSource {
 
 }
 
-function getTopoJSONFeature (topology, object) {
+function getTopoJSONFeature (topology: any, object: any): any {
     let feature = topojson.feature(topology, object);
 
     // Convert single feature to a feature collection
@@ -63,11 +69,14 @@ function getTopoJSONFeature (topology, object) {
 */
 export class TopoJSONTileSource extends GeoJSONTileSource {
 
-    constructor(source, sources) {
+    constructor(source: SourceConfig, sources?: Record<string, unknown>) {
         super(source, sources);
     }
 
-    parseSourceData (tile, source, response) {
+    parseSourceData (tile?: any, source?: any, response?: any): void {
+        if (!tile || !source) {
+            throw new Error('TopoJSON tile parsing requires a tile and source data');
+        }
         let data = typeof response === 'string' ? JSON.parse(response) : response;
         data = TopoJSONSource.prototype.toGeoJSON(data);
         this.prepareGeoJSON(data, tile, source);
@@ -76,6 +85,6 @@ export class TopoJSONTileSource extends GeoJSONTileSource {
 }
 
 // Check for URL tile pattern, if not found, treat as standalone GeoJSON/TopoJSON object
-DataSource.register('TopoJSON', source => {
+DataSource.register('TopoJSON', (source: SourceConfig) => {
     return TopoJSONTileSource.urlHasTilePattern(source.url) ? TopoJSONTileSource : TopoJSONSource;
 });

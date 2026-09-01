@@ -48,7 +48,6 @@
   "modules/tangram-renderer/src/selection/selection.js",
   "modules/tangram-renderer/src/sources/data_source.js",
   "modules/tangram-renderer/src/sources/sources.js",
-  "modules/tangram-renderer/src/sources/topojson.js",
   "modules/tangram-renderer/src/styles/filter.js",
   "modules/tangram-renderer/src/styles/globe_projection_wgsl.js",
   "modules/tangram-renderer/src/styles/layer.js",
