@@ -1,6 +1,7 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 import DataSource, {NetworkTileSource} from './data_source';
 import {TileID} from '../tile/tile_id';
@@ -10,9 +11,16 @@ import Utils from '../utils/utils';
 import hashString from '../utils/hash';
 import log from '../utils/log';
 
+type SourceConfig = Record<string, any>;
+type Tile = any;
+type RasterImage = {url: string | null; bounds: any; alpha: number | null};
+
 export class RasterTileSource extends NetworkTileSource {
 
-    constructor (source, sources) {
+    filtering: any;
+    textures!: Record<string, any>;
+
+    constructor (source: SourceConfig, sources?: Record<string, unknown>) {
         super(source, sources);
 
         if (this.rasters.indexOf(this.name) === -1) {
@@ -25,7 +33,7 @@ export class RasterTileSource extends NetworkTileSource {
         this.textures = {};
     }
 
-    async load (tile) {
+    async load (tile: Tile): Promise<Tile> {
         tile.source_data = {};
         tile.source_data.layers = {};
         tile.pad_scale = this.pad_scale;
@@ -54,7 +62,7 @@ export class RasterTileSource extends NetworkTileSource {
     }
 
     // Return texture info for a raster tile
-    async tileTexture (tile) {
+    async tileTexture (tile: Tile): Promise<any> {
         let coords = this.adjustRasterTileZoom(tile);
         let key = coords.key;
         // texture definitions are cached to avoid loading the same raster tile multiple times,
@@ -76,7 +84,7 @@ export class RasterTileSource extends NetworkTileSource {
     // cause the zoom level to be downsampled relative to the "base" zoom level of the map view.
     // The attaching source has already applied its own zoom downsampling. If this source has a lower
     // level of detail, we apply the remaining differential here.
-    adjustRasterTileZoom (tile) {
+    adjustRasterTileZoom (tile: Tile): any {
         let coords = tile.coords;
         const tile_source = this.sources[tile.source];
         if (tile_source !== this) { // no-op if the raster source isn't being rendered as an attachment
@@ -85,8 +93,8 @@ export class RasterTileSource extends NetworkTileSource {
                 // do extra zoom adjustment and apply this raster source's max zoom
                 coords = TileID.normalizedCoord(tile.coords, {
                     zoom_bias: zdiff,
-                    zooms: this.zooms
-                });
+                    zooms: this.zooms || []
+                } as any);
             }
             else {
                 // raster source supports higher detail, but was downsampled to match (the downsampling already
@@ -99,7 +107,7 @@ export class RasterTileSource extends NetworkTileSource {
                 }
 
                 // no extra zoom adjustment needed, but still need to apply this raster source's max zoom
-                coords = TileID.coordForTileZooms(coords, this.zooms);
+                coords = TileID.coordForTileZooms(coords, this.zooms || []);
             }
         }
         return coords;
@@ -113,7 +121,14 @@ export class RasterTileSource extends NetworkTileSource {
 // TODO: add support for arbitrarily rotated images and quadrangle control points
 export class RasterSource extends RasterTileSource {
 
-    constructor (source, sources) {
+    load_image!: Record<string, Promise<HTMLImageElement | null>>;
+    alpha: number | null;
+    mask_alpha!: boolean;
+    preserve_tiles_within_zoom!: number;
+    max_display_density?: number;
+    images!: RasterImage[];
+
+    constructor (source: SourceConfig, sources?: Record<string, unknown>) {
         super(source, sources);
 
         this.load_image = {}; // resolves to image, cached for life of data source
@@ -133,7 +148,7 @@ export class RasterSource extends RasterTileSource {
         // Optionally composite multiple images into one raster layer
         if (Array.isArray(source.composite)) {
             // TODO: calculate enclosing bounding box to speed tile intersection checks
-            this.images = source.composite.map(s => {
+            this.images = source.composite.map((s: SourceConfig) => {
                 return {
                     url: s.url,
                     bounds: this.parseBounds(s),
@@ -156,13 +171,14 @@ export class RasterSource extends RasterTileSource {
     // (which may be large or only have a small portion in current view), and maintains
     // consistency with the raster tile pipeline allowing for sampling within the fragment shader,
     // and clipping the raster against vector source data.
-    async tileTexture (tile, { blend, generation }) {
+    async tileTexture (tile: Tile, options: {blend?: string; generation?: number} = {}): Promise<any> {
+        const {blend, generation} = options;
         let coords = this.adjustRasterTileZoom(tile);
         const use_alpha = (blend !== 'opaque'); // ignore source alpha multiplier with opaque blending
         const name = `raster-${this.name}-${coords.key}-${use_alpha ? 'alpha' : 'opaque'}-${generation}`; // unique texture name
 
         // only render each raster tile once (per scene generation)
-        if (Texture.textures[name]) {
+        if ((Texture as any).textures[name]) {
             return {
                 name,
                 coords,
@@ -177,7 +193,7 @@ export class RasterSource extends RasterTileSource {
 
         // Display density, with extra 2x for better intra-zoom scaling, because raster tiles
         // can be scaled up to 100% before next zoom level is loaded
-        let dpr = Utils.device_pixel_ratio;
+        let dpr = Utils.device_pixel_ratio || 1;
         if (this.max_display_density) {
             dpr = Math.min(dpr, this.max_display_density); // optionally cap pixel density
         }
@@ -185,6 +201,9 @@ export class RasterSource extends RasterTileSource {
 
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            throw new Error('Raster source requires a 2D canvas context');
+        }
         canvas.width = this.tile_size * dpr; // adjusted for display density
         canvas.height = this.tile_size * dpr;
 
@@ -193,10 +212,13 @@ export class RasterSource extends RasterTileSource {
         ctx.imageSmoothingEnabled = (this.filtering !== 'nearest');
 
         // Draw one or more images
-        const images = this.images.filter(r => this.checkBounds(tile.coords, r.bounds));
-        await Promise.all(images.map(i => {
+        const images = this.images.filter((r: RasterImage) => this.checkBounds(tile.coords, r.bounds));
+        await Promise.all(images.map((i: RasterImage) => {
             // TODO: log warning if alpha specified but will be ignored (in opaque mode)?
             const alpha = (use_alpha ? (i.alpha != null ? i.alpha : this.alpha) : 1);
+            if (!i.url) {
+                return Promise.resolve();
+            }
             return this.drawImage(i.url, i.bounds, alpha, tile, dpr, ctx);
         }));
 
@@ -210,7 +232,14 @@ export class RasterSource extends RasterTileSource {
     }
 
     // Draw a single image to the tile canvas based on on its bounds
-    async drawImage (url, bounds, alpha, tile, dpr, ctx) {
+    async drawImage (
+        url: string,
+        bounds: any,
+        alpha: number | null,
+        tile: Tile,
+        dpr: number,
+        ctx: CanvasRenderingContext2D
+    ): Promise<void> {
         // Get source raster image
         const key = hashString(url); // use hash of URL for shorter keys
         this.load_image[key] = this.load_image[key] || this.loadImage(url);
@@ -232,11 +261,13 @@ export class RasterSource extends RasterTileSource {
         // May want to benchmark with a pre-clipped draw area, though the native implementation is likely fast,
         // and has to apply its own clipping check anyway.
         ctx.globalAlpha = (alpha != null) ? alpha : 1;
-        ctx.drawImage(image, dx, dy, sx, sy);
+        if (image) {
+            ctx.drawImage(image, dx, dy, sx, sy);
+        }
     }
 
     // Load source raster image
-    loadImage (url) {
+    loadImage (url: string): Promise<HTMLImageElement | null> {
         return new Promise(resolve => {
             let image = new Image();
             image.onload = () => resolve(image);
@@ -257,16 +288,16 @@ export class RasterSource extends RasterTileSource {
     }
 
     // Checks if tile interects any rasters in this source
-    includesTile (coords, style_z) {
+    includesTile (coords: any, style_z: number): boolean {
         // Checks zoom range and dependent rasters
         if (!DataSource.prototype.includesTile.call(this, coords, style_z)) {
             return false;
         }
 
-        return this.images.some(r => this.checkBounds(coords, r.bounds)); // check if any images intersect
+        return this.images.some((r: RasterImage) => this.checkBounds(coords, r.bounds)); // check if any images intersect
     }
 
-    validate (source) {
+    validate (source: SourceConfig): void {
         const is_composite = Array.isArray(source.composite);
 
         let url_msg = 'Raster data source must provide a string `url` parameter, or an array of `composite` raster ';
@@ -279,11 +310,11 @@ export class RasterSource extends RasterTileSource {
         mutex_msg += 'parameters, or an array of `composite` raster image objects, each with `url` and `bounds`.';
 
         if (is_composite) {
-            if (source.composite.some(s => typeof s.url !== 'string')) {
+            if (source.composite.some((s: SourceConfig) => typeof s.url !== 'string')) {
                 throw Error(url_msg);
             }
 
-            if (source.composite.some(s => !(Array.isArray(s.bounds) && s.bounds.length === 4))) {
+            if (source.composite.some((s: SourceConfig) => !(Array.isArray(s.bounds) && s.bounds.length === 4))) {
                 throw Error(bounds_msg);
             }
 
@@ -305,6 +336,6 @@ export class RasterSource extends RasterTileSource {
 }
 
 // Check for URL tile pattern, if not found, treat as geo-referenced raster layer
-DataSource.register('Raster', source => {
+DataSource.register('Raster', (source: SourceConfig) => {
     return RasterTileSource.urlHasTilePattern(source.url) ? RasterTileSource : RasterSource;
 });
