@@ -1,16 +1,21 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 import GLSL from '../gl/glsl';
 import StyleParser from '../styles/style_parser';
 
+// @ts-ignore shader source is loaded by the renderer bundler
 import material_source from './material.glsl';
 
 const material_props = ['emission', 'ambient', 'diffuse', 'specular'];
 
 export default class Material {
-    constructor (config) {
+    [key: string]: any;
+    static block: string;
+
+    constructor (config: any) {
 
         config = config || {};
 
@@ -55,7 +60,7 @@ export default class Material {
     }
 
     // Determine if a material config block has sufficient properties to create a material
-    static isValid (config) {
+    static isValid (config: any): boolean {
         if (config == null) {
             return false;
         }
@@ -70,7 +75,7 @@ export default class Material {
         return true;
     }
 
-    inject (style) {
+    inject (style: any): void {
         // For each property, sets defines to configure texture mapping, with a pattern like:
         //   TANGRAM_MATERIAL_DIFFUSE, TANGRAM_MATERIAL_DIFFUSE_TEXTURE, TANGRAM_MATERIAL_DIFFUSE_TEXTURE_SPHEREMAP
         // Also sets flags to keep track of each unique mapping type being used, e.g.:
@@ -102,7 +107,7 @@ export default class Material {
         style.addShaderBlock('setup', '\nmaterial = u_material;\n', 'Material');
     }
 
-    setupProgram (_program) {
+    setupProgram (_program: any): void {
         // For each property, sets uniforms in the pattern:
         // u_material.diffuse, u_material.diffuseScale u_material_diffuse_texture
         material_props.forEach(prop => {

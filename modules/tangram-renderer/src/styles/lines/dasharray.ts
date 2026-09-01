@@ -1,6 +1,7 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 // Renders an array specifying a line pattern of alternating dashes and spaces,
 // similar to an SVG `dasharray` or Canvas setLineDash(), into a byte array of RGBA pixels
@@ -17,7 +18,9 @@
 const default_dash_color = [255, 255, 255, 255];
 const default_background_color = [0, 0, 0, 0];
 
-export default function renderDashArray (pattern, options = {}) {
+type DashArrayOptions = {dash_color?: number[]; background_color?: number[]; scale?: number};
+
+export default function renderDashArray (pattern: number[], options: DashArrayOptions = {}): {pixels: Uint8Array; length: number} {
     const dash_pixel = options.dash_color || default_dash_color;
     const background_color = options.background_color || default_background_color;
     const dashes = pattern;
@@ -29,7 +32,7 @@ export default function renderDashArray (pattern, options = {}) {
     }
 
     let dash = true;
-    let pixels = [];
+    let pixels: any = [];
     for (let i=0; i < dashes.length; i++) {
         let segment = Math.floor(dashes[i] * scale);
         for (let s=0; s < segment; s++) {
