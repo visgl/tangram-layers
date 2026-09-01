@@ -68,7 +68,7 @@ export class RasterTileSource extends NetworkTileSource {
         // texture definitions are cached to avoid loading the same raster tile multiple times,
         // e.g. due to slightly different URLs when subdomain pattern is used (a.tile.com vs. b.tile.com)
         if (!this.textures[key]) {
-            let url = this.formatURL(this.url, { coords });
+            let url = this.formatURL(this.url as string, { coords });
             this.textures[key] = {
                 name: url,
                 url,
