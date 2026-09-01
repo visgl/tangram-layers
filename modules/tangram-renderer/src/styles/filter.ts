@@ -3,17 +3,21 @@
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 // Copyright (c) 2026 vis.gl contributors
 
-function notNull(x)  { return x != null; }
-function wrap(x)     { return '(' + x + ')';}
+type FilterValue = any;
+type FilterOptions = any;
+type FilterAst = string[];
 
-function maybeQuote(value) {
+function notNull (x: FilterValue): boolean { return x != null; }
+function wrap (x: FilterValue): string { return '(' + x + ')';}
+
+function maybeQuote (value: FilterValue): FilterValue {
     if (typeof value === 'string') {
         return '"' + value + '"';
     }
     return value;
 }
 
-function lookUp(key) {
+function lookUp (key: string): string {
     if (key[0] === '$') {
         // keys prefixed with $ are special properties in the context object (not feature properties)
         return 'context[\'' + key.substring(1) + '\']';
@@ -37,46 +41,46 @@ function lookUp(key) {
     return 'context.feature.properties[\'' + key + '\']';
 }
 
-function nullValue(/*key, value*/) {
+function nullValue (/*key, value*/ _key?: FilterValue, _value?: FilterValue): string {
     return ' true ';
 }
 
-function propertyEqual(key, value) {
+function propertyEqual (key: string, value: FilterValue): string {
     return wrap(maybeQuote(value) + ' === ' + lookUp(key));
 }
 
-function propertyOr(key, values) {
+function propertyOr (key: string, values: FilterValue[]): string {
     const arr = '[' + values.map(maybeQuote).join(',') + ']';
     return wrap(`${arr}.indexOf(${lookUp(key)}) > -1`);
 }
 
-function printNested(values, joiner) {
-    return wrap(values.filter(notNull).map(function (x) {
+function printNested (values: FilterAst[], joiner: string): string {
+    return wrap(values.filter(notNull).map(function (x: FilterAst) {
         return wrap(x.join(' && '));
     }).join(' ' + joiner + ' '));
 }
 
-function any(_, values, options) {
-    return (values && values.length > 0) ? printNested(values.map(function(v) { return parseFilter(v, options); }), '||') : 'true';
+function any (_: FilterValue, values: FilterValue[], options: FilterOptions): string {
+    return (values && values.length > 0) ? printNested(values.map(function (v: FilterValue) { return parseFilter(v, options); }), '||') : 'true';
 }
 
-function all(_, values, options) {
-    return (values && values.length > 0) ? printNested(values.map(function(v) { return parseFilter(v, options); }), '&&') : 'true';
+function all (_: FilterValue, values: FilterValue[], options: FilterOptions): string {
+    return (values && values.length > 0) ? printNested(values.map(function (v: FilterValue) { return parseFilter(v, options); }), '&&') : 'true';
 }
 
-function not(key, value, options) {
+function not (key: FilterValue, value: FilterValue, options: FilterOptions): string {
     return '!' + wrap(parseFilter(value, options).join(' && '));
 }
 
-function none(key, values, options) {
+function none (key: FilterValue, values: FilterValue[], options: FilterOptions): string {
     return '!' + wrap(any(null, values, options));
 }
 
-function propertyMatchesBoolean(key, value) {
+function propertyMatchesBoolean (key: string, value: boolean): string {
     return wrap(lookUp(key) + (value ? ' != ' : ' == ')  + 'null');
 }
 
-function rangeMatch(key, value, options) {
+function rangeMatch (key: string, value: any, options: FilterOptions): string {
     var expressions = [];
     var transform = options && (typeof options.rangeTransform === 'function') && options.rangeTransform;
 
@@ -86,14 +90,14 @@ function rangeMatch(key, value, options) {
     }
 
     if (value.min) {
-        var min = transform ? min = transform(value.min) : value.min;
+        var min: any = transform ? min = transform(value.min) : value.min;
         expressions.push('' + lookUp(key) + ' >= ' + min);
     }
 
     return wrap(expressions.join(' && '));
 }
 
-function includesMatch(key, value) {
+function includesMatch (key: string, value: any, _options?: FilterOptions): string {
     let expressions = [];
 
     // the array includes ONE OE MORE of the provided values (a single value is converted to an array)
@@ -113,8 +117,8 @@ function includesMatch(key, value) {
     return wrap(expressions.join(' && '));
 }
 
-function parseFilter(filter, options) {
-    var filterAST = [];
+function parseFilter (filter: FilterValue, options: FilterOptions): FilterAst {
+    var filterAST: FilterAst = [];
 
     // Function filter
     if (typeof filter === 'function') {
@@ -167,11 +171,11 @@ function parseFilter(filter, options) {
     return keys.length === 0 ? ['true'] : filterAST;
 }
 
-function filterToString(filterAST) {
+function filterToString (filterAST: FilterAst): string {
     return wrap(filterAST.join(' && '));
 }
 
-export function buildFilter(filter, options) {
+export function buildFilter (filter: FilterValue, options?: FilterOptions): Function {
     if (filter == null) { return function () { return true; }; }
     // jshint evil: true
     return new Function('context', 'return ' + filterToString(parseFilter(filter, options)) + ';');
