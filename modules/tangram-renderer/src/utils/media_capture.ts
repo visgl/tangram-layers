@@ -8,6 +8,12 @@ import {createObjectURL} from './urls';
 import StyleParser from '../styles/style_parser';
 
 export default class MediaCapture {
+    canvas: any;
+    gl: any;
+    screenshot_canvas: HTMLCanvasElement | null;
+    screenshot_context: CanvasRenderingContext2D | null;
+    queue_screenshot: any;
+    video_capture: any;
 
     constructor() {
         this.canvas = null;
@@ -18,14 +24,14 @@ export default class MediaCapture {
         this.video_capture = null;
     }
 
-    setCanvas (canvas, gl) {
+    setCanvas (canvas: any, gl: any): void {
         this.canvas = canvas;
         this.gl = gl;
     }
 
     // Take a screenshot, returns a promise that resolves with the screenshot data when available
     // `background`: optional background color to blend screenshot with
-    screenshot ({ background } = {}) {
+    screenshot ({ background }: {background?: string} = {}): Promise<any> {
         if (this.queue_screenshot != null) {
             return this.queue_screenshot.promise; // only capture one screenshot at a time
         }
@@ -40,7 +46,7 @@ export default class MediaCapture {
     }
 
     // Called after rendering, captures render buffer and resolves promise with the image data
-    completeScreenshot () {
+    completeScreenshot (): void {
         if (this.queue_screenshot != null) {
             // Firefox appears to have an issue where its alpha conversion overflows some channels when
             // the WebGL canvas content is captured. To get around this, we read pixels from the GL buffer
@@ -56,7 +62,7 @@ export default class MediaCapture {
             // Optional background to blend with (only RGB, alpha is ignored)
             let background = this.queue_screenshot.background;
             if (background && background !== 'transparent') {
-                background = StyleParser.parseColor(background).slice(0, 3).map(c => c * 255);
+                background = StyleParser.parseColor(background).slice(0, 3).map((c: number) => c * 255) as any;
             }
             else {
                 background = null; // skip blend if transparent
@@ -93,7 +99,7 @@ export default class MediaCapture {
             this.screenshot_context = this.screenshot_context || canvas.getContext('2d');
             let ctx = this.screenshot_context;
             let image = new ImageData(flip, w, h);
-            ctx.putImageData(image, 0, 0);
+            ctx!.putImageData(image, 0, 0);
 
             // Get data URL from canvas and convert to blob
             // Strip host/mimetype/etc., convert base64 to binary without UTF-8 mangling
@@ -113,7 +119,7 @@ export default class MediaCapture {
     }
 
     // Starts capturing a video stream from the canvas
-    startVideoCapture () {
+    startVideoCapture (): boolean {
         if (typeof window === 'undefined' || typeof window.MediaRecorder !== 'function' || !this.canvas || typeof this.canvas.captureStream !== 'function') {
             log('warn', 'Video capture (Canvas.captureStream and/or MediaRecorder APIs) not supported by browser');
             return false;
@@ -125,12 +131,12 @@ export default class MediaCapture {
 
         // Start a new capture
         try {
-            let cap = this.video_capture = {};
+            const cap: any = this.video_capture = {};
             cap.chunks = [];
             cap.stream = this.canvas.captureStream();
             cap.options = { mimeType: 'video/webm' }; // TODO: support other format options
             cap.media_recorder = new MediaRecorder(cap.stream, cap.options);
-            cap.media_recorder.ondataavailable = (event) => {
+            cap.media_recorder.ondataavailable = (event: any) => {
                 if (event.data.size > 0) {
                     cap.chunks.push(event.data);
                 }
@@ -143,7 +149,7 @@ export default class MediaCapture {
                     // Explicitly remove all stream tracks, and set objects to null
                     if (cap.stream) {
                         let tracks = cap.stream.getTracks() || [];
-                        tracks.forEach(track => {
+                        tracks.forEach((track: MediaStreamTrack) => {
                             track.stop();
                             cap.stream.removeTrack(track);
                         });
@@ -166,7 +172,7 @@ export default class MediaCapture {
     }
 
     // Stops capturing a video stream from the canvas, returns a promise that resolves with the video when available
-    stopVideoCapture () {
+    stopVideoCapture (): Promise<any> {
         if (!this.video_capture) {
             log('warn', 'No scene video capture in progress, call Scene.startVideoCapture() first');
             return Promise.resolve({});

@@ -26,7 +26,6 @@
   "modules/tangram-renderer/src/scene/host_frame.js",
   "modules/tangram-renderer/src/scene/renderer.js",
   "modules/tangram-renderer/src/scene/scene.js",
-  "modules/tangram-renderer/src/scene/scene_debug.js",
   "modules/tangram-renderer/src/scene/scene_loader.js",
   "modules/tangram-renderer/src/scene/scene_worker.js",
   "modules/tangram-renderer/src/scene/view.js",
@@ -49,7 +48,5 @@
   "modules/tangram-renderer/src/styles/text/text_wrap.js",
   "modules/tangram-renderer/src/tile/tile.js",
   "modules/tangram-renderer/src/tile/tile_manager.js",
-  "modules/tangram-renderer/src/tile/tile_pyramid.js",
-  "modules/tangram-renderer/src/utils/media_capture.js",
   "modules/tangram-renderer/src/utils/worker_broker.js"
 ]

@@ -1,10 +1,18 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 import {TileID} from './tile_id';
 
+type Tile = any;
+type PyramidEntry = {tile?: Tile; descendants: number};
+
 export default class TilePyramid {
+    tiles: Record<string, PyramidEntry>;
+    max_proxy_descendant_depth: number;
+    max_proxy_ancestor_depth: number;
+    children_cache: Record<string, any>;
 
     constructor() {
         this.tiles = {};
@@ -13,7 +21,7 @@ export default class TilePyramid {
         this.children_cache = {}; // cache for children of coordinates
     }
 
-    addTile(tile) {
+    addTile(tile: Tile): void {
         // Add target tile
         this.tiles[tile.key] = this.tiles[tile.key] || { descendants: 0 };
         this.tiles[tile.key].tile = tile;
@@ -32,7 +40,7 @@ export default class TilePyramid {
         }
     }
 
-    removeTile(tile) {
+    removeTile(tile: Tile): void {
         // Remove target tile
         if (this.tiles[tile.key]) {
             delete this.tiles[tile.key].tile;
@@ -59,7 +67,7 @@ export default class TilePyramid {
     }
 
     // Find the parent tile for a given tile and style zoom level
-    getAncestor (tile) {
+    getAncestor (tile: Tile): Tile | undefined {
         let level = 0;
         while (level < this.max_proxy_ancestor_depth) {
             tile = TileID.parent(tile);
@@ -78,10 +86,10 @@ export default class TilePyramid {
     }
 
     // Find the descendant tiles for a given tile and style zoom level
-    getDescendants (tile, level = 0) {
-        let descendants = [];
+    getDescendants (tile: Tile, level = 0): Tile[] | undefined {
+        const descendants: Tile[] = [];
         if (level < this.max_proxy_descendant_depth) {
-            let tiles = TileID.children(tile, this.children_cache);
+            const tiles: Tile[] = TileID.children(tile, this.children_cache) as Tile[];
             if (!tiles) {
                 return;
             }
@@ -93,7 +101,7 @@ export default class TilePyramid {
                         descendants.push(this.tiles[t.key].tile);
                     }
                     else if (this.tiles[t.key].descendants > 0) { // didn't find any children, try next level
-                        descendants.push(...this.getDescendants(t, level + 1));
+                        descendants.push(...(this.getDescendants(t, level + 1) || []));
                     }
                 }
             });
