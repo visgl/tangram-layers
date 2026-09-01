@@ -1,17 +1,28 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 // WebGL context wrapper
 
-export const Context = {};
+type ContextScope = (callback: () => unknown) => unknown;
+
+interface ContextNamespace {
+    configure(gl: any, scope?: ContextScope): any;
+    withContext<T>(gl: any, callback: () => T): T;
+    hasContextScope(gl: any): boolean;
+    getContext(canvas?: HTMLCanvasElement | null, options?: any): any;
+    resize(gl: any, width: number, height: number, devicePixelRatio?: number): void;
+}
+
+export const Context = {} as ContextNamespace;
 export default Context;
 
 let context_id = 0;
 const context_scopes = new WeakMap();
 
 // Register a WebGL context for Tangram use without taking ownership of it.
-Context.configure = function configure (gl, scope)
+Context.configure = function configure (gl: any, scope?: ContextScope)
 {
     if (gl._tangram_id == null) {
         gl._tangram_id = context_id++;
@@ -23,28 +34,28 @@ Context.configure = function configure (gl, scope)
 };
 
 // Run WebGL work inside an optional host-managed state scope.
-Context.withContext = function withContext (gl, callback)
+Context.withContext = function withContext<T> (gl: any, callback: () => T): T
 {
     const scope = gl && context_scopes.get(gl);
     return scope ? scope(callback) : callback();
 };
 
-Context.hasContextScope = function hasContextScope (gl)
+Context.hasContextScope = function hasContextScope (gl: any): boolean
 {
     return Boolean(gl && context_scopes.has(gl));
 };
 
 // Setup a WebGL context
 // If no canvas element is provided, one is created and added to the document body
-Context.getContext = function getContext (canvas, options)
+Context.getContext = function getContext (canvas?: HTMLCanvasElement | null, options: any = {})
 {
     var fullscreen = false;
     if (canvas == null) {
         canvas = document.createElement('canvas');
         canvas.style.position = 'absolute';
-        canvas.style.top = 0;
-        canvas.style.left = 0;
-        canvas.style.zIndex = -1;
+        canvas.style.top = 0 as any;
+        canvas.style.left = 0 as any;
+        canvas.style.zIndex = -1 as any;
         document.body.appendChild(canvas);
         fullscreen = true;
     }
@@ -74,7 +85,7 @@ Context.getContext = function getContext (canvas, options)
     return gl;
 };
 
-Context.resize = function (gl, width, height, device_pixel_ratio)
+Context.resize = function (gl: any, width: number, height: number, device_pixel_ratio?: number): void
 {
     device_pixel_ratio = device_pixel_ratio || window.devicePixelRatio || 1;
     gl.canvas.style.width = width + 'px';

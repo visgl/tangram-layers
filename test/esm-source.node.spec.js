@@ -11,7 +11,7 @@ describe('renderer ESM sources', () => {
   it('do not assign through default exports', async () => {
     const files = [
       'modules/tangram-renderer/src/gl/constants.ts',
-      'modules/tangram-renderer/src/gl/context.js',
+      'modules/tangram-renderer/src/gl/context.ts',
       'modules/tangram-renderer/src/utils/debug_settings.ts',
       'modules/tangram-renderer/src/utils/geo.ts',
       'modules/tangram-renderer/src/utils/vector.ts',

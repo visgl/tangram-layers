@@ -1,16 +1,39 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 import gl from './constants'; // web workers don't have access to GL context, so import all GL constants
 import VertexData from './vertex_data';
 import hashString from '../utils/hash';
 
+type VertexAttribute = {
+    name: string;
+    size: number;
+    type: number;
+    normalized?: boolean;
+    static?: number | number[];
+    offset?: number;
+    byte_size?: number;
+    method?: string;
+};
+type VertexComponent = {type: number; shift: number; offset: number; index: number};
+
 // Describes a vertex layout that can be used with many different GL programs.
 export default class VertexLayout {
+    static enabled_attribs: Record<string, any> = {};
+    static add_vertex_funcs: Record<number, (vertex: number[], views: Record<number, ArrayBufferView>, offset: number) => void> = {};
+    attribs: VertexAttribute[];
+    dynamic_attribs: VertexAttribute[];
+    static_attribs: VertexAttribute[];
+    components: VertexComponent[];
+    index: Record<string, number>;
+    offset: Record<string, number>;
+    stride: number;
+    addVertex?: (vertex: number[], views: Record<number, ArrayBufferView>, offset: number) => void;
     // Attribs are an array, in layout order, of: name, size, type, normalized
     // ex: { name: 'position', size: 3, type: gl.FLOAT, normalized: false }
-    constructor (attribs) {
+    constructor (attribs: VertexAttribute[]) {
         this.attribs = attribs; // array of attributes, specified as standard GL attrib options
         this.dynamic_attribs = this.attribs.filter(x => x.static == null); // attributes with per-vertex values, used to build VBOs
         this.static_attribs = this.attribs.filter(x => x.static != null); // attributes with fixed values
@@ -79,7 +102,7 @@ export default class VertexLayout {
     // Assumes that the desired vertex buffer (VBO) is already bound
     // If the program doesn't include all attributes, it can still use the vertex layout
     // to read those attribs that it does recognize, using the attrib offsets to skip others.
-    enableDynamicAttributes (gl, program) {
+    enableDynamicAttributes (gl: any, program: any): void {
         // Disable all attributes
         for (const location in VertexLayout.enabled_attribs) {
             gl.disableVertexAttribArray(location);
@@ -91,7 +114,7 @@ export default class VertexLayout {
             const location = program.attribute(attrib.name).location;
             if (location !== -1) {
                 gl.enableVertexAttribArray(location);
-                gl.vertexAttribPointer(location, attrib.size, attrib.type, attrib.normalized, this.stride, attrib.offset);
+                gl.vertexAttribPointer(location, attrib.size, attrib.type, attrib.normalized, this.stride, attrib.offset!);
                 VertexLayout.enabled_attribs[location] = program;
             }
         });
@@ -99,27 +122,27 @@ export default class VertexLayout {
 
     // Enable static attributes for this layout. Since these aren't captured as part of Vertex Array Object state,
     // they are enabled separately.
-    enableStaticAttributes (gl, program) {
+    enableStaticAttributes (gl: any, program: any): void {
         this.static_attribs.forEach(attrib => {
             const location = program.attribute(attrib.name).location;
-            if (location !== -1 && gl[attrib.method] instanceof Function) {
+            if (location !== -1 && gl[attrib.method!] instanceof Function) {
                 // N.B.: Safari appears to require an explicit array enable to set vertex attribute as "active"
                 // (the static attribute value method does not work without it). So the attribute is temporarily
                 // enabled as an array, then disabled.
                 gl.enableVertexAttribArray(location);
-                gl[attrib.method](location, attrib.static);
+                gl[attrib.method!](location, attrib.static);
                 gl.disableVertexAttribArray(location);
             }
         });
     }
 
-    createVertexData () {
+    createVertexData (): VertexData {
         return new VertexData(this);
     }
 
     // Return a luma.gl-compatible description of the interleaved vertex buffer.
     // Static attributes are omitted because they are supplied independently of the buffer.
-    getBufferLayout (name = 'vertices') {
+    getBufferLayout (name = 'vertices'): any {
         return {
             name,
             byteStride: this.stride,
@@ -132,31 +155,31 @@ export default class VertexLayout {
     }
 
     // Return constant vertex attributes for renderers that don't use Tangram's VAO wrapper.
-    getStaticAttributes () {
+    getStaticAttributes (): any[] {
         return this.static_attribs.map(attrib => ({
             attribute: attrib.name,
-            value: attrib.static.slice()
+            value: (attrib.static as number[]).slice()
         }));
     }
 
     // Lazily create the add vertex function
-    getAddVertexFunction () {
+    getAddVertexFunction (): (vertex: number[], views: Record<number, ArrayBufferView>, offset: number) => void {
         if (this.addVertex == null) {
             this.createAddVertexFunction();
         }
-        return this.addVertex;
+        return this.addVertex!;
     }
 
     // Dynamically compile a function to add a plain JS vertex array to this layout's typed VBO arrays
     createAddVertexFunction () {
-        let key = hashString(JSON.stringify(this.attribs));
+        const key = hashString(JSON.stringify(this.attribs));
         if (VertexLayout.add_vertex_funcs[key] == null) {
             // `t` = current typed array to write to
             // `o` = current offset into VBO, in current type size (e.g. divide 2 for shorts, divide by 4 for floats, etc.)
             // `v` = plain JS array containing vertex data
             // `vs` = typed arrays (one per GL type needed for this vertex layout)
             // `off` = current offset into VBO, in bytes
-            let src = ['var t, o;'];
+            let src: string[] | string = ['var t, o;'];
 
             // Sort by array type to reduce redundant array look-up and offset calculation
             let last_type;
@@ -176,24 +199,16 @@ export default class VertexLayout {
             }
 
             src = src.join('\n');
-            let func = new Function('v', 'vs', 'off', src); // jshint ignore:line
+            const func = new Function('v', 'vs', 'off', src) as (vertex: number[], views: Record<number, ArrayBufferView>, offset: number) => void; // jshint ignore:line
             VertexLayout.add_vertex_funcs[key] = func;
         }
 
         this.addVertex = VertexLayout.add_vertex_funcs[key];
     }
-
 }
 
-// Track currently enabled attribs, by the program they are bound to
-// Static class property to reflect global GL state
-VertexLayout.enabled_attribs = {};
-
-// Functions to add plain JS vertex array to typed VBO arrays
-VertexLayout.add_vertex_funcs = {}; // keyed by unique set of attributes
-
-function getVertexFormat(attrib) {
-    let type;
+function getVertexFormat(attrib: VertexAttribute): string {
+    let type: string;
     switch (attrib.type) {
     case gl.BYTE:
         type = attrib.normalized ? 'snorm8' : 'sint8';

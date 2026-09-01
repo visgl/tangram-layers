@@ -1,16 +1,21 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 let MAX_VALUE = Math.pow(2, 16) - 1;
 let has_element_index_uint = false;
 
 export default class VertexElements {
+    static setElementIndexUint: (flag: boolean) => void;
+    array: number[];
+    has_overflown: boolean;
+
     constructor () {
         this.array = [];
         this.has_overflown = false;
     }
-    push (value) {
+    push (value: number): void {
         // If values have overflown and no Uint32 option is available, do not push values
         if (this.has_overflown && !has_element_index_uint) {
             return;
@@ -26,7 +31,7 @@ export default class VertexElements {
 
         this.array.push(value);
     }
-    end () {
+    end (): Uint16Array | Uint32Array | false {
         if (this.array.length){
             let buffer = createBuffer(this.array, this.has_overflown);
             this.array = [];
@@ -39,11 +44,11 @@ export default class VertexElements {
     }
 }
 
-VertexElements.setElementIndexUint = function(flag) {
+VertexElements.setElementIndexUint = function(flag: boolean): void {
     has_element_index_uint = flag;
 };
 
-function createBuffer(array, overflown) {
+function createBuffer(array: number[], overflown: boolean): Uint16Array | Uint32Array {
     var typedArray = (overflown && has_element_index_uint) ? Uint32Array : Uint16Array;
     return new typedArray(array);
 }

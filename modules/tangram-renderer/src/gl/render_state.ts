@@ -1,16 +1,20 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 
 export class RenderState {
-    constructor (value, setup) {
+    value: any;
+    setup: (value: any) => void;
+
+    constructor (value: any, setup: (value: any) => void) {
         setup(value);
         this.value = value;
         this.setup = setup;
     }
 
-    set (value) {
+    set (value: any): void {
         // if the states are different, call the GL context for a state change
         if (JSON.stringify(this.value) !== JSON.stringify(value)) {
             this.setup(value);
@@ -18,14 +22,20 @@ export class RenderState {
         }
     }
 
-    invalidate () {
+    invalidate (): void {
         this.value = null;
     }
 }
 
 export default class RenderStateManager {
 
-    constructor (gl) {
+    defaults: Record<string, any>;
+    culling: RenderState;
+    blending: RenderState;
+    depth_write: RenderState;
+    depth_test: RenderState;
+
+    constructor (gl: any) {
         this.defaults = {};
 
         // Culling
@@ -47,7 +57,7 @@ export default class RenderStateManager {
         // Culling
         this.culling = new RenderState(
             { cull: this.defaults.culling, face: this.defaults.culling_face },
-            (value) => {
+            (value: any) => {
                 if (value.cull) {
                     gl.enable(gl.CULL_FACE);
                     gl.cullFace(value.face);
@@ -65,7 +75,7 @@ export default class RenderStateManager {
             src_alpha: this.defaults.blending_src_alpha,
             dst_alpha: this.defaults.blending_dst_alpha
         },
-        (value) => {
+        (value: any) => {
             if (value.blend) {
                 gl.enable(gl.BLEND);
 
@@ -84,7 +94,7 @@ export default class RenderStateManager {
         // Depth write
         this.depth_write = new RenderState(
             { depth_write: this.defaults.depth_write },
-            (value) => {
+            (value: any) => {
                 gl.depthMask(value.depth_write);
             }
         );
@@ -92,7 +102,7 @@ export default class RenderStateManager {
         // Depth test
         this.depth_test = new RenderState(
             { depth_test: this.defaults.depth_test },
-            (value) => {
+            (value: any) => {
                 if (value.depth_test) {
                     gl.enable(gl.DEPTH_TEST);
                 } else {
@@ -103,7 +113,7 @@ export default class RenderStateManager {
 
     }
 
-    invalidate () {
+    invalidate (): void {
         this.culling.invalidate();
         this.blending.invalidate();
         this.depth_write.invalidate();
