@@ -1,10 +1,11 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 // Rearranges element array for triangles into a new element array that draws a wireframe
 // Used for debugging
-export default function makeWireframeForTriangleElementData (element_data) {
+export default function makeWireframeForTriangleElementData (element_data: Uint16Array): Uint16Array {
     const wireframe_data = new Uint16Array(element_data.length * 2);
 
     // Draw triangles as lines:

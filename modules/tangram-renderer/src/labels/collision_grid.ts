@@ -1,15 +1,23 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
+type Anchor = {x: number; y: number};
+type Cell = {aabb: unknown[]; obb: unknown[]};
+type LabelLike = {aabb?: number[]; aabbs?: number[][]; cells?: Cell[]};
 export default class CollisionGrid {
-    constructor (anchor, span) {
+    anchor: Anchor;
+    span: number;
+    cells: Record<number, Record<number, Cell>>;
+
+    constructor (anchor: Anchor, span: number) {
         this.anchor = anchor;
         this.span = span;
         this.cells = {};
     }
 
-    addLabel (label) {
+    addLabel (label: LabelLike): void {
         if (label.aabb) {
             this.addLabelBboxes(label, label.aabb);
         }
@@ -19,7 +27,7 @@ export default class CollisionGrid {
         }
     }
 
-    addLabelBboxes (label, aabb) {
+    addLabelBboxes (label: LabelLike, aabb: number[]): void {
         // min/max cells that the label falls into
         // keep grid coordinates at zero or above so any labels that go "below" the anchor are in the lowest grid cell
         const cell_bounds = [

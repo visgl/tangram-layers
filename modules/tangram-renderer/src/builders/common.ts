@@ -1,6 +1,7 @@
 // Tangram
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
+// Copyright (c) 2026 vis.gl contributors
 
 // Geometry building functions
 import Geo from '../utils/geo';
@@ -14,7 +15,7 @@ export const default_uvs = [0, 0, 1, 1];
 
 // Tests if a line segment (from point A to B) is outside the tile bounds
 // (within a certain tolerance to account for geometry nearly on tile edges)
-export function outsideTile (_a, _b, tolerance) {
+export function outsideTile (_a: number[], _b: number[], tolerance: number): boolean {
     let tile_min = tile_bounds[0];
     let tile_max = tile_bounds[1];
 
@@ -29,8 +30,7 @@ export function outsideTile (_a, _b, tolerance) {
     return false;
 }
 
-export function isCoordOutsideTile (coord, tolerance) {
-    tolerance = tolerance || 0;
+export function isCoordOutsideTile (coord: number[], tolerance = 0): boolean {
     let tile_min = tile_bounds[0];
     let tile_max = tile_bounds[1];
 

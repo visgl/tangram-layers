@@ -7,10 +7,10 @@ import {MethodNotImplemented} from '../modules/tangram-renderer/src/utils/errors
 import {compileFunctionString, compileFunctionStrings, clearFunctionStringCache, functionStringCache} from '../modules/tangram-renderer/src/utils/functions.js';
 import Geo from '../modules/tangram-renderer/src/utils/geo.ts';
 import {buildFilter} from '../modules/tangram-renderer/src/styles/filter.js';
-import CollisionGrid from '../modules/tangram-renderer/src/labels/collision_grid.js';
-import {boxIntersectsBox, boxIntersectsList} from '../modules/tangram-renderer/src/labels/intersect.js';
-import PointAnchor from '../modules/tangram-renderer/src/labels/point_anchor.js';
-import RepeatGroup from '../modules/tangram-renderer/src/labels/repeat_group.js';
+import CollisionGrid from '../modules/tangram-renderer/src/labels/collision_grid.ts';
+import {boxIntersectsBox, boxIntersectsList} from '../modules/tangram-renderer/src/labels/intersect.ts';
+import PointAnchor from '../modules/tangram-renderer/src/labels/point_anchor.ts';
+import RepeatGroup from '../modules/tangram-renderer/src/labels/repeat_group.ts';
 import {getPropertyPath, getPropertyPathTarget, setPropertyPath} from '../modules/tangram-renderer/src/utils/props.js';
 import Vector from '../modules/tangram-renderer/src/utils/vector.js';
 import {
