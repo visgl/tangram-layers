@@ -2,16 +2,27 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-// @ts-nocheck
-
 import Label from './label';
 import PointAnchor from './point_anchor';
 import OBB from '../utils/obb';
 import StyleParser from '../styles/style_parser';
 
+type LabelPointCoordinate = [number, number];
+type LabelPointSize = [number, number];
+type LabelPointLayout = Record<string, any>;
+const typedStyleParser = StyleParser as any;
+
 export default class LabelPoint extends Label {
 
-    constructor (position, size, layout, angle = 0) {
+    position: LabelPointCoordinate;
+    angle: number;
+    parent: any;
+    start_anchor_index: number;
+    degenerate: boolean;
+    throw_away: boolean;
+    static PLACEMENT: Record<string, number>;
+
+    constructor (position: LabelPointCoordinate, size: LabelPointSize, layout: LabelPointLayout, angle = 0) {
         super(size, layout);
         this.type = 'point';
         this.position = [position[0], position[1]];
@@ -39,8 +50,8 @@ export default class LabelPoint extends Label {
             // point's own anchor, text anchor applied to point, additional point offset
             this.offset = PointAnchor.computeOffset(this.offset, parent.size, parent.anchor, PointAnchor.zero_buffer);
             this.offset = PointAnchor.computeOffset(this.offset, parent.size, this.anchor, PointAnchor.zero_buffer);
-            if (parent.offset !== StyleParser.zeroPair) {        // point has an offset
-                if (this.offset === StyleParser.zeroPair) {      // no text offset, use point's
+            if (parent.offset !== typedStyleParser.zeroPair) {        // point has an offset
+                if (this.offset === typedStyleParser.zeroPair) {      // no text offset, use point's
                     this.offset = parent.offset;
                 }
                 else {                                           // text has offset, add point's
@@ -81,7 +92,7 @@ export default class LabelPoint extends Label {
         }
     }
 
-    discard (bboxes, exclude = null) {
+    discard (bboxes: any, exclude: any = null) {
         if (this.degenerate) {
             return false;
         }

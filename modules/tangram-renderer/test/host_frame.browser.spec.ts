@@ -3,7 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 import {describe, expect, it} from 'vitest';
-import HostFrame from '../src/scene/host_frame';
+import HostFrameClass from '../src/scene/host_frame';
+
+const HostFrame: any = HostFrameClass;
 
 const IDENTITY_MATRIX = [
     1, 0, 0, 0,
@@ -12,7 +14,7 @@ const IDENTITY_MATRIX = [
     0, 0, 0, 1
 ];
 
-function createCamera(offset = 0) {
+function createCamera(offset = 0): any {
     const view = IDENTITY_MATRIX.slice();
     view[12] = offset;
     return {

@@ -12,7 +12,7 @@ import Camera, {
     PerspectiveCamera
 } from '../src/scene/camera';
 
-function createView() {
+function createView(): any {
     return {
         setView: vi.fn(),
         scene: {requestRedraw: vi.fn()},
@@ -27,7 +27,7 @@ function createView() {
     };
 }
 
-function createMatrix(value) {
+function createMatrix(value: number): any {
     return new Float32Array(16).fill(value);
 }
 
@@ -92,7 +92,7 @@ describe('Camera', () => {
         expect(camera.setMatrices(frame)).toBe(false);
         expect(view.scene.requestRedraw).toHaveBeenCalledTimes(1);
         expect(camera.transformVector([1, 0, 0])).toHaveLength(3);
-        expect(() => camera.setMatrices({view: [1], projection: [2]})).toThrow('4x4');
+        expect(() => camera.setMatrices({view: [1] as any, projection: [2] as any})).toThrow('4x4');
 
         const program = {uniform: vi.fn()};
         camera.setupProgram(program);

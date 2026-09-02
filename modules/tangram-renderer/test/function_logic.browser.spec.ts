@@ -15,20 +15,20 @@ describe('renderer function and text helpers', () => {
   beforeEach(() => clearFunctionStringCache());
 
   test('compiles function strings, applies wrappers, and caches source', () => {
-    const compiled = compileFunctionString('function (zoom) { return zoom + 1; }');
+    const compiled: any = compileFunctionString('function (zoom) { return zoom + 1; }') as any;
     expect(compiled(4)).toBe(5);
     expect(compiled.source).toContain('return zoom + 1');
     expect(compileFunctionString('function (zoom) { return zoom + 1; }')).toBe(compiled);
     expect(functionStringCache.num_functions).toBe(1);
     expect(functionStringCache.num_cached).toBe(1);
 
-    const wrapped = compileFunctionString('function (value) { return value * 2; }', body => `return (function () { ${body} }());`);
+    const wrapped: any = compileFunctionString('function (value) { return value * 2; }', (body: string) => `return (function () { ${body} }());`) as any;
     expect(wrapped(3)).toBe(6);
     expect(compileFunctionString('plain text')).toBe('plain text');
   });
 
   test('recursively compiles function-valued stylesheet properties', () => {
-    const style = {
+    const style: any = {
       draw: {color: 'function (context) { return context.zoom; }'},
       nested: ['function (value) { return value + 2; }']
     };

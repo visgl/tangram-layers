@@ -12,13 +12,13 @@ import {getPropertyPath, getPropertyPathTarget, setPropertyPath} from '../src/ut
 describe('renderer utility logic', () => {
   test('indexes label bounding boxes in collision grid cells', () => {
     const grid = new CollisionGrid({x: 0, y: 0}, 10);
-    const label = {aabb: [1, -1, 19, -19]};
+    const label: any = {aabb: [1, -1, 19, -19]};
     grid.addLabel(label);
     expect(label.cells).toHaveLength(4);
     expect(Object.keys(grid.cells)).toEqual(['0', '1']);
     expect(grid.cells[0][0].aabb).toEqual([]);
 
-    const multiBoxLabel = {aabbs: [[-5, 5, 5, -5], [20, -20, 21, -21]]};
+    const multiBoxLabel: any = {aabbs: [[-5, 5, 5, -5], [20, -20, 21, -21]]};
     grid.addLabel(multiBoxLabel);
     expect(multiBoxLabel.cells.length).toBeGreaterThan(0);
   });
@@ -26,19 +26,19 @@ describe('renderer utility logic', () => {
   test('tracks repeated label positions per tile and group', () => {
     const tile = 'tile-1';
     RepeatGroup.clear(tile);
-    const layout = {repeat_distance: 10, repeat_group: 'road', repeat_scale: 2};
-    const first = {position: [100, 100]};
-    const second = {position: [105, 100]};
-    const far = {position: [130, 100]};
+    const layout: any = {repeat_distance: 10, repeat_group: 'road', repeat_scale: 2};
+    const first: any = {position: [100, 100]};
+    const second: any = {position: [105, 100]};
+    const far: any = {position: [130, 100]};
 
     expect(RepeatGroup.check(first, layout, tile)).toBeUndefined();
     RepeatGroup.add(first, layout, tile);
     expect(RepeatGroup.check(second, layout, tile)).toBe(true);
     expect(RepeatGroup.check(far, layout, tile)).toBeUndefined();
-    RepeatGroup.add(null, layout, tile);
+    RepeatGroup.add(null as any, layout, tile);
     RepeatGroup.add(far, layout, tile);
     expect(RepeatGroup.groups[tile].road.positions).toHaveLength(2);
-    expect(RepeatGroup.check(first, {repeat_group: 'missing'}, tile)).toBeUndefined();
+    expect(RepeatGroup.check(first, {repeat_group: 'missing'} as any, tile)).toBeUndefined();
   });
 
   test('renders even and odd dash patterns into flipped RGBA pixels', () => {

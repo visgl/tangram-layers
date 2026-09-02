@@ -10,19 +10,19 @@ import {
   triangulatePolygon
 } from '../src/builders/polygons';
 
-function createVertexData() {
+function createVertexData(): any {
   return {
     vertex_count: 0,
     vertex_elements: [],
     vertices: [],
-    addVertex(vertex) {
+    addVertex(vertex: number[]) {
       this.vertices.push([...vertex]);
       this.vertex_count++;
     }
   };
 }
 
-function buildLine(lines, style = {}, options = {}) {
+function buildLine(lines: number[][][], style: any = {}, options: any = {}): any {
   const vertexData = createVertexData();
   const vertexTemplate = new Array(10).fill(0);
   const triangles = buildPolylines(
@@ -73,8 +73,8 @@ describe('polyline geometry builder', () => {
       {textured: true}
     );
     expect(result.triangles).toBeGreaterThan(2);
-    expect(result.vertexData.vertices.some(vertex => vertex[4] !== 0 || vertex[5] !== 0)).toBe(true);
-    expect(result.vertexData.vertices.some(vertex => vertex[6] !== 0 || vertex[7] !== 0)).toBe(true);
+    expect(result.vertexData.vertices.some((vertex: number[]) => vertex[4] !== 0 || vertex[5] !== 0)).toBe(true);
+    expect(result.vertexData.vertices.some((vertex: number[]) => vertex[6] !== 0 || vertex[7] !== 0)).toBe(true);
   });
 
   test('builds clockwise and counter-clockwise closed polygon joins', () => {
@@ -124,7 +124,7 @@ describe('polygon geometry builder', () => {
   test('triangulates flat polygons with normalized texture coordinates', () => {
     const vertexData = createVertexData();
     const template = new Array(10).fill(0);
-    const triangles = buildPolygons([polygon], vertexData, template, {
+    const triangles = buildPolygons([polygon as any], vertexData, template, {
       texcoord_index: 3,
       texcoord_scale: [0.25, 0.5, 0.75, 1],
       texcoord_normalize: 65535
@@ -132,7 +132,7 @@ describe('polygon geometry builder', () => {
     expect(triangles).toBe(2);
     expect(vertexData.vertex_count).toBe(5);
     expect(vertexData.vertex_elements).toHaveLength(6);
-    expect(vertexData.vertices.some(vertex => vertex[3] > 0)).toBe(true);
+    expect(vertexData.vertices.some((vertex: number[]) => vertex[3] > 0)).toBe(true);
     expect(triangulatePolygon({
       vertices: polygon[0].flat(),
       holes: [],
@@ -144,7 +144,7 @@ describe('polygon geometry builder', () => {
     const vertexData = createVertexData();
     const template = new Array(12).fill(0);
     const triangles = buildExtrudedPolygons(
-      [polygon],
+      [polygon as any],
       2,
       20,
       5,
@@ -162,9 +162,9 @@ describe('polygon geometry builder', () => {
       }
     );
     expect(triangles).toBe(10);
-    expect(vertexData.vertices.some(vertex => vertex[2] === 22)).toBe(true);
-    expect(vertexData.vertices.some(vertex => vertex[2] === 7)).toBe(true);
-    expect(vertexData.vertices.some(vertex => vertex[3] !== 0 || vertex[4] !== 0)).toBe(true);
+    expect(vertexData.vertices.some((vertex: number[]) => vertex[2] === 22)).toBe(true);
+    expect(vertexData.vertices.some((vertex: number[]) => vertex[2] === 7)).toBe(true);
+    expect(vertexData.vertices.some((vertex: number[]) => vertex[3] !== 0 || vertex[4] !== 0)).toBe(true);
   });
 
   test('does not extrude walls along tile edges', () => {
@@ -177,7 +177,7 @@ describe('polygon geometry builder', () => {
     ]];
     const vertexData = createVertexData();
     const triangles = buildExtrudedPolygons(
-      [edgePolygon],
+      [edgePolygon as any],
       0,
       10,
       0,

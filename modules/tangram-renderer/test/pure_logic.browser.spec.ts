@@ -22,11 +22,11 @@ describe('renderer pure logic', () => {
   });
 
   test('builds a point quad and optional curved-label attributes', () => {
-    const vertices = [];
-    const vertexData = {
+    const vertices: any[] = [];
+    const vertexData: any = {
       vertex_elements: [],
       vertex_count: 0,
-      addVertex(vertex) {
+        addVertex(vertex: number[]) {
         vertices.push(vertex.slice());
         this.vertex_count++;
       }
@@ -90,10 +90,10 @@ describe('renderer pure logic', () => {
     expect(buildFilter({optional: true})(context)).toBe(false);
     expect(buildFilter(null)(context)).toBe(true);
 
-    const transformed = buildFilter({zoom: {min: 3}}, {rangeTransform: value => value + 8});
+    const transformed = buildFilter({zoom: {min: 3}}, {rangeTransform: (value: number) => value + 8});
     expect(transformed({feature: {properties: {zoom: 12}}})).toBe(true);
-    expect(buildFilter(value => value.feature.properties.kind === 'road')(context)).toBe(true);
-    expect(buildFilter(value => value.feature.properties.kind === 'building')(context)).toBe(false);
+    expect(buildFilter((value: any) => value.feature.properties.kind === 'road')(context)).toBe(true);
+    expect(buildFilter((value: any) => value.feature.properties.kind === 'building')(context)).toBe(false);
   });
 
   test('handles point anchors and collision boxes', () => {
@@ -109,8 +109,8 @@ describe('renderer pure logic', () => {
 
     expect(boxIntersectsBox([0, 0, 5, 5], [4, 4, 8, 8])).toBe(true);
     expect(boxIntersectsBox([0, 0, 2, 2], [3, 3, 8, 8])).toBe(false);
-    const hits = [];
-    boxIntersectsList([0, 0, 5, 5], [[10, 10, 12, 12], [1, 1, 2, 2]], index => hits.push(index));
+    const hits: number[] = [];
+    boxIntersectsList([0, 0, 5, 5], [[10, 10, 12, 12], [1, 1, 2, 2]], (index: number) => hits.push(index));
     expect(hits).toEqual([1]);
   });
 
@@ -127,7 +127,7 @@ describe('renderer pure logic', () => {
   });
 
   test('wraps text by words, explicit breaks, and line limits', () => {
-    const context = {measureText: text => ({width: text.length * 2})};
+    const context = {measureText: (text: string) => ({width: text.length * 2})};
     const wrapped = MultiLine.parse('one two three', 7, Infinity, 10, context);
     expect(wrapped.lines.map(line => line.text)).toEqual(['one two', 'three']);
     expect(wrapped.width).toBe(14);
@@ -147,7 +147,7 @@ describe('renderer pure logic', () => {
       custom_extension: {enabled: true}
     });
     expect(result.success).toBe(true);
-    expect(result.data.custom_extension).toEqual({enabled: true});
+    expect((result.data as any).custom_extension).toEqual({enabled: true});
     expect(TangramStyleSheetSchema.safeParse({sources: {map: {tile_size: -1}}}).success).toBe(false);
     expect(TangramStyleSheetSchema.safeParse({
       import: ['base.yaml', {layers: {roads: {draw: {lines: {color: '#fff'}}}}}],

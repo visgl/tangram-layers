@@ -31,7 +31,7 @@ describe('small renderer utilities', () => {
   test('debounces calls while preserving receiver and arguments', async () => {
     vi.useFakeTimers();
     const receiver = {value: 0};
-    const callback = vi.fn(function callback(value) {
+    const callback = vi.fn(function callback(this: {value: number}, value: number) {
       this.value = value;
     });
     const debounced = debounce(callback, 20);

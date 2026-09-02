@@ -64,8 +64,8 @@ describe('renderer source normalization', () => {
     expect(layers.buildings.type).toBe('FeatureCollection');
     expect(layers.buildings.features.length).toBeGreaterThan(0);
 
-    const polygon = decodeMultiPolygon({coordinates: [[[0, 0], [4, 0], [4, 4], [0, 4]]]});
-    expect(polygon.type).toBe('Polygon');
-    expect(polygon.coordinates).toHaveLength(1);
+    const polygon = decodeMultiPolygon({type: 'Polygon', coordinates: [[[0, 0], [4, 0], [4, 4], [0, 4]]] } as any);
+    expect(polygon!.type).toBe('Polygon');
+    expect(polygon!.coordinates).toHaveLength(1);
   });
 });

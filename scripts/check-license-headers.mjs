@@ -136,22 +136,22 @@ const TANGRAM_RENDERER_FILES = new Set([
   'modules/tangram-renderer/src/utils/version.ts',
   'modules/tangram-renderer/src/utils/worker_broker.ts',
   'modules/tangram-renderer/test/data_source.browser.spec.js',
-  'modules/tangram-renderer/test/camera.browser.spec.js',
+  'modules/tangram-renderer/test/camera.browser.spec.ts',
   'modules/tangram-renderer/test/fixtures/sample-scene.yaml',
-  'modules/tangram-renderer/test/geo.browser.spec.js',
+  'modules/tangram-renderer/test/geo.browser.spec.ts',
   'modules/tangram-renderer/test/helpers.js',
   'modules/tangram-renderer/test/layer.browser.spec.js',
-  'modules/tangram-renderer/test/merge.browser.spec.js',
-  'modules/tangram-renderer/test/obb.browser.spec.js',
+  'modules/tangram-renderer/test/merge.browser.spec.ts',
+  'modules/tangram-renderer/test/obb.browser.spec.ts',
   'modules/tangram-renderer/test/rollup.config.worker.js',
   'modules/tangram-renderer/test/scene.browser.spec.js',
   'modules/tangram-renderer/test/style.browser.spec.js',
   'modules/tangram-renderer/test/subscribe.browser.spec.js',
   'modules/tangram-renderer/test/tile_manager.browser.spec.js',
   'modules/tangram-renderer/test/tile_pyramid.browser.spec.js',
-  'modules/tangram-renderer/test/tile.browser.spec.js',
-  'modules/tangram-renderer/test/vertex_data.browser.spec.js',
-  'modules/tangram-renderer/test/vertex_layout.browser.spec.js'
+  'modules/tangram-renderer/test/tile.browser.spec.ts',
+  'modules/tangram-renderer/test/vertex_data.browser.spec.ts',
+  'modules/tangram-renderer/test/vertex_layout.browser.spec.ts'
 ]);
 
 // Tangram-derived files that have received substantive vis.gl modifications.
@@ -193,8 +193,8 @@ const VISGL_MODIFIED_TANGRAM_FILES = new Set([
   'modules/tangram-renderer/src/tile/tile_id.ts',
   'modules/tangram-renderer/src/utils/version.ts',
   'modules/tangram-renderer/src/utils/vector.ts',
-  'modules/tangram-renderer/test/camera.browser.spec.js',
-  'modules/tangram-renderer/test/geo.browser.spec.js'
+  'modules/tangram-renderer/test/camera.browser.spec.ts',
+  'modules/tangram-renderer/test/geo.browser.spec.ts'
 ]);
 
 const TANGRAM_ROOT_FILES = new Set([

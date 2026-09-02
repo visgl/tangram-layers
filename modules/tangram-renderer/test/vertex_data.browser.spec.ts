@@ -10,15 +10,15 @@ import gl from '../src/gl/constants';
 describe('VertexData', () => {
 
     // Note: a_color is intentionally not a multiple of 4, to test padding
-    let attribs =  [
+    let attribs: any =  [
         { name: 'a_position', size: 3, type: gl.FLOAT, normalized: false },
         { name: 'a_color', size: 3, type: gl.UNSIGNED_BYTE, normalized: true }, // should be padded to 4 bytes
         { name: 'a_layer', size: 1, type: gl.FLOAT, normalized: false }
     ];
 
     describe('.constructor(vertex_layout)', () => {
-        let subject;
-        let layout;
+        let subject: any;
+        let layout: any;
 
         beforeEach(() => {
             layout = new VertexLayout(attribs);
@@ -35,9 +35,9 @@ describe('VertexData', () => {
     });
 
     describe('.addVertex(vertex)', () => {
-        let subject;
-        let layout;
-        let vertex = [
+        let subject: any;
+        let layout: any;
+        let vertex: number[] = [
             25, 50, 100,    // position
             255, 0, 0,      // color
             2               // layer
