@@ -1,6 +1,6 @@
-// Tangram layers
+// tangram-layers
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 vis.gl contributors
+// Copyright (c) vis.gl contributors
 
 declare module 'fontfaceobserver' {
     export default class FontFaceObserver {
