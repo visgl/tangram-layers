@@ -6,16 +6,23 @@
 
 // Right-to-left / bi-directional text handling
 // Taken from http://stackoverflow.com/questions/12006095/javascript-how-to-check-if-character-is-rtl
-// @ts-nocheck
+
+type SegmentCache = {
+    segment: Record<string, string[]>;
+    stats: {
+        segment_hits: number;
+        segment_misses: number;
+    };
+};
 
 const rtl_test = new RegExp('[\u0591-\u07FF\u200F\u202B\u202E\uFB1D-\uFDFD\uFE70-\uFEFC]');
-export function isTextRTL(s){
+export function isTextRTL(s: string): boolean {
     return rtl_test.test(s);
 }
 
 const neutral_chars = '\u0000-\u002F\u003A-\u0040\u005B-\u0060\u007B-\u00BF\u00D7\u00F7\u02B9-\u02FF\u2000-\u2BFF\u2010-\u2029\u202C\u202F-\u2BFF';
 const neutral_test = new RegExp('['+neutral_chars+']+');
-export function isTextNeutral(s){
+export function isTextNeutral(s: string): boolean {
     return neutral_test.test(s);
 }
 
@@ -56,19 +63,19 @@ const combo_characters = '[\u094D\u09CD\u0A4D\u0ACD\u0B4D\u0C4D\u0CCD\u0D4D\u0F8
 const grapheme_match = new RegExp(`^.(?:${accents_and_vowels}+)?(${combo_characters}\\W(?:${accents_and_vowels}+)?)*`); // eslint-disable-line no-misleading-character-class
 
 // Scripts that cannot be curved due (due to contextual shaping and/or layout complexity)
-const curve_blacklist = {
+const curve_blacklist: Record<string, string> = {
     Mongolian: '\u1800-\u18AF'
 };
 const curve_blacklist_range = Object.keys(curve_blacklist).map(r => curve_blacklist[r]).join('');
 const curve_blacklist_test = new RegExp('['+curve_blacklist_range+']');
-export function isTextCurveBlacklisted(s){
+export function isTextCurveBlacklisted(s: string): boolean {
     return curve_blacklist_test.test(s);
 }
 
 // Splitting strategy for chopping a label into segments
 const default_segment_length = 2; // character length of each segment when dividing up label text
 
-export function splitLabelText(text, rtl, cache) {
+export function splitLabelText(text: string, rtl: boolean, cache: SegmentCache): string[] {
     // Use single-character segments for RTL, to avoid additional handling for neutral characters
     // (see https://github.com/tangrams/tangram/issues/541)
     const segment_length = rtl ? 1 : default_segment_length;
@@ -85,7 +92,7 @@ export function splitLabelText(text, rtl, cache) {
         return cache.segment[key];
     }
 
-    let segments = [];
+    let segments: string[] = [];
 
     // Arabic-specific text handling
     // NB: works for strings that are *only* Arabic; mixed-script labels may need more work

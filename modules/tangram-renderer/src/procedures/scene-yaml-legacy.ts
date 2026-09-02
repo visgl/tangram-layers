@@ -3,8 +3,6 @@
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 // Copyright (c) 2026 vis.gl contributors
 
-// @ts-nocheck
-
 import yaml from 'js-yaml';
 
 /**
@@ -12,7 +10,7 @@ import yaml from 'js-yaml';
  * @param {string} source YAML scene source.
  * @returns {object} Parsed scene object.
  */
-export function parseSceneYamlLegacy(source) {
+export function parseSceneYamlLegacy(source: string): Record<string, any> {
     // Existing Tangram behavior allows duplicate keys despite the YAML specification.
     return yaml.safeLoad(source, { json: true });
 }

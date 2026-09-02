@@ -45,13 +45,15 @@
     "build:size": "gzip dist/tangram.min.mjs -c | wc -c | awk '{kb=$1/1024; print kb}' OFMT='Module:\\t\\t%.0fk (min/gzip)' && gzip dist/tangram.min.js -c | wc -c | awk '{kb=$1/1024; print kb}' OFMT='No module:\\t%.0fk (min/gzip)'",
     "prepack": "yarn build",
     "watch": "ESM=\"${ESM:=true}\" SERVE=true rollup -cw",
-    "lint": "eslint --ext .js src/ --no-error-on-unmatched-pattern",
+    "lint": "eslint --ext .ts src/ --ignore-pattern '**/*.d.ts' --no-error-on-unmatched-pattern",
     "test-build-worker": "ESM=false rollup -c test/rollup.config.worker.js"
   },
   "devDependencies": {
     "@babel/core": "^7.26.0",
+    "@babel/eslint-parser": "^7.26.0",
     "@babel/plugin-transform-runtime": "^7.25.9",
     "@babel/preset-env": "^7.26.0",
+    "@babel/preset-typescript": "^7.29.0",
     "@loaders.gl/config": "5.0.0-alpha.4",
     "@loaders.gl/core": "5.0.0-alpha.4",
     "@loaders.gl/mvt": "5.0.0-alpha.4",

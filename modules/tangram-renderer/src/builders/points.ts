@@ -3,9 +3,11 @@
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 // Point builders
-// @ts-nocheck
 
 import { default_uvs } from './common';
+import type VertexData from '../gl/vertex_data';
+
+type VertexIndex = Record<string, number>;
 
 // Scaling values to encode fractional values with fixed-point integer attributes
 const pre_angles_normalize = 128 / Math.PI;
@@ -29,18 +31,18 @@ const shape = new Array(4); // single, reusable allocation
 // properties for width, height, angle, and texture UVs. Curved label segment sprites have additional properties
 // for interpolating their position and angle across zooms.
 export function buildQuadForPoint (
-    point,
-    vertex_data,
-    vertex_template,
-    vindex,
-    size,
-    offset,
-    offsets,
-    pre_angles,
-    angle,
-    angles,
-    texcoords,
-    curve) {
+    point: number[],
+    vertex_data: VertexData,
+    vertex_template: number[],
+    vindex: VertexIndex,
+    size: number[],
+    offset: number[],
+    offsets: number[],
+    pre_angles: number[],
+    angle: number,
+    angles: number[],
+    texcoords: number[] | undefined,
+    curve: boolean) {
 
     // Half-sized point dimensions in fixed point
     const w2 = size[0] * size_normalize;
