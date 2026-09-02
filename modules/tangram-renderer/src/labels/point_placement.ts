@@ -4,16 +4,17 @@
 
 // Logic for placing point labels along a line geometry
 
-// @ts-nocheck
-
 import LabelPoint from './label_point';
 import {isCoordOutsideTile} from '../builders/common';
 
 const PLACEMENT = LabelPoint.PLACEMENT;
 const default_spacing = 80; // spacing of points along line in pixels
+type Point = [number, number];
+type PlacementLayout = Record<string, any>;
+type PlacementResult = {positions: Point[]; angles: number[]};
 
-export default function placePointsOnLine (line, size, layout) {
-    const labels = [];
+export default function placePointsOnLine (line: Point[], size: Point, layout: PlacementLayout): LabelPoint[] {
+    const labels: LabelPoint[] = [];
     const strategy = layout.placement;
     const min_length = Math.max(size[0], size[1]) * layout.placement_min_length_ratio * layout.units_per_pixel;
 
@@ -40,14 +41,14 @@ export default function placePointsOnLine (line, size, layout) {
             p = line[i];
             q = line[i + 1];
             if (layout.tile_edges === true || !isCoordOutsideTile(p)) {
-                const angle = getAngle(p, q, layout.angle);
-                labels.push(new LabelPoint(p, size, layout, angle));
+                const angle = getAngle(p as Point, q as Point, layout.angle);
+                labels.push(new LabelPoint(p as Point, size, layout, angle));
             }
         }
 
         // add last endpoint
-        const angle = getAngle(p, q, layout.angle);
-        labels.push(new LabelPoint(q, size, layout, angle));
+        const angle = getAngle(p as Point, q as Point, layout.angle);
+        labels.push(new LabelPoint(q as Point, size, layout, angle));
     }
     else if (strategy === PLACEMENT.MIDPOINT) {
         for (let i = 0; i < line.length - 1; i++) {
@@ -60,7 +61,7 @@ export default function placePointsOnLine (line, size, layout) {
             if (layout.tile_edges === true || !isCoordOutsideTile(position)) {
                 if (!min_length || norm(p, q) > min_length) {
                     const angle = getAngle(p, q, layout.angle);
-                    labels.push(new LabelPoint(position, size, layout, angle));
+                labels.push(new LabelPoint(position as Point, size, layout, angle));
                 }
             }
         }
@@ -68,7 +69,7 @@ export default function placePointsOnLine (line, size, layout) {
     return labels;
 }
 
-function getPositionsAndAngles(line, min_length, layout) {
+function getPositionsAndAngles(line: Point[], min_length: number, layout: PlacementLayout): PlacementResult | false {
     let upp = layout.units_per_pixel;
     let spacing = (layout.placement_spacing || default_spacing) * upp;
 
@@ -79,8 +80,8 @@ function getPositionsAndAngles(line, min_length, layout) {
 
     let num_labels = Math.max(Math.floor(length / spacing), 1);
     let remainder = length - (num_labels - 1) * spacing;
-    let positions = [];
-    let angles = [];
+    let positions: Point[] = [];
+    let angles: number[] = [];
 
     let distance = 0.5 * remainder;
     for (let i = 0; i < num_labels; i++) {
@@ -95,11 +96,11 @@ function getPositionsAndAngles(line, min_length, layout) {
     return {positions, angles};
 }
 
-function getAngle(p, q, angle = 0) {
+function getAngle(p: Point, q: Point, angle: number | 'auto' = 0): number {
     return (angle === 'auto') ? Math.atan2(q[0] - p[0], q[1] - p[1]) : angle;
 }
 
-function getLineLength(line) {
+function getLineLength(line: Point[]): number {
     let distance = 0;
     for (let i = 0; i < line.length - 1; i++) {
         distance += norm(line[i], line[i+1]);
@@ -107,15 +108,16 @@ function getLineLength(line) {
     return distance;
 }
 
-function norm(p, q) {
+function norm(p: Point, q: Point): number {
     return Math.sqrt(Math.pow(p[0] - q[0], 2) + Math.pow(p[1] - q[1], 2));
 }
 
 // TODO: can be optimized.
 // you don't have to start from the first index every time for placement
-function interpolateLine(line, distance, min_length, layout) {
+function interpolateLine(line: Point[], distance: number, min_length: number, layout: PlacementLayout): {position?: Point; angle?: number} {
     let sum = 0;
-    let position, angle;
+    let position: Point | undefined;
+    let angle: number | undefined;
     for (let i = 0; i < line.length-1; i++) {
         let p = line[i];
         let q = line[i+1];
@@ -136,7 +138,7 @@ function interpolateLine(line, distance, min_length, layout) {
     return {position, angle};
 }
 
-function interpolateSegment(p, q, distance) {
+function interpolateSegment(p: Point, q: Point, distance: number): Point {
     let length = norm(p, q);
     let ratio = distance / length;
     return [

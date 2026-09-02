@@ -6,7 +6,6 @@
 import GLSL from '../gl/glsl';
 import StyleParser from '../styles/style_parser';
 
-// @ts-ignore shader source is loaded by the renderer bundler
 import material_source from './material.glsl';
 
 const material_props = ['emission', 'ambient', 'diffuse', 'specular'];

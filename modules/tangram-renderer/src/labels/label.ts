@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-// @ts-nocheck
-
 import PointAnchor from './point_anchor';
 import {boxIntersectsList} from './intersect';
 import OBB from '../utils/obb';
@@ -12,7 +10,32 @@ import Geo from '../utils/geo';
 
 export default class Label {
 
-    constructor (size, layout = {}) {
+    static epsilon: number;
+    static nextLabelId: () => number;
+    static add: (label: any, bboxes: any) => void;
+    static id: number;
+    static id_prefix: number;
+    static id_multiplier: number;
+    id: number;
+    type: string;
+    size: any;
+    layout: any;
+    position: any;
+    angle: any;
+    anchor: any;
+    placed: any;
+    offset: any;
+    unit_scale: any;
+    aabb: any;
+    obb: any;
+    aabbs: any;
+    obbs: any;
+    align: any;
+    throw_away: any;
+    breach: any;
+    may_repeat_across_tiles: any;
+
+    constructor (size: any, layout: any = {}) {
         this.id = Label.nextLabelId();
         this.type = ''; // set by subclass
         this.size = size;
@@ -50,7 +73,7 @@ export default class Label {
     }
 
     // check for overlaps with other labels in the tile
-    occluded (bboxes, exclude = null) {
+    occluded (bboxes: any, exclude: any = null) {
         let intersect = false;
         let aabbs = bboxes.aabb;
         let obbs = bboxes.obb;
@@ -111,7 +134,7 @@ export default class Label {
 
     // Whether the label should be discarded
     // Depends on whether label must fit in the tile bounds, and if so, can it be moved to fit there
-    discard(bboxes, exclude = null) {
+    discard(bboxes: any, exclude: any = null) {
         if (this.throw_away) {
             return true;
         }
@@ -148,7 +171,7 @@ Label.nextLabelId = function () {
 Label.epsilon = 0.9999; // tolerance around collision boxes, prevent perfectly adjacent objects from colliding
 
 // Minimal representation of text layout, sent to main thread for label collisions
-export function textLayoutToJSON (layout) {
+export function textLayoutToJSON (layout: any) {
     return {
         priority: layout.priority,
         collide: layout.collide,
