@@ -199,7 +199,6 @@ const VISGL_MODIFIED_TANGRAM_FILES = new Set([
 
 const TANGRAM_ROOT_FILES = new Set([
   '.editorconfig',
-  '.eslintrc.cjs',
   '.gitignore',
   'CHANGELOG.md',
   'CONTRIBUTING.md',

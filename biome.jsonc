@@ -5,30 +5,45 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.4.8/schema.json",
   "extends": ["@vis.gl/dev-tools/biome.jsonc"],
-  "formatter": {
+  "files": {
     "includes": [
-      "modules/tangram-layers/src/**/*.js",
-      "modules/tangram-renderer/dist/index.js",
-      "website/scripts/**/*.mjs",
-      "website/src/**/*.js",
-      "website/docusaurus.config.js",
-      "website/sidebars.js",
-      "examples/deck/**/*.js"
+      "modules/**/*.js",
+      "modules/**/*.jsx",
+      "modules/**/*.ts",
+      "modules/**/*.tsx",
+      "scripts/**/*.mjs",
+      "website/**/*.js",
+      "website/**/*.jsx",
+      "website/**/*.ts",
+      "website/**/*.tsx",
+      "examples/**/*.js",
+      "examples/**/*.jsx",
+      "examples/**/*.ts",
+      "examples/**/*.tsx",
+      "!**/*.min.js",
+      "!**/dist/**",
+      "!**/.docusaurus/**",
+      "!examples/classic/lib/**"
     ]
   },
+  "formatter": {
+    "enabled": false
+  },
   "linter": {
-    "includes": [
-      "modules/tangram-layers/src/**/*.js",
-      "modules/tangram-renderer/dist/index.js",
-      "website/scripts/**/*.mjs",
-      "website/src/**/*.js",
-      "website/docusaurus.config.js",
-      "website/sidebars.js",
-      "examples/deck/**/*.js"
-    ],
     "rules": {
+      "recommended": false,
+      "correctness": {
+        "noUnusedImports": "off",
+        "noUnusedVariables": "off",
+        "noUnreachable": "error"
+      },
       "suspicious": {
-        "noConsole": "warn"
+        "noConsole": "off",
+        "noAsyncPromiseExecutor": "error",
+        "noDebugger": "error",
+        "noDoubleEquals": "off",
+        "noRedeclare": "off",
+        "noShadowRestrictedNames": "error"
       }
     }
   }

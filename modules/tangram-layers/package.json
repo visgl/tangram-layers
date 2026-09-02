@@ -37,15 +37,10 @@
     "build:bundle": "yarn build:bundle:main && yarn build:bundle:webxr",
     "build:bundle:main": "ocular-bundle ./bundle.js --env=dev --output=dist/index.js --externals=@vis.gl/tangram-renderer --sourcemap=true --sourcesContent=false",
     "build:bundle:webxr": "ocular-bundle ./experimental-webxr.js --env=dev --output=dist/experimental/webxr.js --externals=@vis.gl/tangram-renderer --sourcemap=true --sourcesContent=false",
-    "prepack": "yarn build",
-    "lint": "eslint --ext .ts src/ --ignore-pattern '**/*.d.ts' --no-error-on-unmatched-pattern"
+    "prepack": "yarn build"
   },
   "devDependencies": {
-    "@babel/core": "^7.26.0",
-    "@babel/eslint-parser": "^7.26.0",
-    "@babel/preset-typescript": "^7.29.0",
     "@vis.gl/dev-tools": "2.0.0-alpha.8",
-    "eslint": "7.8.1",
     "playwright": "^1.58.0",
     "vitest": "^4.0.18"
   },
