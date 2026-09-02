@@ -2,9 +2,58 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-// @ts-nocheck
-
-export * from './interaction.ts';
-export * from './presentation.ts';
-export * from './projection.ts';
-export * from './views.ts';
+export {
+  WebXRInputAdapter,
+  setWebXRSessionWithFallback
+} from './interaction';
+export type {
+  WebXRInputSnapshot,
+  WebXRSession,
+  WebXRReferenceSpaceType,
+  WebXRInputAdapterOptions
+} from './interaction';
+export {
+  DEFAULT_INTERPUPILLARY_DISTANCE,
+  WebXRPresentation,
+  WebXRViewManager
+} from './presentation';
+export {
+  longitudeLatitudeToMeters,
+  metersToLongitudeLatitude,
+  createXRPoseMatrix,
+  createXRPlacementMatrix,
+  transformXRRayToContent,
+  intersectXRMap,
+  intersectXRGlobe,
+  getXRGlobeVisibleBounds,
+  unionGeographicBounds
+} from './projection';
+export {
+  WebXRMapView,
+  WebXRFirstPersonView,
+  WebXRGlobeView
+} from './views';
+export type {
+  XRVector3,
+  XRQuaternion,
+  XRGeographicPosition,
+  XRPlacementPose,
+  XRBoundedMapSurface,
+  XRUnboundedMapSurface,
+  XRMapPlacement,
+  XRGlobePlacement,
+  XRFirstPersonPlacement,
+  XRPlacement,
+  XRPresentationMode,
+  XRFrameView,
+  XRFrameState,
+  XRDeckView,
+  XRDeckViewport,
+  XRDeckController,
+  XRHostFrameFields,
+  XRPresentationRenderView,
+  XRPresentationFrame,
+  XRSpatialRay,
+  XRScreenPointer,
+  XRInteractionIntent
+} from './types';
