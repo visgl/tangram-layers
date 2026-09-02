@@ -8,7 +8,7 @@ import mergeObjects from '../src/utils/merge';
 
 describe('mergeObjects', () => {
 
-    let dest;
+    let dest: any;
 
     beforeEach(() => {
         dest = {

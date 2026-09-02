@@ -17,7 +17,7 @@ describe('media capture behavior', () => {
     const gl = {
       RGBA: 1,
       UNSIGNED_BYTE: 2,
-      readPixels: vi.fn((x, y, width, height, format, type, pixels) => {
+      readPixels: vi.fn((_x: number, _y: number, _width: number, _height: number, _format: number, _type: number, pixels: Uint8Array) => {
         pixels.set([255, 0, 0, 128, 0, 255, 0, 255]);
       })
     };
@@ -36,7 +36,7 @@ describe('media capture behavior', () => {
     });
     expect(gl.readPixels).toHaveBeenCalledTimes(1);
     expect(capture.queue_screenshot).toBeNull();
-    expect(capture.screenshot_canvas.width).toBe(2);
+    expect(capture.screenshot_canvas!.width).toBe(2);
   });
 
   test('treats transparent screenshots as unblended', async () => {
@@ -46,7 +46,7 @@ describe('media capture behavior', () => {
     const gl = {
       RGBA: 1,
       UNSIGNED_BYTE: 2,
-      readPixels(x, y, width, height, format, type, pixels) {
+      readPixels(_x: number, _y: number, _width: number, _height: number, _format: number, _type: number, pixels: Uint8Array) {
         pixels.set([10, 20, 30, 255]);
       }
     };

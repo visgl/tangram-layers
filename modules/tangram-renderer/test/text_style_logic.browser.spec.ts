@@ -9,7 +9,7 @@ import Collision from '../src/labels/collision';
 import LabelLine from '../src/labels/label_line';
 import LabelPoint from '../src/labels/label_point';
 
-function createTextStyle() {
+function createTextStyle(): any {
     const style = Object.create(TextStyle);
     style.name = 'text-test';
     style.generation = 2;
@@ -25,7 +25,7 @@ function createTextStyle() {
     return style;
 }
 
-function layout(overrides = {}) {
+function layout(overrides: any = {}): any {
     return {
         angle: 0,
         buffer: [0, 0],
@@ -87,7 +87,7 @@ describe('standalone text style', () => {
         expect(style.buildLabels([10, 5], {type: 'Polygon', coordinates: polygon}, pointLayout)).toHaveLength(1);
         expect(style.buildLabels([10, 5], {type: 'MultiPolygon', coordinates: [[...polygon]]}, pointLayout)).toHaveLength(1);
 
-        vi.spyOn(LabelLine, 'create').mockImplementation(() => ({type: 'straight'}));
+        vi.spyOn(LabelLine, 'create').mockImplementation(() => ({type: 'straight'} as any));
         const line = [[0, 0], [10, 0], [20, 0], [30, 0]];
         expect(style.buildLineLabels(line, [10, 5], layout({subdiv: 2}))).toHaveLength(2);
         expect(style.buildLabels([10, 5], {type: 'LineString', coordinates: line}, layout())).toHaveLength(1);
@@ -109,7 +109,7 @@ describe('standalone text style', () => {
                 text_settings: {can_articulate: true}
             }}
         };
-        vi.spyOn(LabelLine, 'create').mockImplementation(() => ({type: 'straight'}));
+        vi.spyOn(LabelLine, 'create').mockImplementation(() => ({type: 'straight'} as any));
         expect(style.buildTextLabels(tile, [regular, articulated])).toHaveLength(2);
         expect(articulated.layout.no_curving).toBe(false);
         expect(regular.layout.vertical_buffer).toBe(1);
@@ -158,7 +158,7 @@ describe('standalone text style', () => {
         });
         expect(await style.endData(tile)).toBe(tileData);
         expect(style.feature_style).toMatchObject({label_texture: 'atlas', size: [10, 5]});
-        expect(tileData.meshes.main.uniforms.u_apply_color_blocks).toBe(true);
+        expect((tileData.meshes.main.uniforms as any).u_apply_color_blocks).toBe(true);
 
         style.queues.tile = [base];
         style.collideAndRenderTextLabels.mockResolvedValue({

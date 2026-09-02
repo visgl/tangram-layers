@@ -11,7 +11,7 @@ import simplePolygon from './fixtures/simple-polygon.json';
 describe('Geo', () => {
 
     describe('Geo.findBoundingBox(polygon)', () => {
-        let bbox;
+        let bbox: any;
         beforeEach(() => {
             bbox = Geo.findBoundingBox(simplePolygon.geometry.coordinates);
         });
