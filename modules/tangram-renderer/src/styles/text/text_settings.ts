@@ -2,15 +2,83 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-// @ts-nocheck
-
 import Utils from '../../utils/utils';
 import StyleParser from '../style_parser';
+
+type TextColorValue = unknown;
+
+interface TextFontStroke {
+    color?: TextColorValue;
+    alpha?: TextColorValue;
+    width?: TextColorValue;
+}
+
+interface TextFontBackground {
+    color?: TextColorValue;
+    alpha?: TextColorValue;
+    width?: TextColorValue;
+    stroke?: TextFontStroke;
+}
+
+interface TextFont {
+    fill?: TextColorValue;
+    alpha?: TextColorValue;
+    stroke?: TextFontStroke;
+    underline?: boolean;
+    background?: TextFontBackground;
+    weight?: TextColorValue;
+    family?: string;
+    style?: string;
+    transform?: string;
+    px_size?: TextColorValue;
+    size?: TextColorValue;
+}
+
+interface TextDraw {
+    font?: TextFont;
+    supersample_text?: boolean;
+    can_articulate?: boolean;
+    text_wrap?: boolean | number;
+    max_lines?: number;
+}
+
+interface TextSettingsResult {
+    style?: string;
+    weight?: string | number;
+    px_size?: number;
+    family?: string;
+    fill?: string;
+    stroke?: string;
+    stroke_width?: number;
+    underline_width?: number;
+    background_color?: string;
+    background_width?: number;
+    background_stroke_color?: string;
+    background_stroke_width?: number;
+    transform?: string;
+    text_wrap?: boolean | number;
+    max_lines?: number;
+    supersample: number;
+    can_articulate?: boolean;
+    font_css?: string;
+}
+
+interface TextSettingsContext {
+    [key: string]: unknown;
+}
+
+interface StyleParserApi {
+    zeroPair: readonly [number, number];
+    evalCachedProperty(value: unknown, context: unknown): unknown;
+    evalCachedColorPropertyWithAlpha(value: unknown, alpha: unknown, context: unknown): number[] | null | undefined;
+}
+
+const typedStyleParser = StyleParser as unknown as StyleParserApi;
 
 const TextSettings = {
 
     // A key for grouping all labels of the same text style (e.g. same Canvas state, to minimize state changes)
-    key (settings) {
+    key (settings: TextSettingsResult): string {
         return [
             settings.style,
             settings.weight,
@@ -44,8 +112,8 @@ const TextSettings = {
         align: 'center'
     },
 
-    compute (draw, context) {
-        const style = {};
+    compute (draw: TextDraw, context: TextSettingsContext): TextSettingsResult {
+        const style: TextSettingsResult = {supersample: 1};
 
         draw.font = draw.font || this.defaults;
 
@@ -55,14 +123,13 @@ const TextSettings = {
         style.can_articulate = draw.can_articulate;
 
         // Text fill
-        style.fill = StyleParser.evalCachedColorPropertyWithAlpha(draw.font.fill, draw.font.alpha, context);
-        style.fill = Utils.toCSSColor(style.fill); // convert to CSS for Canvas
+        const fillColor = typedStyleParser.evalCachedColorPropertyWithAlpha(draw.font.fill, draw.font.alpha, context);
+        style.fill = Utils.toCSSColor(fillColor); // convert to CSS for Canvas
 
         // Text stroke
         if (draw.font.stroke && draw.font.stroke.color) {
-            style.stroke = StyleParser.evalCachedColorPropertyWithAlpha(draw.font.stroke.color, draw.font.stroke.alpha, context);
-            style.stroke = Utils.toCSSColor(style.stroke); // convert to CSS for Canvas
-            style.stroke_width = StyleParser.evalCachedProperty(draw.font.stroke.width, context);
+            style.stroke = Utils.toCSSColor(typedStyleParser.evalCachedColorPropertyWithAlpha(draw.font.stroke.color, draw.font.stroke.alpha, context)); // convert to CSS for Canvas
+            style.stroke_width = typedStyleParser.evalCachedProperty(draw.font.stroke.width, context) as number;
         }
 
         // Text underline
@@ -73,23 +140,21 @@ const TextSettings = {
         // Background box
         if (draw.font.background && !style.can_articulate) { // supported for point labels only
             // Background fill
-            style.background_color = StyleParser.evalCachedColorPropertyWithAlpha(draw.font.background.color, draw.font.background.alpha, context);
-            style.background_color = Utils.toCSSColor(style.background_color); // convert to CSS for Canvas
+            style.background_color = Utils.toCSSColor(typedStyleParser.evalCachedColorPropertyWithAlpha(draw.font.background.color, draw.font.background.alpha, context)); // convert to CSS for Canvas
             if (style.background_color) {
-                style.background_width = StyleParser.evalCachedProperty(draw.font.background.width, context);
+                style.background_width = typedStyleParser.evalCachedProperty(draw.font.background.width, context) as number;
             }
 
             // Background stroke
+            const backgroundStroke = draw.font.background.stroke;
             style.background_stroke_color =
-                draw.font.background.stroke &&
-                draw.font.background.stroke.color &&
-            StyleParser.evalCachedColorPropertyWithAlpha(draw.font.background.stroke.color, draw.font.background.stroke.alpha, context);
+                backgroundStroke?.color != null ?
+                    Utils.toCSSColor(typedStyleParser.evalCachedColorPropertyWithAlpha(backgroundStroke.color, backgroundStroke.alpha, context)) :
+                    undefined;
             if (style.background_stroke_color) {
-                style.background_stroke_color = Utils.toCSSColor(style.background_stroke_color); // convert to CSS for Canvas
-
                 // default background stroke to 1px when stroke color but no stroke width specified
-                style.background_stroke_width = draw.font.background.stroke.width != null ?
-                    StyleParser.evalCachedProperty(draw.font.background.stroke.width, context) : 1;
+                style.background_stroke_width = backgroundStroke?.width != null ?
+                    typedStyleParser.evalCachedProperty(backgroundStroke.width, context) as number : 1;
             }
         }
 
@@ -101,7 +166,7 @@ const TextSettings = {
         // - transform: capitalize, uppercase, lowercase
 
         // clamp weight to 1-1000 (see https://drafts.csswg.org/css-fonts-4/#valdef-font-weight-number)
-        style.weight = StyleParser.evalCachedProperty(draw.font.weight, context) || this.defaults.weight;
+        style.weight = typedStyleParser.evalCachedProperty(draw.font.weight, context) as string | number || this.defaults.weight;
         if (typeof style.weight === 'number') {
             style.weight = Math.min(Math.max(style.weight, 1), 1000);
         }
@@ -120,7 +185,7 @@ const TextSettings = {
         style.transform = draw.font.transform;
 
         // calculated pixel size
-        style.px_size = StyleParser.evalCachedProperty(draw.font.px_size, context) * style.supersample;
+        style.px_size = (typedStyleParser.evalCachedProperty(draw.font.px_size, context) as number) * style.supersample;
 
         style.font_css = this.fontCSS(style);
 
@@ -147,7 +212,7 @@ const TextSettings = {
     },
 
     // Build CSS-style font string (to set Canvas draw state)
-    fontCSS ({ style, weight, px_size, family }) {
+    fontCSS ({style, weight, px_size, family}: TextSettingsResult): string {
         return [style, weight, px_size + 'px', family]
             .filter(x => x) // remove null props
             .join(' ');

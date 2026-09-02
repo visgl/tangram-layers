@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-// @ts-nocheck
-
 /*jshint worker: true*/
 
 import Scene from './scene/scene';

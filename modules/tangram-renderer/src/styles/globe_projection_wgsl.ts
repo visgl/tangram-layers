@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-// @ts-nocheck
-
 /** Shared host-projection functions for Tangram's portable WGSL styles. */
 export const GLOBE_PROJECTION_WGSL = `
 fn tangramGlobePosition(mercator_position: vec3<f32>) -> vec3<f32> {
