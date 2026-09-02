@@ -30,6 +30,7 @@ interface MvtLayer {
     feature(index: number): MvtFeature;
 }
 
+/** Mapbox Vector Tile object produced by the legacy vector-tile decoder. */
 export interface MvtTile {
     layers: Record<string, MvtLayer>;
 }
