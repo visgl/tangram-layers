@@ -70,10 +70,14 @@ interface TextSettingsContext {
 interface StyleParserApi {
     zeroPair: readonly [number, number];
     evalCachedProperty(value: unknown, context: unknown): unknown;
-    evalCachedColorPropertyWithAlpha(value: unknown, alpha: unknown, context: unknown): number[] | null | undefined;
+    evalCachedColorPropertyWithAlpha(value: unknown, alpha: unknown, context: unknown): number[] | false | null | undefined;
 }
 
 const typedStyleParser = StyleParser as unknown as StyleParserApi;
+
+function toCssColor(value: number[] | false | null | undefined): string | undefined {
+    return Array.isArray(value) ? Utils.toCSSColor(value) : undefined;
+}
 
 const TextSettings = {
 
@@ -124,11 +128,11 @@ const TextSettings = {
 
         // Text fill
         const fillColor = typedStyleParser.evalCachedColorPropertyWithAlpha(draw.font.fill, draw.font.alpha, context);
-        style.fill = Utils.toCSSColor(fillColor); // convert to CSS for Canvas
+        style.fill = toCssColor(fillColor); // convert to CSS for Canvas
 
         // Text stroke
         if (draw.font.stroke && draw.font.stroke.color) {
-            style.stroke = Utils.toCSSColor(typedStyleParser.evalCachedColorPropertyWithAlpha(draw.font.stroke.color, draw.font.stroke.alpha, context)); // convert to CSS for Canvas
+            style.stroke = toCssColor(typedStyleParser.evalCachedColorPropertyWithAlpha(draw.font.stroke.color, draw.font.stroke.alpha, context)); // convert to CSS for Canvas
             style.stroke_width = typedStyleParser.evalCachedProperty(draw.font.stroke.width, context) as number;
         }
 
@@ -140,17 +144,17 @@ const TextSettings = {
         // Background box
         if (draw.font.background && !style.can_articulate) { // supported for point labels only
             // Background fill
-            style.background_color = Utils.toCSSColor(typedStyleParser.evalCachedColorPropertyWithAlpha(draw.font.background.color, draw.font.background.alpha, context)); // convert to CSS for Canvas
+            style.background_color = toCssColor(typedStyleParser.evalCachedColorPropertyWithAlpha(draw.font.background.color, draw.font.background.alpha, context)); // convert to CSS for Canvas
             if (style.background_color) {
                 style.background_width = typedStyleParser.evalCachedProperty(draw.font.background.width, context) as number;
             }
 
             // Background stroke
             const backgroundStroke = draw.font.background.stroke;
-            style.background_stroke_color =
-                backgroundStroke?.color != null ?
-                    Utils.toCSSColor(typedStyleParser.evalCachedColorPropertyWithAlpha(backgroundStroke.color, backgroundStroke.alpha, context)) :
-                    undefined;
+            const backgroundStrokeColor = backgroundStroke?.color != null ?
+                typedStyleParser.evalCachedColorPropertyWithAlpha(backgroundStroke.color, backgroundStroke.alpha, context) :
+                undefined;
+            style.background_stroke_color = toCssColor(backgroundStrokeColor);
             if (style.background_stroke_color) {
                 // default background stroke to 1px when stroke color but no stroke width specified
                 style.background_stroke_width = backgroundStroke?.width != null ?
