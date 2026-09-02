@@ -26,7 +26,7 @@ Object.assign(RasterStyle, {
 
     _preprocess (this: any, draw: any): any {
         // Raster tiles default to white vertex color, as this color will tint the underlying texture
-        draw.color = draw.color || StyleParser.defaults.color;
+        draw.color = draw.color || (StyleParser as any).defaults.color;
         return this.super._preprocess.apply(this, arguments);
     }
 

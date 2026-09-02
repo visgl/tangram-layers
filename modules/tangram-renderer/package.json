@@ -40,12 +40,11 @@
     "build:nomodule": "ESM=false rollup -c",
     "build:module:minify": "ESM=true MINIFY=true rollup -c",
     "build:nomodule:minify": "ESM=false MINIFY=true rollup -c",
-    "build:style-schema": "yarn --cwd ../.. ocular-bundle modules/tangram-renderer/src/styles/style-schema.js --env=dev --format=esm --output=modules/tangram-renderer/dist/style-schema.js --externals=zod --sourcemap=true --sourcesContent=false",
+    "build:style-schema": "yarn --cwd ../.. ocular-bundle modules/tangram-renderer/src/styles/style-schema.ts --env=dev --format=esm --output=modules/tangram-renderer/dist/style-schema.js --externals=zod --sourcemap=true --sourcesContent=false",
     "generate-style-schema": "node scripts/generate-style-schema.mjs",
     "build:size": "gzip dist/tangram.min.mjs -c | wc -c | awk '{kb=$1/1024; print kb}' OFMT='Module:\\t\\t%.0fk (min/gzip)' && gzip dist/tangram.min.js -c | wc -c | awk '{kb=$1/1024; print kb}' OFMT='No module:\\t%.0fk (min/gzip)'",
     "prepack": "yarn build",
     "watch": "ESM=\"${ESM:=true}\" SERVE=true rollup -cw",
-    "lint": "eslint src/",
     "test-build-worker": "ESM=false rollup -c test/rollup.config.worker.js"
   },
   "devDependencies": {
@@ -62,7 +61,6 @@
     "@rollup/plugin-node-resolve": "^15.3.0",
     "@rollup/plugin-replace": "^6.0.1",
     "@rollup/plugin-terser": "^0.4.4",
-    "eslint": "7.8.1",
     "rollup": "4.59.0",
     "rollup-plugin-livereload": "^2.0.5",
     "rollup-plugin-node-builtins": "^2.1.2",

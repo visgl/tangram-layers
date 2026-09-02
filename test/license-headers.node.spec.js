@@ -16,7 +16,7 @@ import {
 
 describe('license headers', () => {
   it('allowlists inherited renderer files and defaults future files to vis.gl', () => {
-    expect(isTangramInherited('modules/tangram-renderer/src/scene/camera.js')).toBe(true);
+    expect(isTangramInherited('modules/tangram-renderer/src/scene/camera.ts')).toBe(true);
     expect(isTangramInherited('modules/tangram-renderer/src/scene/future-adapter.js')).toBe(false);
     expect(isTangramInherited('modules/tangram-renderer/test/future-adapter_spec.js')).toBe(false);
   });
@@ -32,7 +32,7 @@ describe('license headers', () => {
   });
 
   it('repairs an existing header with incorrect provenance', () => {
-    const inheritedPath = 'modules/tangram-renderer/src/scene/camera.js';
+    const inheritedPath = 'modules/tangram-renderer/src/scene/camera.ts';
     const newPath = 'modules/tangram-renderer/src/scene/future-adapter.js';
     const source = `${getHeader(inheritedPath, 'line')}export const value = 1;\n`;
     const result = updateLicenseHeader(newPath, source);
@@ -63,7 +63,7 @@ describe('license headers', () => {
   it('writes repaired provenance headers in fix mode', async () => {
     const temporaryDirectory = await mkdtemp(join(tmpdir(), 'tangram-license-'));
     const filePath = join(temporaryDirectory, 'future-adapter.js');
-    const inheritedPath = 'modules/tangram-renderer/src/scene/camera.js';
+    const inheritedPath = 'modules/tangram-renderer/src/scene/camera.ts';
     await writeFile(filePath, `${getHeader(inheritedPath, 'line')}export const value = 1;\n`);
 
     try {

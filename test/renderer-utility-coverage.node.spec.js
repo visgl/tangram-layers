@@ -18,7 +18,7 @@ import {
   TangramSourceSchema,
   TangramStyleSheetSchema,
   TangramStyleValueSchema
-} from '../modules/tangram-renderer/src/styles/style-schema.js';
+} from '../modules/tangram-renderer/src/styles/style-schema.ts';
 
 describe('renderer utility modules', () => {
   let urlHelpers;
