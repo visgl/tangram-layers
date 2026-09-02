@@ -8,7 +8,8 @@ import log from '../utils/log';
 import {
     convertMvtTileWithLegacy,
     decodeMultiPolygon,
-    parseMvtWithLegacy
+    parseMvtWithLegacy,
+    type MvtTile
 } from '../procedures/mvt-legacy';
 import {parseMvtJsonProperties} from '../procedures/mvt-properties';
 
@@ -89,7 +90,7 @@ export class MVTSource extends NetworkTileSource {
 
     // Loop through layers/features using Mapbox lib API, convert to GeoJSON features
     // Returns an object with keys for each layer, e.g. { layer: geojson }
-    toGeoJSON (tile: unknown) {
+    toGeoJSON (tile: MvtTile) {
         return convertMvtTileWithLegacy(tile, {parseJson: this.parseJsonOption()});
     }
 

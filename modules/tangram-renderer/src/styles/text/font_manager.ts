@@ -2,13 +2,37 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
-// @ts-nocheck
-
 import log from '../../utils/log';
 import Utils from '../../utils/utils';
 import FontFaceObserver from 'fontfaceobserver';
 
-const FontManager = {
+interface FontFaceDefinition {
+    url?: string;
+    weight?: string | number;
+    style?: string;
+    [key: string]: unknown;
+}
+
+type FontDefinition = FontFaceDefinition | FontFaceDefinition[] | 'external';
+type FontCollection = Record<string, FontDefinition>;
+
+interface FontFaceOptions {
+    family: string;
+    weight?: string | number;
+    style?: string;
+    [key: string]: unknown;
+}
+
+interface FontManagerApi {
+    fonts_loaded: Promise<void>;
+    last_loaded: string | null;
+    supports_native_font_loading?: boolean;
+    loadFonts(fonts?: FontCollection | null): Promise<void>;
+    loadFontFace(family: string, face: FontDefinition): Promise<void>;
+    injectFontFace(options: FontFaceOptions & {url?: string}): Promise<void>;
+}
+
+const FontManager: FontManagerApi = {
 
     // Font detection
     fonts_loaded: Promise.resolve(), // resolves when all requested fonts have been detected
@@ -18,7 +42,7 @@ const FontManager = {
     // `fonts` is an object where the key is a font family name, and the value is one or more font face
     // definitions. The value can be either a single object, or an array of such objects.
     // If the special string value 'external' is used, it indicates the the font will be loaded via external CSS.
-    loadFonts (fonts) {
+    loadFonts (fonts?: FontCollection | null): Promise<void> {
         const same = (JSON.stringify(fonts) === this.last_loaded);
         if (fonts && !same) {
             const queue = [];
@@ -32,7 +56,7 @@ const FontManager = {
             }
 
             this.last_loaded = JSON.stringify(fonts);
-            this.fonts_loaded = Promise.all(queue.filter(x => x));
+            this.fonts_loaded = Promise.all(queue.filter(x => x)).then(() => undefined);
         }
         return this.fonts_loaded;
     },
@@ -43,14 +67,14 @@ const FontManager = {
     // If the object's value is the special string 'external', or if no `url` is defined, then the font face
     // is assumed is assumed to been loaded via external CSS. In either case, the function returns a promise
     // that resolves when the font face has loaded, or times out.
-    async loadFontFace (family, face) {
+    async loadFontFace (family: string, face: FontDefinition): Promise<void> {
         if (face == null || (typeof face !== 'object' && face !== 'external')) {
             return;
         }
 
-        const options = { family };
+        const options: FontFaceOptions = {family};
 
-        if (typeof face === 'object') {
+        if (typeof face === 'object' && !Array.isArray(face)) {
             Object.assign(options, face);
 
             // If URL is defined, inject font into document
@@ -80,7 +104,11 @@ const FontManager = {
 
     // Loads a font face via either the native FontFace API, or CSS injection
     // TODO: consider support for multiple format URLs per face, unicode ranges
-    async injectFontFace ({ family, url, weight, style }) {
+    async injectFontFace ({family, url, weight, style}: FontFaceOptions & {url?: string}): Promise<void> {
+        if (!url) {
+            return;
+        }
+
         if (this.supports_native_font_loading === undefined) {
             this.supports_native_font_loading = (window.FontFace !== undefined);
         }
@@ -96,10 +124,10 @@ const FontManager = {
         // When the FontFace API is *not* supported, the blob URL data is converted to a base64 data URL.
         // This avoids security restricions in some browsers.
         // Also see https://github.com/bramstein/fontloader/blob/598e9399117bdc946ff786fa2c5007a6bd7d3b9e/src/fontface.js#L145-L153
-        let data = url;
+        let data: string | Uint8Array = url;
         if (url.slice(0, 5) === 'blob:') {
-            data = (await Utils.io(url, 60000, 'arraybuffer')).body;
-            let bytes = new Uint8Array(data);
+            const body = (await Utils.io(url, 60000, 'arraybuffer')).body as ArrayBuffer;
+            let bytes = new Uint8Array(body);
             if (this.supports_native_font_loading) {
                 data = bytes; // use raw binary data
             }
@@ -116,16 +144,22 @@ const FontManager = {
             // Use native FontFace API
             let face;
             if (typeof data === 'string') { // add as URL
-                face = new FontFace(family, `url(${encodeURI(data)})`, { weight, style });
+                face = new FontFace(family, `url(${encodeURI(data)})`, {weight: weight == null ? undefined : String(weight), style});
             }
             else if (data instanceof Uint8Array) { // add as binary data
-                face = new FontFace(family, data, { weight, style });
+                face = new FontFace(family, data.buffer as ArrayBuffer, {weight: weight == null ? undefined : String(weight), style});
+            }
+            if (!face) {
+                return;
             }
             document.fonts.add(face);
             log('trace', 'Adding FontFace to document.fonts:', face);
         }
         else {
             // Use CSS injection
+            if (typeof data !== 'string') {
+                return;
+            }
             let css = `
                 @font-face {
                     font-family: '${family}';
@@ -136,7 +170,7 @@ const FontManager = {
             let style_el = document.createElement('style');
             style_el.appendChild(document.createTextNode(''));
             document.head.appendChild(style_el);
-            style_el.sheet.insertRule(css, 0);
+            style_el.sheet?.insertRule(css, 0);
             log('trace', 'Injecting CSS font face:', css);
         }
     }

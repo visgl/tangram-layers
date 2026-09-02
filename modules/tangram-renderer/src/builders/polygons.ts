@@ -3,7 +3,6 @@
 // Copyright (c) 2013-2016 Brett Camper and Mapzen
 
 // Polygon builders
-// @ts-nocheck
 
 import Geo from '../utils/geo';
 import Vector from '../utils/vector';
@@ -13,6 +12,18 @@ import earcut from 'earcut';
 import quickselect from 'quickselect';
 
 const up_vec3 = [0, 0, 1];
+
+type PolygonCoordinates = Array<Array<[number, number]>>;
+type VertexData = {
+    vertex_elements: number[];
+    vertex_count: number;
+    addVertex(vertex: number[]): void;
+};
+type PolygonBuildOptions = {
+    texcoord_index?: number;
+    texcoord_scale?: number[];
+    texcoord_normalize?: number;
+};
 
 
 /**
@@ -25,17 +36,18 @@ const up_vec3 = [0, 0, 1];
  * @return {number} the number of the resulting geometries (triangles)
  */
 export function buildPolygons (
-    polygons, vertex_data, vertex_template, { texcoord_index, texcoord_scale, texcoord_normalize }) {
+    polygons: PolygonCoordinates[], vertex_data: VertexData, vertex_template: number[],
+    { texcoord_index, texcoord_scale, texcoord_normalize }: PolygonBuildOptions) {
+    const normalizedTextureScale = texcoord_normalize || 1;
 
     let vertex_elements = vertex_data.vertex_elements,
         num_polygons = polygons.length,
         geom_count = 0,
-        min_u, min_v, max_u, max_v,
-        min_x, min_y, max_x, max_y,
-        span_x, span_y, scale_u, scale_v;
+        min_u = 0, min_v = 0, max_u = 0, max_v = 0,
+        min_x = 0, min_y = 0, max_x = 0, max_y = 0,
+        span_x = 0, span_y = 0, scale_u = 0, scale_v = 0;
 
     if (texcoord_index) {
-        texcoord_normalize = texcoord_normalize || 1;
         [min_u, min_v, max_u, max_v] = texcoord_scale || default_uvs;
     }
 
@@ -46,7 +58,7 @@ export function buildPolygons (
 
         if (polygon.length > max_rings) {
             polygon = [...polygon]; // copy to avoid modifying original
-            quickselect(polygon, max_rings, 1, polygon.length - 1, (a, b) => b.area - a.area);
+            quickselect(polygon, max_rings, 1, polygon.length - 1, (a: any, b: any) => b.area - a.area);
             polygon = polygon.slice(0, max_rings);
         }
 
@@ -76,8 +88,8 @@ export function buildPolygons (
 
                     // Add UVs:
                     if (texcoord_index) {
-                        vertex_template[texcoord_index + 0] = ((vertex[0] - min_x) * scale_u + min_u) * texcoord_normalize;
-                        vertex_template[texcoord_index + 1] = ((vertex[1] - min_y) * scale_v + min_v) * texcoord_normalize;
+                        vertex_template[texcoord_index + 0] = ((vertex[0] - min_x) * scale_u + min_u) * normalizedTextureScale;
+                        vertex_template[texcoord_index + 1] = ((vertex[1] - min_y) * scale_v + min_v) * normalizedTextureScale;
                     }
 
                     vertex_data.addVertex(vertex_template);
@@ -98,11 +110,11 @@ export function buildPolygons (
 
 // Tesselate and extrude a flat 2D polygon into a simple 3D model with fixed height and add to GL vertex buffer
 export function buildExtrudedPolygons (
-    polygons,
-    z, height, min_height,
-    vertex_data, vertex_template,
-    normal_index,
-    normal_normalize,
+    polygons: PolygonCoordinates[],
+    z: number, height: number, min_height: number,
+    vertex_data: VertexData, vertex_template: number[],
+    normal_index: number,
+    normal_normalize: number,
     {
         remove_tile_edges,
         tile_edge_tolerance,
@@ -110,7 +122,13 @@ export function buildExtrudedPolygons (
         texcoord_scale,
         texcoord_normalize,
         winding
+    }: PolygonBuildOptions & {
+        remove_tile_edges?: boolean;
+        tile_edge_tolerance?: number;
+        normal_index?: number;
+        winding?: string;
     }) {
+    const normalizedTextureScale = texcoord_normalize || 1;
 
     // Top
     var min_z = z + (min_height || 0);
@@ -123,10 +141,10 @@ export function buildExtrudedPolygons (
 
     // Walls
     // Fit UVs to wall quad
+    let texcoords: number[][] = [];
     if (texcoord_index) {
-        texcoord_normalize = texcoord_normalize || 1;
         var [min_u, min_v, max_u, max_v] = texcoord_scale || default_uvs;
-        var texcoords = [
+        texcoords = [
             [min_u, max_v],
             [min_u, min_v],
             [max_u, min_v],
@@ -142,7 +160,7 @@ export function buildExtrudedPolygons (
             var contour = polygon[q];
 
             for (var w=0; w < contour.length - 1; w++) {
-                if (remove_tile_edges && outsideTile(contour[w], contour[w+1], tile_edge_tolerance)) {
+                if (remove_tile_edges && outsideTile(contour[w], contour[w+1], tile_edge_tolerance || 0)) {
                     continue; // don't extrude tile edges
                 }
 
@@ -167,7 +185,7 @@ export function buildExtrudedPolygons (
 
                 // Calc the normal of the wall from up vector and one segment of the wall triangles
                 let wall_vec = Vector.normalize([contour[w1][0] - contour[w0][0], contour[w1][1] - contour[w0][1], 0]);
-                let normal = Vector.cross(up_vec3, wall_vec);
+                let normal = Vector.cross(up_vec3, wall_vec) as number[];
 
                 // Update vertex template with current surface normal
                 vertex_template[normal_index + 0] = normal[0] * normal_normalize;
@@ -180,8 +198,8 @@ export function buildExtrudedPolygons (
                     vertex_template[2] = wall_vertices[wv][2];
 
                     if (texcoord_index) {
-                        vertex_template[texcoord_index + 0] = texcoords[wv][0] * texcoord_normalize;
-                        vertex_template[texcoord_index + 1] = texcoords[wv][1] * texcoord_normalize;
+                        vertex_template[texcoord_index + 0] = texcoords[wv][0] * normalizedTextureScale;
+                        vertex_template[texcoord_index + 1] = texcoords[wv][1] * normalizedTextureScale;
                     }
 
                     vertex_data.addVertex(vertex_template);
@@ -204,6 +222,6 @@ export function buildExtrudedPolygons (
 
 // Triangulation using earcut
 // https://github.com/mapbox/earcut
-export function triangulatePolygon (data) {
+export function triangulatePolygon (data: {vertices: number[]; holes: number[]; dimensions: number}) {
     return earcut(data.vertices, data.holes, data.dimensions);
 }

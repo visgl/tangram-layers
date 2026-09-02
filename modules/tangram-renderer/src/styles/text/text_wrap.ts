@@ -4,14 +4,24 @@
 
 // Word wrapping
 
-// @ts-nocheck
-
 import { isTextRTL, isTextNeutral, RTL_MARKER } from './text_segments';
+
+interface TextMeasurementContext {
+    measureText(text: string): {width: number};
+}
 
 // Private class to arrange text labels into multiple lines based on
 // "text wrap" and "max line" values
 export default class MultiLine {
-    constructor (context, max_lines = Infinity, text_wrap = Infinity) {
+    static ellipsis: string;
+    width: number;
+    height: number;
+    lines: Line[];
+    max_lines: number;
+    text_wrap: number | boolean;
+    context: TextMeasurementContext;
+
+    constructor (context: TextMeasurementContext, max_lines = Infinity, text_wrap: number | boolean = Infinity) {
         this.width = 0;
         this.height = 0;
         this.lines = [];
@@ -21,7 +31,7 @@ export default class MultiLine {
         this.context = context;
     }
 
-    createLine (line_height){
+    createLine (line_height: number): Line | false {
         if (this.lines.length < this.max_lines){
             return new Line(line_height, this.text_wrap);
         }
@@ -30,7 +40,7 @@ export default class MultiLine {
         }
     }
 
-    push (line){
+    push (line: Line): boolean {
         if (this.lines.length < this.max_lines){
             // measure line width
             let line_width = this.context.measureText(line.text).width;
@@ -52,7 +62,7 @@ export default class MultiLine {
     }
 
     // pushes to the lines array and returns a new line if possible (false otherwise)
-    advance (line, line_height) {
+    advance (line: Line, line_height: number): Line | false {
         let can_push = this.push(line);
         if (can_push){
             return this.createLine(line_height);
@@ -62,7 +72,7 @@ export default class MultiLine {
         }
     }
 
-    addEllipsis (){
+    addEllipsis (): void {
         let last_line = this.lines[this.lines.length - 1];
         let ellipsis_width = Math.ceil(this.context.measureText(MultiLine.ellipsis).width);
 
@@ -74,7 +84,7 @@ export default class MultiLine {
         }
     }
 
-    finish (line){
+    finish (line: Line | false): void {
         if (line){
             this.push(line);
         }
@@ -83,7 +93,13 @@ export default class MultiLine {
         }
     }
 
-    static parse (str, text_wrap, max_lines, line_height, ctx) {
+    static parse (
+        str: string,
+        text_wrap: boolean | number,
+        max_lines: number,
+        line_height: number,
+        ctx: TextMeasurementContext
+    ): MultiLine {
         // Word wrapping
         // Line breaks can be caused by:
         //  - implicit line break when a maximum character threshold is exceeded per line (text_wrap)
@@ -152,20 +168,27 @@ MultiLine.ellipsis = '...';
 // A Private class used by MultiLine to contain the logic for a single line
 // including character count, width, height and text
 class Line {
-    constructor (height = 0, text_wrap = 0){
+    chars: number;
+    text: string;
+    width: number;
+    height: number;
+    text_wrap: number | boolean;
+
+    constructor (height = 0, text_wrap: number | boolean = 0){
         this.chars = 0;
         this.text = '';
+        this.width = 0;
 
         this.height = Math.ceil(height);
         this.text_wrap = text_wrap;
     }
 
-    append (text){
+    append (text: string): void {
         this.chars += text.length;
         this.text += text;
     }
 
-    exceedsTextwrap (text){
-        return text.length + this.chars > this.text_wrap;
+    exceedsTextwrap (text: string): boolean {
+        return typeof this.text_wrap === 'number' && text.length + this.chars > this.text_wrap;
     }
 }
