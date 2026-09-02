@@ -2,11 +2,71 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-// @ts-nocheck
-
 import Scene from './scene';
 import HostFrame from './host_frame';
 import LumaDeviceRenderer from '../gpu/luma_device_renderer';
+
+interface RendererOptions {
+    device?: unknown;
+    [key: string]: unknown;
+}
+
+interface FrameOptions {
+    renderViewId?: string;
+}
+
+interface RenderOptions extends FrameOptions {
+    frame?: unknown;
+    renderPass?: unknown;
+    force?: boolean;
+}
+
+interface RendererView {
+    size: {css: {width: number; height: number}};
+    setProjection(projection: unknown): void;
+    setView(view: {lng: number; lat: number; zoom: number}): void;
+    buffer: number;
+}
+
+interface RendererScene {
+    view: RendererView;
+    config: {animated?: boolean} | null;
+    animated: boolean;
+    dirty: boolean;
+    subscribe(listeners: unknown): unknown;
+    load(config: unknown, options: RendererOptions): unknown;
+    resizeMap(width: number, height: number): void;
+    setCameraMatrices(camera: unknown): void;
+    updateScene(options: {renderPass?: unknown}): unknown;
+    processTasks(): void;
+    requestRedraw(): void;
+    destroy(): unknown;
+}
+
+interface RendererHostFrame {
+    projection: unknown;
+    geographicAnchor: {longitude: number; latitude: number; zoom: number};
+    tileBuffer: number;
+    getRenderView(renderViewId?: string): {
+        id: string;
+        viewport: {width: number; height: number};
+        camera: unknown;
+    };
+}
+
+interface RendererGpuBackend {
+    device: unknown;
+    getSceneOptions(): Record<string, unknown>;
+    destroy(): void;
+}
+
+const sceneFactory = Scene as unknown as {
+    create(config: unknown, options: RendererOptions): RendererScene;
+};
+const hostFrameFactory = HostFrame as unknown as {
+    from(frame: unknown): RendererHostFrame;
+};
+const gpuBackendFactory = LumaDeviceRenderer as unknown as new (device: unknown) => RendererGpuBackend;
 
 /**
  * Embeddable Tangram renderer driven by a host-provided frame.
@@ -17,12 +77,18 @@ import LumaDeviceRenderer from '../gpu/luma_device_renderer';
  */
 export default class Renderer {
 
-    constructor(config, options = {}) {
-        this.gpuBackend = options.device ? new LumaDeviceRenderer(options.device) : null;
+    gpuBackend: RendererGpuBackend | null;
+    device_renderer: RendererGpuBackend | null;
+    scene: RendererScene;
+    host_frame: RendererHostFrame | null;
+    active_render_view_id: string | null;
+
+    constructor(config: unknown, options: RendererOptions = {}) {
+        this.gpuBackend = options.device ? new gpuBackendFactory(options.device) : null;
         // Retain the historical field while integrations migrate to gpuBackend.
         this.device_renderer = this.gpuBackend;
         const device_options = this.gpuBackend ? this.gpuBackend.getSceneOptions() : {};
-        this.scene = Scene.create(config, Object.assign({}, options, device_options, {
+        this.scene = sceneFactory.create(config, Object.assign({}, options, device_options, {
             device: this.gpuBackend ? this.gpuBackend.device : options.device,
             disableRenderLoop: true,
             cameraMode: 'external'
@@ -31,23 +97,23 @@ export default class Renderer {
         this.active_render_view_id = null;
     }
 
-    static create(config, options = {}) {
+    static create(config: unknown, options: RendererOptions = {}): Renderer {
         return new Renderer(config, options);
     }
 
-    subscribe(listeners) {
+    subscribe(listeners: unknown): unknown {
         return this.scene.subscribe(listeners);
     }
 
-    load(config, options = {}) {
+    load(config: unknown, options: RendererOptions = {}): unknown {
         return this.scene.load(config, options);
     }
 
     /**
      * Applies host-owned viewport, geographic, and camera state.
      */
-    setFrame(frame, { renderViewId } = {}) {
-        const host_frame = HostFrame.from(frame);
+    setFrame(frame: unknown, {renderViewId}: FrameOptions = {}): RendererHostFrame {
+        const host_frame = hostFrameFactory.from(frame);
         const render_view = host_frame.getRenderView(renderViewId);
         const viewport = render_view.viewport;
         const anchor = host_frame.geographicAnchor;
@@ -76,7 +142,7 @@ export default class Renderer {
     /**
      * Updates and draws Tangram into a host-owned render pass.
      */
-    render({ frame, renderPass = null, renderViewId, force = false } = {}) {
+    render({frame, renderPass = null, renderViewId, force = false}: RenderOptions = {}): unknown {
         if (frame) {
             this.setFrame(frame, { renderViewId });
         }

@@ -4,14 +4,12 @@
 
 // Creates a Vertex Array Object if the extension is available, or falls back on standard attribute calls
 
-// @ts-nocheck
-
 import getExtension from './extensions';
 import log from '../utils/log';
 
-const native_extensions = new WeakMap();
+const native_extensions = new WeakMap<object, any>();
 
-function getVertexArrayExtension(gl) {
+function getVertexArrayExtension(gl: any): any {
     const extension = getExtension(gl, 'OES_vertex_array_object');
     if (extension || typeof gl.createVertexArray !== 'function') {
         return extension;
@@ -20,19 +18,19 @@ function getVertexArrayExtension(gl) {
     if (!native_extensions.has(gl)) {
         native_extensions.set(gl, {
             createVertexArrayOES: () => gl.createVertexArray(),
-            deleteVertexArrayOES: vao => gl.deleteVertexArray(vao),
-            bindVertexArrayOES: vao => gl.bindVertexArray(vao)
+            deleteVertexArrayOES: (vao: any) => gl.deleteVertexArray(vao),
+            bindVertexArrayOES: (vao: any) => gl.bindVertexArray(vao)
         });
     }
     return native_extensions.get(gl);
 }
 
-export default {
+const Vao: any = {
 
     disabled: false, // set to true to disable VAOs even if extension is available
     bound_vao: [],   // currently bound VAO, by GL context
 
-    init (gl) {
+    init (gl: any) {
         let ext;
         if (this.disabled !== true) {
             ext = getVertexArrayExtension(gl);
@@ -49,7 +47,7 @@ export default {
         }
     },
 
-    getExtension(gl, ext_name) {
+    getExtension(gl: any, ext_name: string) {
         if (this.disabled !== true) {
             if (ext_name === 'OES_vertex_array_object') {
                 return getVertexArrayExtension(gl);
@@ -58,8 +56,8 @@ export default {
         }
     },
 
-    create (gl, setup, teardown) {
-        let vao = {};
+    create (gl: any, setup: () => void, teardown?: () => void) {
+        let vao: any = {};
         vao.setup = setup;
         vao.teardown = teardown;
 
@@ -74,14 +72,14 @@ export default {
         return vao;
     },
 
-    getCurrentBinding (gl) {
-        let bound = this.bound_vao.filter(e => e[0] === gl)[0];
+    getCurrentBinding (gl: any) {
+        let bound = this.bound_vao.filter((e: any[]) => e[0] === gl)[0];
         return bound && bound[1];
     },
 
-    setCurrentBinding (gl, vao) {
+    setCurrentBinding (gl: any, vao: any) {
         let bound_vao = this.bound_vao;
-        let binding = bound_vao.filter(e => e[0] === gl)[0];
+        let binding = bound_vao.filter((e: any[]) => e[0] === gl)[0];
         if (binding == null) {
             bound_vao.push([gl, vao]);
         }
@@ -90,7 +88,7 @@ export default {
         }
     },
 
-    bind (gl, vao) {
+    bind (gl: any, vao: any) {
         let ext = this.getExtension(gl, 'OES_vertex_array_object');
         if (vao != null) {
             if (ext != null && vao._vao != null) {
@@ -113,7 +111,7 @@ export default {
         }
     },
 
-    destroy (gl, vao) {
+    destroy (gl: any, vao: any) {
         let ext = this.getExtension(gl, 'OES_vertex_array_object');
         if (ext != null && vao != null && vao._vao != null) {
             ext.deleteVertexArrayOES(vao._vao);
@@ -123,3 +121,5 @@ export default {
     }
 
 };
+
+export default Vao;
